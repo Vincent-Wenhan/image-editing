@@ -4,6 +4,7 @@
 
 - [方案评审](docs/proposal_review.md)：可行性、贡献边界、标签定义与必要对照。
 - [Stage 0 设计](docs/stage0_design.md)：当前准备工作的范围和验收。
+- [当前验收状态](docs/stage0_report.md)：已验证内容、下载进度入口和待运行实验。
 - [原始 roadmap](Image_Editing_Preparation_and_InterEdit_Roadmap.md)：研究输入与长期路线。
 - [Inter-Edit 代码走读](notes/inter_edit_code_review.md)：CJT 张量流及 FLUX 适配边界。
 - [开发规则](AGENTS.md)：Conventional Commits、500 行限制、文档同步和 GPU 规范。
@@ -67,6 +68,8 @@ image-edit gpu -- image-edit infer --lora outputs/lora/flux2_magicbrush_smoke/fl
 ```
 
 训练 wrapper 校验上游 commit，将上游公开 class attribute 指向本地 Qwen3 权重，并强制离线加载；不修改外部仓库。短训练只验收 forward/backward/checkpoint/reload，不能预设质量提升。
+
+也可运行 `python scripts/run_stage0.py --output outputs/stage0_new_run`，等待固定资产准备完成后自动执行上述工程验收；状态写入该目录的 `status.json`。每次 GPU 启动仍会检查空闲卡，下载等待阶段不占用 GPU。新验收使用新的输出目录。
 
 ## 开发与目录
 
