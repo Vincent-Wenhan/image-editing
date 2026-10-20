@@ -1,0 +1,63 @@
+# Paths are resolved by `image-edit train-config` from the project root.
+job: extension
+config:
+  name: flux2_magicbrush_smoke
+  process:
+    - type: diffusion_trainer
+      training_folder: outputs/lora
+      device: cuda:0
+      performance_log_every: 10
+      network:
+        type: lora
+        linear: 16
+        linear_alpha: 16
+      save:
+        dtype: bf16
+        save_every: 50
+        max_step_saves_to_keep: 3
+        push_to_hub: false
+      datasets:
+        - folder_path: data/magicbrush/train/target
+          control_path: data/magicbrush/train/reference
+          caption_ext: txt
+          caption_dropout_rate: 0.0
+          resolution: [512]
+          cache_latents_to_disk: true
+          shuffle_tokens: false
+          flip_x: false
+          flip_y: false
+      train:
+        batch_size: 1
+        steps: 150
+        gradient_accumulation: 1
+        train_unet: true
+        train_text_encoder: false
+        gradient_checkpointing: true
+        cache_text_embeddings: true
+        noise_scheduler: flowmatch
+        timestep_type: sigmoid
+        optimizer: adamw
+        lr: 0.0001
+        dtype: bf16
+        seed: 42
+        skip_first_sample: true
+        disable_sampling: true
+      model:
+        arch: flux2_klein_4b
+        name_or_path: models/FLUX.2-klein-base-4B
+        vae_path: models/flux2_vae/ae.safetensors
+        quantize: false
+        quantize_te: false
+        low_vram: false
+      sample:
+        sampler: flowmatch
+        sample_every: 1000
+        width: 512
+        height: 512
+        prompts: []
+        seed: 42
+        guidance_scale: 4.0
+        sample_steps: 50
+meta:
+  name: '[name]'
+  version: '0.1'

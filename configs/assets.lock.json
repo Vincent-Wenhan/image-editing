@@ -1,0 +1,39 @@
+{
+  "models": {
+    "base": {
+      "repo_id": "black-forest-labs/FLUX.2-klein-base-4B",
+      "revision": "a3b4f4849157f664bdbc776fd7453c2783562f4d",
+      "path": "models/FLUX.2-klein-base-4B",
+      "allow_patterns": ["*.json", "*.md", "tokenizer/*", "text_encoder/*", "transformer/*", "vae/*", "scheduler/*", "flux-2-klein-base-4b.safetensors"]
+    },
+    "training_vae": {
+      "repo_id": "ai-toolkit/flux2_vae",
+      "revision": "3f679cf232e6d91d28396522d9502c31e8f7ccbe",
+      "path": "models/flux2_vae",
+      "allow_patterns": ["ae.safetensors", "*.md"]
+    },
+    "training_text": {
+      "repo_id": "Qwen/Qwen3-4B",
+      "revision": "1cfa9a7208912126459214e8b04321603b3df60c",
+      "path": "models/Qwen3-4B",
+      "allow_patterns": ["*.json", "*.safetensors", "*.txt", "*.jinja", "*.md"]
+    }
+  },
+  "dataset": {
+    "repo_id": "osunlp/MagicBrush",
+    "revision": "6c254560879df7851233ea0fd2ae2a62764d0ef2",
+    "splits": ["train", "dev"],
+    "license": "cc-by-4.0"
+  },
+  "repositories": {
+    "ai-toolkit": {
+      "url": "https://github.com/ostris/ai-toolkit.git",
+      "revision": "a055947d56a156411abb4ef0301b35d0fe5f51a5"
+    },
+    "Inter-Edit": {
+      "url": "https://github.com/Delong-liu-bupt/Inter-Edit.git",
+      "revision": "220c1dc26d8401cae160a6b25e48198f85bdd115"
+    }
+  },
+  "diffusers_revision": "8600b4c10d67b0ce200f664204358747bd53c775"
+}
