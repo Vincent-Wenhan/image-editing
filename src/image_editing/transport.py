@@ -8,7 +8,7 @@ import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from image_editing.common import sha256
+from image_editing.common import sha256, write_json
 
 
 def file_matches(path, item):
@@ -39,32 +39,46 @@ def download_ranges(url, partial, size, connections):
         if target.exists() and target.stat().st_size == expected:
             return target
         temporary = target.with_suffix(".tmp")
-        subprocess.run(
-            [
-                "curl",
-                "-4",
-                "-fLsS",
-                "--retry",
-                "5",
-                "--retry-all-errors",
-                "--connect-timeout",
-                "15",
-                "--max-time",
-                "600",
-                "--range",
-                f"{start}-{end}",
-                "--max-filesize",
-                str(expected),
-                "-o",
-                str(temporary),
-                url,
-            ],
-            check=True,
-        )
-        if temporary.stat().st_size != expected:
-            raise ValueError(f"Incomplete range {start}-{end}")
-        temporary.replace(target)
-        return target
+        if temporary.exists() and temporary.stat().st_size > expected:
+            temporary.unlink()
+        for _ in range(8):
+            received = temporary.stat().st_size if temporary.exists() else 0
+            if received == expected:
+                temporary.replace(target)
+                return target
+            fragment = chunks / f"{start}.{received}.part"
+            if not fragment.exists():
+                subprocess.run(
+                    [
+                        "curl",
+                        "-4",
+                        "-fLsS",
+                        "--connect-timeout",
+                        "15",
+                        "--max-time",
+                        "600",
+                        "--range",
+                        f"{start + received}-{end}",
+                        "--max-filesize",
+                        str(expected - received),
+                        "-o",
+                        str(fragment),
+                        url,
+                    ],
+                    check=False,
+                )
+            # curl can leave valid prefix bytes after a reset; retain them.
+            if fragment.exists():
+                if fragment.stat().st_size > expected - received:
+                    fragment.unlink()
+                    raise ValueError(f"Server returned too many bytes for range {start}-{end}")
+                with temporary.open("ab") as output, fragment.open("rb") as source:
+                    shutil.copyfileobj(source, output)
+                fragment.unlink()
+        if temporary.exists() and temporary.stat().st_size == expected:
+            temporary.replace(target)
+            return target
+        raise RuntimeError(f"Range {start}-{end} incomplete; saved bytes are resumable")
 
     offsets = range(0, size, chunk_size)
     with ThreadPoolExecutor(max_workers=connections) as pool:
@@ -88,9 +102,16 @@ def curl(url, *, headers=False):
 
 
 def repo_info(repo, revision, repo_type="model"):
+    cache = Path(".cache/asset-metadata") / f"{repo_type}-{repo.replace('/', '--')}-{revision}.json"
+    if cache.exists():
+        info = json.loads(cache.read_text())
+        if info.get("sha") != revision or info.get("id") != repo:
+            raise ValueError(f"Cached asset metadata does not match the lock: {cache}")
+        return info
     info = json.loads(curl(f"{endpoint()}/api/{repo_type}s/{repo}/revision/{revision}?blobs=true"))
     if info["sha"] != revision:
         raise ValueError("Hub returned a different revision")
+    write_json(cache, info)
     return info
 
 

@@ -29,7 +29,11 @@ def range_server():
             self.send_header("Content-Length", str(len(body)))
             self.send_header("Content-Range", f"bytes {start}-{end}/{len(payload)}")
             self.end_headers()
-            self.wfile.write(body)
+            if self.path == "/interrupted" and start == 0:
+                self.wfile.write(body[: len(body) // 2])
+                self.close_connection = True
+            else:
+                self.wfile.write(body)
 
         def log_message(self, *args):
             pass
@@ -69,3 +73,11 @@ def test_bad_checksum_does_not_publish_an_asset(tmp_path, range_server, monkeypa
     with pytest.raises(ValueError, match="checksum mismatch"):
         download_file("test/repo", "revision", item, tmp_path, connections=2)
     assert not list(tmp_path.iterdir())
+
+
+def test_interrupted_range_resumes_from_received_bytes(tmp_path, range_server):
+    url, payload, requests = range_server
+    partial = tmp_path / "asset.partial"
+    download_ranges(url.replace("/redirect", "/interrupted"), partial, len(payload), connections=1)
+    assert partial.read_bytes() == payload
+    assert requests[:2] == [(0, 4 * 1024**2 - 1), (2 * 1024**2, 4 * 1024**2 - 1)]
