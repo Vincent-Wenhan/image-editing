@@ -1,9 +1,12 @@
 # 工程架构重构
 
-## 架构收尾与稳定性验收（2026-10-21，计划）
+## 架构收尾与稳定性验收（2026-10-21）
 
-保持现有目录职责、网络结构和 flow loss。本轮先完成以下稳定性修改及 CPU 回归，
-再在正常 GPU 租约下执行 200 train /30 dev 上尚未完成的 20/150-step 验收：
+状态：工程修改已实现，97 项回归和 Ruff/CLI 通过。完整验收的 20-step debug、
+150-step、固定 12 例重载/配对评估和画廊均已完成；详见 [Stage 0 报告](stage0_report.md)。
+
+保持现有目录职责、网络结构和 flow loss。本轮按以下顺序完成稳定性修改及 CPU 回归，
+再在正常 GPU 租约下补齐 200 train /30 dev 上的 20/150-step 验收：
 
 1. 固定 ai-toolkit revision 的设备适配只能安装一次，重复配置只更新文本权重路径；
    测试设备迁移、原调用透传、实际 CPU loss/梯度/参数更新一致性。
@@ -111,13 +114,14 @@ ai-toolkit 在其根目录下以独立 Python worker 启动，使用正常的 `-
 ```text
 src/                          # package，不是传统 src-layout 的搜索根
   __init__.py, __main__.py, cli.py
-  core/                       # types, config, paths, images, io, metadata, random, logging
+  core/                       # types, spatial, config, paths, images, io, metadata, random, logging
   datasets/                   # images, export, magicbrush, manifest, validation
   conditioning/               # controls（数据契约）, masks（原有 alpha/灰度语义）
   backends/                   # base（Protocol）, flux2（实际 Diffusers 调用）
-  training/                   # config, launcher, worker, flux2_compat, checkpoints, __main__
+  training/                   # config, launcher, worker, flux2_compat, lifecycle, memory,
+                              # checkpoints, __main__
   inference/                  # runner
-  evaluation/                 # metrics, evaluate, gallery
+  evaluation/                 # metrics, provenance, evaluate, gallery
   infra/                      # assets, transport, gpu, environment, process,
                               # repositories, repository, acceptance
 configs/
@@ -217,7 +221,7 @@ manifest、下载 marker、训练 report 和 Stage 0 status 的键保持兼容�
 
 表中不带路径前缀的旧 Python 文件均位于已删除的 `src/image_editing/`；没有保留双份实现。
 
-## 最终兼容性检查
+## 上一轮架构迁移的兼容性检查
 
 - 完整锁定依赖环境：50 项测试通过；独立无 torch 的 CPU 环境：49 项通过、1 项跳过
   （checkpoint 张量测试，完整环境已执行）。Ruff check / format、`pip check`、shell 语法和仓库卫生检查通过。
@@ -240,7 +244,7 @@ manifest、下载 marker、训练 report 和 Stage 0 status 的键保持兼容�
 | 记录格式 | manifest/run/report/status/metrics | 字段结构及错误状态回归通过，旧文件保留；新结果写入独立目录 |
 | 第三方与环境 | 固定源码和命名 Conda | 3 个外部 Git checkout 均无改动；原 Conda editable 安装仍指向原工作区 |
 
-本次未重新执行原定 200 样本上的 20/150-step 完整训练、12 例 LoRA 评估，
+上一轮未重新执行原定 200 样本上的 20/150-step 完整训练、12 例 LoRA 评估，
 也没有 Static Mask / Role / Qwen 验证。两个 GPU 推理样本和两步训练只验收工程行为。
 
 开发交付位于 `/home/jiangwenhan/project/image-editing-architecture`；原工作区保持用户的
@@ -254,7 +258,7 @@ conda run --no-capture-output -n image-edit "$PWD/.venv/bin/python" -m src.train
 ```
 
 一次性的 CPU 验证环境、wheel 和构建目录已在结束前清理，验证日志/配置/产物保留在
-`outputs/refactor_validation/`。后续先完成完整 Stage 0 基线，再按 conditioning →
+`outputs/refactor_validation/`。本轮已补齐完整 Stage 0 工程验收；后续按 conditioning →
 FLUX adapter/训练配置 → 公平消融的顺序开发 Static Mask。
 
 ### 固定训练器的设备兼容修复
@@ -279,9 +283,17 @@ SHA256。只有训练参数/数据一致、参考至少 20 steps、统计完整�
 
 验收脚本新增 `--base-run`，仅复用与锁定 Base、默认采样预算和当前数据内容一致的
 无 LoRA 记录。12 例只复制到新输出；重载评估使用 `--reference-run` 检查预算。
-目前稳定性 CPU 回归通过，完整 20/150-step 结果在执行后更新。
+完整验收代码版本为 `26bc4c2`，结果位于 worktree 的
+`outputs/stage0_stability_20261021/`。20-step batch 2 为 199.58s /15.04 GiB reserved；
+150-step batch 4 为 787.24s /15.10 GiB reserved；12 例重载生成合计 317.94s，
+全阶段 390.92s /16.26 GiB reserved。checkpoint 元数据步数分别为 20、150，
+各 160 个张量均有限，哈希复核通过；本轮没有实际 OOM 或清理错误。
+原数据与副本训练后再次检查通过，GPU 已释放。完整验收总计 1460.10s；
+没有开发或验证 Static Mask、Role Predictor 或 Qwen。OOM 恢复只经 CPU 注入测试，
+本轮未触发；自适应 batch 仅用于工程验收，研究对照须固定训练样本/计算预算。
 
-旧运行的错误发生在固定 ai-toolkit `flux2_model.py:415`：主 latent 在 CUDA，
+最初问题与上一轮最小验证（历史记录）：旧运行的错误发生在固定 ai-toolkit
+`flux2_model.py:415`：主 latent 在 CUDA，
 reference 编码结果在 CPU。其缓存流程主动卸载 VAE 到 CPU，随后 FLUX 在
 `get_noise_prediction` 仍调用 VAE 编码原始 reference，造成跨设备拼接。
 本次在自有 `training/flux2_compat.py` 对固定 Klein 类的公开调用边界做小型适配：
@@ -291,4 +303,4 @@ reference 编码结果在 CPU。其缓存流程主动卸载 VAE 到 CPU，随后
 透传；已在复制出的 8 train /2 dev 小数据目录运行两步 batch 2 训练，保存 160 个有限
 LoRA 张量，训练含加载/缓存共 72.25s，峰值 reserved 15.04 GiB。
 同样本 50-step LoRA 重载通过：27.08s，峰值 reserved 16.26 GiB。
-原 20/150-step 失败记录保留，完整预算验收未重跑。
+最初 20-step 的失败记录保留，150-step 当时未开始；本轮已补齐 20/150-step 与 12 例重载。

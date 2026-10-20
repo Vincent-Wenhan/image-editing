@@ -7,7 +7,7 @@
 - [当前验收状态](docs/stage0_report.md)：已验证内容、下载进度入口和待运行实验。
 - [原始 roadmap](docs/Image_Editing_Preparation_and_InterEdit_Roadmap.md)：研究输入与长期路线。
 - [架构重构设计与验收](docs/architecture.md)：模块边界、兼容约定与实施步骤。
-- 当前正在按架构文档收尾：补丁幂等、失败清理、评估校验和容量约束 batch；20/150-step 验收结果随后记录。
+- 稳定性收尾与 20/150-step、固定 12 例重载验收已完成；真实结果见 Stage 0 报告。
 - [Inter-Edit 代码走读](notes/inter_edit_code_review.md)：CJT 张量流及 FLUX 适配边界。
 - [开发规则](AGENTS.md)：Conventional Commits、500 行限制、文档同步和 GPU 规范。
 
@@ -79,8 +79,8 @@ image-edit gpu -- image-edit infer --lora outputs/lora/flux2_magicbrush_smoke/fl
 `python scripts/train.py ...` 保持兼容，也可使用 `python -m src.training ...`。
 训练器在自己的目录中通过独立 worker 导入，父进程的导入路径与工作目录保持稳定。
 固定训练器在缓存后把 VAE 留在 CPU；本地适配在 reference 编码前恢复其设备，
-保留原 dtype、forward 和 loss。已通过两步真实训练、checkpoint 有限性检查与一例 LoRA 重载推理，
-这不代表原定 20/150-step 全量基线已完成。
+保留原 dtype、forward 和 loss。现已通过 200 个训练样本上的 20-step debug、
+150-step 训练、checkpoint 有限性检查与固定 12 例 LoRA 重载评估。
 
 也可运行 `python scripts/run_stage0.py --output outputs/stage0_new_run`，等待固定资产准备完成后自动执行上述工程验收；状态写入该目录的 `status.json`。每次 GPU 启动仍会检查空闲卡，下载等待阶段不占用 GPU。新验收使用新的输出目录。
 
@@ -117,9 +117,10 @@ CLI 从这些配置读取默认值，原有命令行覆盖有效。采样默认�
 `EditInput` 与 `EditSupervision` 独立，推理只读取 source/instruction；`ControlBundle` 标记控制来源，
 普通推理拒绝 oracle。当前后端仍只实现 Stage 0，无空间控制；Mask/Role/Qwen 的扩展位置已预留为接口。
 
-本次重构验收：完整环境 50 项测试通过；纯 CPU 环境 49 项通过、1 项因未安装 torch 跳过。
-editable/wheel 安装、九个子命令帮助、数据校验、旧 12 例评估均通过；一例 Base 输出与旧结果
-逐字节一致，两步 LoRA 训练与一例重载完成。原定 20/150-step 完整基线仍待单独验收。
+本轮完整环境 97 项 CPU 回归、Ruff 与 CLI 检查通过；20-step /batch 2 和 150-step /
+batch 4 均保存了有限 checkpoint，固定 12 例重载和配对校验完成。此前 editable/wheel
+安装及 Base 单例字节一致验证保留。新证据在 `outputs/stage0_stability_20261021/`，
+只用于工程验收，不据像素诊断宣称编辑成功率提升。
 
 `data/`、`models/`、`outputs/`、`external/`、`.venv/` 全部忽略。Git hooks 检查提交信息、代码行数和禁止上传的资产。实验原始日志应留在本地 `outputs/logs/`，一次性文件放 `.tmp/` 并在完成后清理。
 

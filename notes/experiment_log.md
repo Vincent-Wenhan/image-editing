@@ -20,7 +20,20 @@
 - 设备补丁幂等并绑定固定源码版本；原调用透传、设备变化、CPU loss/梯度/参数更新一致性通过。
 - 失败清理、同步/cleanup 次级异常、报告写入失败不遮蔽原异常的测试通过；launcher 等待 worker 清理退出。
 - 用实际租约卡容量、debug 峰值、最大 2 倍增长及 20%/4 GiB 余量替代固定 22 GiB 阈值；记录有效 YAML 与内存决策。
-- 放大后 OOM 只允许一次新实验名降级，其他失败不重试。完整环境当前 97 项 CPU 回归通过，完整训练待执行。
+- 放大后 OOM 只允许一次新实验名降级，其他失败不重试。该阶段 97 项 CPU 回归通过，完整训练尚未执行；随后结果如下。
+
+### 完整 Stage 0 验收完成
+
+- 执行代码为 `26bc4c2`，运行目录是 worktree `outputs/stage0_stability_20261021/`；开始 03:50:24、结束 04:14:45（Asia/Shanghai），控制器报告 1460.10s。
+- 只复制现有 200 train /30 dev 数据以隔离缓存，manifest 字节 SHA256 不变；训练前后原数据与副本均通过配对/哈希验证，跨 split session/source 交集为 0。模型没有移动或重下。
+- 旧 12 例 Base 校验模型 revision、无 LoRA 状态、数据哈希和默认采样配置后复用；新旧 Base metrics.json 一致。
+- 20-step debug：batch 2 /512² /rank 16 /seed 42，199.58s，峰值 allocated 15.02 /reserved 15.04 GiB；160 个 LoRA 张量有限，header step=20，checkpoint SHA256 `138ba8e4ca9ec9bef29199ca55146f883396df5f6c1d0e7d5c392424d43ac2b1`。
+- 150-step Edit LoRA：独立从 Base 开始，batch 4，其余配方不变；787.24s，峰值 allocated 15.02 /reserved 15.10 GiB；160 张量有限，header step=150 /epoch=2，SHA256 `911bb69a934768805c942a635f50c3d13c6bea1717706d82cdd9e9b745fe4b31`。
+- batch 决策基于实际租约卡可用 47.99 GiB、debug 实测 15.04 GiB，保守估计放大后 30.07 GiB，预留 9.60 GiB；有效配置与决策文件保留。没有实际 OOM、降级或清理/统计错误。
+- 同样 12 例、50 steps /CFG 4 /512² /稳定 sample seed 的重载完成；加载 SHA256 与最终 checkpoint 一致，12 张 PNG 均与 Base 不同。逐图生成合计 317.94s（均值 26.50s），含加载全阶段 390.92s，峰值 reserved 16.26 GiB。
+- 配对评估与画廊完成。Target MAE：0.073098 →0.055915；mask 外漂移 proxy：0.054625 →0.034876；变化面积：0.302519 →0.188654。误差较低但变化也较少，identity target MAE 为 0.030950，不推断编辑成功率提高。
+- 结束后实时确认所有 GPU 为 0 MiB /0%、无计算进程，租约已释放。旧失败记录保留；OOM/cleanup 异常恢复只经 CPU 注入回归，未人为制造 GPU OOM。
+- 详细证据为本轮 `verification.json`、`status.json`、训练报告、`lora_inference/metrics.json` 和两组画廊。所有资产和日志留在本地；未开发 Static Mask、Role Predictor 或 Qwen。
 
 ## 2026-10-21：架构重构开始
 
