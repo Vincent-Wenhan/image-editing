@@ -1,12 +1,29 @@
 """Pinned Hub downloads with curl metadata, parallel ranges and SHA256 checks."""
 
+import hashlib
 import json
 import os
+import shutil
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from image_editing.common import sha256
+
+
+def file_matches(path, item):
+    if not path.is_file():
+        return False
+    digest = item.get("lfs", {}).get("sha256")
+    if digest:
+        return sha256(path) == digest
+    if not item.get("blobId"):
+        raise ValueError(f"No content digest for {item['rfilename']}")
+    hasher = hashlib.sha1(f"blob {path.stat().st_size}\0".encode())
+    with path.open("rb") as file:
+        for block in iter(lambda: file.read(1024**2), b""):
+            hasher.update(block)
+    return hasher.hexdigest() == item["blobId"]
 
 
 def download_ranges(url, partial, size, connections):
@@ -54,8 +71,6 @@ def download_ranges(url, partial, size, connections):
     with partial.open("wb") as output:
         for file in files:
             with file.open("rb") as source:
-                import shutil
-
                 shutil.copyfileobj(source, output, length=1024**2)
     return chunks
 
@@ -87,7 +102,7 @@ def download_file(
     target = Path(destination) / name
     target.parent.mkdir(parents=True, exist_ok=True)
     digest = item.get("lfs", {}).get("sha256")
-    if target.exists() and (digest and sha256(target) == digest):
+    if file_matches(target, item):
         return target
     prefix = "datasets/" if repo_type == "dataset" else ""
     url = f"{endpoint()}/{prefix}{repo}/resolve/{revision}/{name}"
@@ -126,8 +141,6 @@ def download_file(
         ]
         payload_url = locations[-1] if locations else url
         chunks = download_ranges(payload_url, partial, item["size"], connections)
-        if sha256(partial) != digest:
-            raise ValueError(f"SHA256 mismatch: {name}")
     else:
         subprocess.run(
             [
@@ -145,10 +158,13 @@ def download_file(
             ],
             check=True,
         )
+    if not file_matches(partial, item):
+        if chunks:
+            shutil.rmtree(chunks)
+        partial.unlink(missing_ok=True)
+        raise ValueError(f"Content checksum mismatch: {name}")
     partial.replace(target)
     if chunks:
-        import shutil
-
         shutil.rmtree(chunks)
     print(f"Verified download: {target}", flush=True)
     return target
