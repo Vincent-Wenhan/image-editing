@@ -1,0 +1,33 @@
+# Local assets and third-party source
+/data/
+/models/
+/outputs/
+/external/
+/.venv*/
+/.cache/
+/.tmp/
+*.zip
+*.tar
+*.tar.gz
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.bin
+*.onnx
+*.npy
+*.npz
+*.parquet
+*.arrow
+# Credentials and generated files
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+build/
+dist/
