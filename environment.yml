@@ -1,0 +1,8 @@
+name: image-edit
+channels:
+  - defaults
+dependencies:
+  - python=3.11.17
+  - pip
+  - gcc_linux-64
+  - gxx_linux-64

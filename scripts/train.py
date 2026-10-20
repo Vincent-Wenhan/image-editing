@@ -34,12 +34,15 @@ def main():
     os.chdir(trainer)
     sys.path.insert(0, str(trainer))
     import torch
+    import yaml
+    from accelerate.utils import set_seed
     from extensions_built_in.diffusion_models.flux2.flux2_klein_model import Flux2Klein4BModel
     from toolkit.job import get_job
 
     # The upstream architecture exposes this class attribute, not a YAML field.
     Flux2Klein4BModel.flux2_klein_te_path = str(root / "models/klein_text_encoder")
-    torch.manual_seed(42)
+    settings = yaml.safe_load(config.read_text())["config"]["process"][0]
+    set_seed(settings["train"].get("seed", 42))
     torch.cuda.reset_peak_memory_stats()
     result = dict(
         created=now(),

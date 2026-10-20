@@ -16,6 +16,12 @@ def range_server():
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):
+            if self.path == "/redirect":
+                self.send_response(302)
+                self.send_header("Location", "/file")
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
             start, end = map(int, self.headers["Range"].removeprefix("bytes=").split("-"))
             requests.append((start, end))
             body = payload[start : end + 1]
@@ -32,7 +38,7 @@ def range_server():
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
-        yield f"http://127.0.0.1:{server.server_port}/file", payload, requests
+        yield f"http://127.0.0.1:{server.server_port}/redirect", payload, requests
     finally:
         server.shutdown()
         server.server_close()
@@ -54,7 +60,7 @@ def test_bad_checksum_does_not_publish_an_asset(tmp_path, range_server, monkeypa
     from image_editing import transport
 
     url, payload, _ = range_server
-    monkeypatch.setattr(transport, "curl", lambda *a, **k: f"location: {url}\n")
+    monkeypatch.setattr(transport, "endpoint", lambda: url.removesuffix("/redirect"))
     item = dict(
         rfilename="weights.bin",
         size=len(payload),

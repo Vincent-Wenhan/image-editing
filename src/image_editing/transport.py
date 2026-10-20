@@ -112,36 +112,9 @@ def download_file(
     if digest:
         if payload_mirror == "modelscope":
             url = f"https://modelscope.cn/models/{repo}/resolve/master/{name}"
-            headers = subprocess.check_output(
-                [
-                    "curl",
-                    "-4",
-                    "-sS",
-                    "--retry",
-                    "3",
-                    "--connect-timeout",
-                    "15",
-                    "--max-time",
-                    "120",
-                    "-D",
-                    "-",
-                    "--range",
-                    "0-0",
-                    "-o",
-                    os.devnull,
-                    url,
-                ],
-                text=True,
-            )
-        else:
-            headers = curl(url, headers=True)
-        locations = [
-            line.split(": ", 1)[1]
-            for line in headers.splitlines()
-            if line.lower().startswith("location: ")
-        ]
-        payload_url = locations[-1] if locations else url
-        chunks = download_ranges(payload_url, partial, item["size"], connections)
+        # Resolve each range through the stable URL so expiring CDN signatures
+        # are refreshed automatically by curl, including after retries.
+        chunks = download_ranges(url, partial, item["size"], connections)
     else:
         subprocess.run(
             [
