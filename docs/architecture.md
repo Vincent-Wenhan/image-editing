@@ -76,7 +76,7 @@ src/                          # package，不是传统 src-layout 的搜索根
   datasets/                   # images, export, magicbrush, manifest, validation
   conditioning/               # controls（数据契约）, masks（原有 alpha/灰度语义）
   backends/                   # base（Protocol）, flux2（实际 Diffusers 调用）
-  training/                   # config, launcher, worker, checkpoints, __main__
+  training/                   # config, launcher, worker, flux2_compat, checkpoints, __main__
   inference/                  # runner
   evaluation/                 # metrics, evaluate, gallery
   infra/                      # assets, transport, gpu, environment, process,
@@ -166,7 +166,7 @@ manifest、下载 marker、训练 report 和 Stage 0 status 的键保持兼容�
 | `validation.py` | `datasets/validation.py`；安全路径 → `core/paths.py` |
 | `inference.py` | `inference/runner.py` + `backends/flux2.py`；尺寸 → `core/images.py` |
 | `training.py` | `training/config.py` |
-| `scripts/train.py` | `training/launcher.py`, `worker.py`, `checkpoints.py`；原脚本保留为入口 |
+| `scripts/train.py` | `training/launcher.py`, `worker.py`, `flux2_compat.py`, `checkpoints.py`；原脚本保留为入口 |
 | `evaluation.py` | `evaluation/metrics.py`, `evaluate.py` |
 | `gallery.py` | `evaluation/gallery.py` |
 | `assets.py`, `transport.py` | `infra/assets.py`, `transport.py` |
@@ -174,18 +174,49 @@ manifest、下载 marker、训练 report 和 Stage 0 status 的键保持兼容�
 | `scripts/run_stage0.py` | `infra/acceptance.py`；原脚本保留为入口 |
 | `scripts/check_repo.py` | `infra/repository.py`；原脚本保留为入口 |
 | setup shell 中的仓库逻辑 | `infra/repositories.py` |
-| `cli.py`, `__main__.py` | `src/cli.py`, `src/__main__.py` |
+| `__init__.py`, `cli.py`, `__main__.py` | `src/__init__.py`, `src/cli.py`, `src/__main__.py` |
 
-除 `scripts/` 行外，旧文件均位于已删除的 `src/image_editing/`；没有保留双份实现。
+表中不带路径前缀的旧 Python 文件均位于已删除的 `src/image_editing/`；没有保留双份实现。
 
-## 验证进度
+## 最终兼容性检查
 
-- 原 19 项测试迁移并补充协议、CLI、配置和历史记录回归后，42 项测试通过；Ruff 与依赖检查通过。
+- 完整锁定依赖环境：50 项测试通过；独立无 torch 的 CPU 环境：49 项通过、1 项跳过
+  （checkpoint 张量测试，完整环境已执行）。Ruff check / format、`pip check`、shell 语法和仓库卫生检查通过。
 - 已完成新结构下一例真实 Base 推理（512²、50 steps、CFG 4）：23.36 秒，
   峰值 reserved 15.95 GiB；sample `dev_140513_t1` 与旧记录 seed 相同，
   PNG SHA256 完全相同：`890bcd4efb235202410f73ed1f6f1ef0eca52d00bed2c0b35b91755c40c4e614`。
 - 证据留在 worktree 的 `outputs/refactor_validation/base/`，不进入 Git。
-- 完整最终检查和训练兼容性验证将在后续提交更新。
+
+| 功能 | 重构前 | 重构后证据与边界 |
+|---|---|---|
+| 安装与导入 | `src/image_editing` 搜索根 | editable + wheel 均安装通过，仓库外导入/配置/CLI 通过；无 `sys.path` 修改 |
+| CLI | 9 个子命令及原脚本参数 | 对重构前直接采集的默认值快照逐项相等，全部帮助和薄脚本入口通过 |
+| 模型/数据下载 | 固定 revision、分块/续传/哈希 | lock 与传输行为保留，本地 HTTP 字节续传/坏哈希/错误 revision 拒绝测试通过；未重下真实资产 |
+| MagicBrush | first-turn、反向 alpha、几何统一 | 保留；真实 200/30 全集哈希/配对/尺寸/split 检查通过，session/source overlap 均为 0 |
+| 输入与监督隔离 | runner 自行选 source | 独立契约和加载函数；删除 target/mask 后仍能加载输入，oracle 普通推理被拒绝 |
+| Base 推理 | 本地 BF16 常驻，50 steps /CFG 4 | 1 例真实重跑，seed/PNG SHA256 与旧结果完全一致 |
+| LoRA 配方 | flowmatch/sigmoid、AdamW、原 YAML | 配方参数和 CLI 生成测试通过；两步真实训练保存 160 个有限张量，并完成一例同配置重载 |
+| GPU 管理 | 空闲检测、UUID 文件锁、二次检查 | 原实现保留；竞争测试通过，所有真实 GPU 验证经租约启动并正常释放 |
+| 评估与画廊 | MAE/漂移/变化面积、HTML/contact sheet | 复制旧 12 例后重新评估，完整 metrics.json 与旧报告相等；新画廊通过 |
+| 记录格式 | manifest/run/report/status/metrics | 字段结构及错误状态回归通过，旧文件保留；新结果写入独立目录 |
+| 第三方与环境 | 固定源码和命名 Conda | 3 个外部 Git checkout 均无改动；原 Conda editable 安装仍指向原工作区 |
+
+本次未重新执行原定 200 样本上的 20/150-step 完整训练、12 例 LoRA 评估，
+也没有 Static Mask / Role / Qwen 验证。两个 GPU 推理样本和两步训练只验收工程行为。
+
+开发交付位于 `/home/jiangwenhan/project/image-editing-architecture`；原工作区保持用户的
+roadmap 移动状态。该 worktree 的 `.venv` 单独 editable 安装并复用命名 Conda 依赖：
+
+```bash
+cd /home/jiangwenhan/project/image-editing-architecture
+.venv/bin/image-edit --help
+# 编译扩展相关训练继续继承 Conda 编译器环境
+conda run --no-capture-output -n image-edit "$PWD/.venv/bin/python" -m src.training --help
+```
+
+一次性的 CPU 验证环境、wheel 和构建目录已在结束前清理，验证日志/配置/产物保留在
+`outputs/refactor_validation/`。后续先完成完整 Stage 0 基线，再按 conditioning →
+FLUX adapter/训练配置 → 公平消融的顺序开发 Static Mask。
 
 ### 固定训练器的设备兼容修复
 

@@ -30,6 +30,17 @@ def test_identity_reports_unfulfilled_target():
     assert result["target_mae"] == result["identity_target_mae"] == 1
 
 
+def test_masked_drift_and_change_threshold_are_numerically_correct():
+    source = np.zeros((1, 2, 3), dtype=np.float32)
+    target = np.ones_like(source)
+    prediction = np.array([[[1, 1, 1], [0.25, 0.25, 0.25]]], dtype=np.float32)
+    result = metrics(source, target, prediction, np.array([[1.0, 0.0]]), 0.5)
+    assert result["target_mae"] == 0.375
+    assert result["source_drift_mae"] == 0.625
+    assert result["outside_mask_drift_proxy"] == 0.25
+    assert result["changed_area_fraction"] == 0.5
+
+
 def test_seed_is_independent_of_order():
     before = {name: sample_seed(42, name) for name in ["a", "b"]}
     after = {name: sample_seed(42, name) for name in ["b", "a"]}

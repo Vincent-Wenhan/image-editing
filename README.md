@@ -106,6 +106,11 @@ CLI 从这些配置读取默认值，原有命令行覆盖有效。采样默认�
 
 `EditInput` 与 `EditSupervision` 独立，推理只读取 source/instruction；`ControlBundle` 标记控制来源，
 普通推理拒绝 oracle。当前后端仍只实现 Stage 0，无空间控制；Mask/Role/Qwen 的扩展位置已预留为接口。
+
+本次重构验收：完整环境 50 项测试通过；纯 CPU 环境 49 项通过、1 项因未安装 torch 跳过。
+editable/wheel 安装、九个子命令帮助、数据校验、旧 12 例评估均通过；一例 Base 输出与旧结果
+逐字节一致，两步 LoRA 训练与一例重载完成。原定 20/150-step 完整基线仍待单独验收。
+
 `data/`、`models/`、`outputs/`、`external/`、`.venv/` 全部忽略。Git hooks 检查提交信息、代码行数和禁止上传的资产。实验原始日志应留在本地 `outputs/logs/`，一次性文件放 `.tmp/` 并在完成后清理。
 
 所有 GPU 任务使用 `image-edit gpu -- ...`：实时检查占用、利用率和计算进程，再获取 UUID 锁。可用 `--device 2` 指定物理卡，若忙则拒绝；不允许通过直接设置 CUDA 序号绕过检查。锁协调同一用户的本项目任务，共享机器仍需遵循管理员调度。

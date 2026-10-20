@@ -33,7 +33,7 @@ namespaces = false
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-extend-exclude = ["Image_Editing_Preparation_and_InterEdit_Roadmap.md"]
+extend-exclude = ["docs/Image_Editing_Preparation_and_InterEdit_Roadmap.md"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]

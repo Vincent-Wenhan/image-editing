@@ -28,6 +28,15 @@
 - 设备适配的 6 项 CPU stub 测试通过；同样本 50-step LoRA 重载完成，27.08s，峰值 reserved 16.26 GiB。
   `run.json` 的 LoRA SHA256 与保存的 checkpoint 一致；20/150-step 完整验收不计为通过。
 
+## 2026-10-21：架构重构最终验收
+
+- 完整环境 50 项测试通过；独立无 torch CPU 环境 49 项通过、1 项 checkpoint 张量测试按依赖跳过；完整环境执行了该测试。
+- Ruff check/format、依赖检查、九个子命令帮助、薄脚本入口、shell 语法、仓库卫生均通过；editable 和 wheel 安装后从仓库外导入/加载配置/CLI 通过。
+- 只读校验原 200 train /30 dev 数据，跨 split session/source SHA256 交集为 0。复制旧 12 例 Base 产物再评估，metrics.json 与旧报告完全一致；生成了新画廊。
+- Base 一例重跑与旧 PNG 逐字节一致；两步 LoRA 训练、160 个有限张量和一例同配置重载均通过。所有 GPU 操作先检查空闲并获取 UUID 租约。
+- 固定第三方仓库均无源码修改，原模型/数据/实验保留。一次性 CPU 环境、构建/wheel 文件清理；原始验证日志与配置保留在 worktree `outputs/refactor_validation/`。
+- 本次交付是工程重构及设备兼容修复；未运行完整 20/150-step 训练或新的空间控制。下一步先完成完整 Stage 0 基线验收，再进入 Static Mask。
+
 ## 2026-10-20：Stage 0 准备（进行中）
 
 - 初始仓库为空。保留用户原始 roadmap；审阅 starter kit，建立维护中的包和开发规则。
