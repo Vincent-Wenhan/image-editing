@@ -46,6 +46,7 @@ def download_ranges(url, partial, size, connections):
                 "-fLsS",
                 "--retry",
                 "5",
+                "--retry-all-errors",
                 "--connect-timeout",
                 "15",
                 "--max-time",

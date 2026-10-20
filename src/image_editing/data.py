@@ -1,5 +1,6 @@
 """Export a deterministic first-turn subset without changing source geometry."""
 
+import fcntl
 import io
 import json
 import re
@@ -145,7 +146,7 @@ def parquet_rows(info, split, cache):
                 yield from batch.to_pylist()
 
 
-def prepare(args):
+def prepare_locked(args):
     from concurrent.futures import ThreadPoolExecutor
 
     from image_editing.transport import repo_info
@@ -165,7 +166,7 @@ def prepare(args):
         previous = json.loads(state_path.read_text())
         if any(previous[k] != state[k] for k in ("repo_id", "revision", "selection", "requested")):
             raise ValueError("Existing export provenance differs; use a new root")
-    elif root.exists() and any(root.iterdir()):
+    elif any(p.name != ".prepare.lock" for p in root.iterdir()):
         raise ValueError("Existing data has no provenance; use a new root")
     if args.side < 16 or min(args.train, args.dev) < 1:
         raise ValueError("Positive sample counts and side >=16 required")
@@ -199,6 +200,21 @@ def prepare(args):
             future.result()
     write_json(root / "validation.json", validate(root))
     write_json(state_path, state | {"status": "complete"})
+
+
+def prepare(args):
+    root = Path(args.root)
+    root.mkdir(parents=True, exist_ok=True)
+    with (root / ".prepare.lock").open("a+") as lease:
+        try:
+            fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as error:
+            raise RuntimeError(f"Another preparation job is using {root}") from error
+        for split in ("train", "dev"):
+            partial = root / f".{split}.incomplete"
+            if partial.exists():
+                shutil.rmtree(partial)
+        prepare_locked(args)
 
 
 def configure(parser):

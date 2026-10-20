@@ -11,7 +11,7 @@ accelerate==1.12.0
 lycoris-lora==1.8.3
 flatten_json
 oyaml
-tensorboard
+tensorboard==2.21.0
 kornia
 invisible-watermark
 einops
@@ -33,7 +33,7 @@ pytorch_fid
 optimum-quanto==0.2.4
 sentencepiece
 python-slugify
-opencv-python<4.12
+opencv-python==4.11.0.86
 pytorch-wavelets==1.3.0
 matplotlib==3.10.1
 scipy==1.12.0

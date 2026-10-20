@@ -30,6 +30,7 @@ def main():
     os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
     os.environ["NO_ALBUMENTATIONS_UPDATE"] = "1"
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
+    os.environ["WANDB_MODE"] = "disabled"
     os.chdir(trainer)
     sys.path.insert(0, str(trainer))
     import torch
