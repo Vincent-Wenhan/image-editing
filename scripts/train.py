@@ -41,7 +41,8 @@ def main():
 
     # The upstream architecture exposes this class attribute, not a YAML field.
     Flux2Klein4BModel.flux2_klein_te_path = str(root / "models/klein_text_encoder")
-    settings = yaml.safe_load(config.read_text())["config"]["process"][0]
+    configuration = yaml.safe_load(config.read_text())["config"]
+    settings = configuration["process"][0]
     set_seed(settings["train"].get("seed", 42))
     torch.cuda.reset_peak_memory_stats()
     result = dict(
@@ -59,6 +60,22 @@ def main():
         job = get_job(str(config))
         job.run()
         job.cleanup()
+        checkpoint = Path(settings["training_folder"]) / configuration["name"]
+        checkpoint = checkpoint / f"{configuration['name']}.safetensors"
+        from safetensors import safe_open
+
+        with safe_open(checkpoint, framework="pt", device="cpu") as weights:
+            keys = list(weights.keys())
+            if not keys or not any("lora" in key.lower() for key in keys):
+                raise ValueError("Saved checkpoint contains no LoRA tensors")
+            if any(not torch.isfinite(weights.get_tensor(key)).all() for key in keys):
+                raise ValueError("Saved LoRA contains non-finite weights")
+        result.update(
+            checkpoint=str(checkpoint),
+            checkpoint_sha256=sha256(checkpoint),
+            lora_tensors=len(keys),
+            checkpoint_finite=True,
+        )
         result["status"] = "complete"
     except BaseException as error:
         result.update(status="failed", error=repr(error))
