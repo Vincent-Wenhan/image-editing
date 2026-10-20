@@ -8,7 +8,7 @@ import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from image_editing.common import sha256, write_json
+from src.core.io import sha256, write_json
 
 
 def file_matches(path, item):

@@ -1,20 +1,13 @@
-"""Small shared IO and provenance helpers."""
+"""Atomic JSON records, CSV tables and file digests."""
 
 import csv
 import hashlib
-import importlib.metadata
 import json
-import subprocess
-from datetime import datetime
 from pathlib import Path
-from zoneinfo import ZoneInfo
+from typing import Any
 
 
-def now():
-    return datetime.now(ZoneInfo("Asia/Shanghai")).isoformat(timespec="seconds")
-
-
-def write_json(path, value):
+def write_json(path: str | Path, value: Any) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".tmp")
@@ -22,7 +15,7 @@ def write_json(path, value):
     temporary.replace(path)
 
 
-def read_rows(path):
+def read_rows(path: str | Path) -> list[dict[str, str]]:
     with Path(path).open(newline="", encoding="utf-8") as file:
         rows = list(csv.DictReader(file))
     if not rows:
@@ -30,7 +23,7 @@ def read_rows(path):
     return rows
 
 
-def write_rows(path, rows):
+def write_rows(path: str | Path, rows: list[dict]) -> None:
     if not rows:
         raise ValueError("Cannot write an empty manifest")
     path = Path(path)
@@ -41,20 +34,6 @@ def write_rows(path, rows):
         writer.writerows(rows)
 
 
-def sha256(path):
+def sha256(path: str | Path) -> str:
     with Path(path).open("rb") as file:
         return hashlib.file_digest(file, "sha256").hexdigest()
-
-
-def command(args):
-    return subprocess.check_output(args, text=True, timeout=30).strip()
-
-
-def versions():
-    packages = ("torch", "diffusers", "transformers", "peft", "datasets", "huggingface-hub")
-    return {name: importlib.metadata.version(name) for name in packages}
-
-
-def sample_seed(seed, sample_id):
-    digest = hashlib.sha256(sample_id.encode()).digest()
-    return (seed + int.from_bytes(digest[:4], "little")) % (2**32)

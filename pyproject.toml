@@ -18,10 +18,17 @@ dependencies = [
 dev = ["pytest>=8", "ruff>=0.12"]
 
 [project.scripts]
-image-edit = "image_editing.cli:main"
+image-edit = "src.cli:main"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
+include = ["src", "src.*"]
+namespaces = false
+
+[tool.setuptools.data-files]
+"share/image-editing/configs" = ["configs/assets.lock.json", "configs/flux2_edit_lora.yaml"]
+"share/image-editing/configs/datasets" = ["configs/datasets/*.yaml"]
+"share/image-editing/configs/experiments" = ["configs/experiments/*.yaml"]
 
 [tool.ruff]
 line-length = 100

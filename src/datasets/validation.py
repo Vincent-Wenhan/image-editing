@@ -4,10 +4,12 @@ from pathlib import Path
 
 from PIL import Image
 
-from image_editing.common import read_rows, sha256, write_json
+from src.core.config import ProjectSettings
+from src.core.io import read_rows, sha256, write_json
+from src.core.paths import data_path
 
 
-def scan(root, split):
+def scan(root: Path, split: str) -> tuple[list[dict], set[str], set[str], list[float]]:
     rows = read_rows(root / split / "manifest.csv")
     identifiers, sessions, sources = set(), set(), set()
     coverage = []
@@ -18,9 +20,7 @@ def scan(root, split):
         sessions.add(row["source_session"])
         dimensions = (int(row["width"]), int(row["height"]))
         for key in ("source", "target", "mask"):
-            path = (root / row[f"{key}_path"]).resolve()
-            if not path.is_relative_to(root.resolve()):
-                raise ValueError(f"Path escapes data root: {path}")
+            path = data_path(root, row[f"{key}_path"])
             with Image.open(path) as image:
                 image.load()
                 expected_mode = "L" if key == "mask" else "RGB"
@@ -38,7 +38,7 @@ def scan(root, split):
     return rows, sessions, sources, coverage
 
 
-def validate(root):
+def validate(root: str | Path) -> dict:
     root = Path(root)
     train, tr_sessions, tr_sources, tr_coverage = scan(root, "train")
     dev, dv_sessions, dv_sources, dv_coverage = scan(root, "dev")
@@ -63,5 +63,5 @@ def run(args):
 
 
 def configure(parser):
-    parser.add_argument("--root", default="data/magicbrush")
+    parser.add_argument("--root", default=ProjectSettings.load().dataset["root"])
     parser.set_defaults(func=run)

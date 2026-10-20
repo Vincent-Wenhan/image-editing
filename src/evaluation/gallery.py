@@ -7,7 +7,8 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageOps
 
-from image_editing.common import read_rows
+from src.core.config import ProjectSettings
+from src.core.io import read_rows
 
 
 def run(args):
@@ -59,9 +60,10 @@ def run(args):
 
 
 def configure(parser):
-    parser.add_argument("--data-root", default="data/magicbrush")
-    parser.add_argument("--manifest", default="data/magicbrush/dev/manifest.csv")
+    settings = ProjectSettings.load()
+    parser.add_argument("--data-root", default=settings.dataset["root"])
+    parser.add_argument("--manifest", default=settings.manifest)
     parser.add_argument("--predictions")
     parser.add_argument("--output", default="outputs/data_gallery")
-    parser.add_argument("--limit", type=int, default=30)
+    parser.add_argument("--limit", type=int, default=settings.dataset["dev"])
     parser.set_defaults(func=run)

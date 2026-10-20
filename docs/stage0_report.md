@@ -1,6 +1,6 @@
 # Stage 0 状态与复现入口
 
-更新时间：2026-10-21（Asia/Shanghai）。**环境和初始数据已验证；完整 Base 权重仍在下载，真实模型推理/LoRA 训练尚未验收。**
+更新时间：2026-10-21（Asia/Shanghai）。**200/30 数据与完整 Base 权重已准备，旧流程 12 例 Base 推理完成；LoRA debug 在第一步失败，尚无完整训练验收。架构重构已完成模块迁移，正在进行兼容性验收。**
 
 ## 已完成
 
@@ -9,22 +9,27 @@
 - 已在检查为空闲的 RTX A6000 上验证 BF16 matmul、Klein pipeline 导入和 ai-toolkit `ExtensionJob` 配置构建。配置构建不等于 forward/backward 已完成。
 - `data/magicbrush_smoke/`：89 train /30 dev first-turn 样本，两个集合的 session 和 source 图像 SHA256 交集均为 0；图像、指令、尺寸、Mask 与校验和检查通过。
 - 实测并修正 RGBA mask 反向 alpha 语义及 500²→512²、1024²→512² 的配对尺度转换；已检查 30 组 source/target/mask 画廊。
-- 19 项 CPU 测试通过，覆盖数据完整性、泄漏、Mask、GPU 锁、分块/字节续传、重定向和错误校验和拒绝；代码检查通过。自有代码文件均少于 500 行。
+- 重构前 19 项 CPU 测试通过；迁移并补充协议、配置、CLI 和记录测试后 42 项通过。
+- 独立 worktree 内 `pip install -e .`（复用锁定依赖）和 `pip check` 通过；从其他目录导入及九个子命令帮助均通过，帮助和模块导入不加载 torch/CUDA。
+- 新结构下 1 例真实 Base 推理通过，512² /50 steps /CFG 4，与旧样本 PNG SHA256 完全一致；原 12 例结果保留。
 - 已固定外部代码/model/dataset revision，建立 Conventional Commits hooks、仓库资产检查与 CPU CI。
 
 ## 尚未完成的验收
 
 | 项目 | 当前状态 | 证据/入口 |
 |---|---|---|
-| 200 train /30 dev 正式准备子集 | dev 已完成；额外 train 分片下载中 | `data/magicbrush/dataset.json` |
-| Base 全部权重和本地文本编码器链接 | 下载中；完整文件逐个校验 | `models/FLUX.2-klein-base-4B/download.json` 仅在全部完成后生成 |
-| 固定 12 例 Base 编辑推理 | 等待资产 | `outputs/stage0/status.json` |
-| 20-step debug、150-step LoRA、同配置重载 | 等待资产和前序步骤 | 同上 |
+| 200 train /30 dev 正式准备子集 | 已完成 | `data/magicbrush/dataset.json` |
+| Base 全部权重和本地文本编码器链接 | 已完成；复用已有资产 | `models/FLUX.2-klein-base-4B/download.json` |
+| 固定 12 例 Base 编辑推理 | 原流程已完成 | `outputs/stage0/base/run.json` |
+| 20-step debug、150-step LoRA、同配置重载 | debug 在第一步因 VAE 条件 CPU/CUDA 混用失败，后续未执行 | `outputs/stage0/debug_report.json` |
+| 架构重构验收 | 模块迁移、42 测试及 1 例 GPU 推理通过；训练兼容性检查进行中 | [架构文档](architecture.md) |
 | 静态 Mask、动态 Role、Qwen 迁移 | 研究后续阶段，尚未实现 | 原始 roadmap 与 proposal review |
 
 网络存在 SSL 超时、连接重置和大文件 CDN 签名过期；传输使用可续传的 4 MiB 分块，逐次通过稳定 URL 获取重定向，最终验证固定版本的完整文件 SHA256。下载分块数量和下载进程存在都不代表模型已验收。
 
-下载和后续验收已作为独立后台进程启动，进程与日志清单见本地 `outputs/background_jobs.json`；验收状态见 `outputs/stage0/status.json`。它们不会在资产不完整时启动模型任务。训练 VAE 已完成校验；文本编码器直接复用 Base 附带权重。
+旧后台任务已经结束，`outputs/background_jobs.json` 是历史启动清单，不能作为当前进程状态。
+原验收状态见 `outputs/stage0/status.json`，失败记录原样保留。
+重构验证在独立 worktree 的 `outputs/refactor_validation/` 写入新记录。
 
 ## 使用
 

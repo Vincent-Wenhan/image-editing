@@ -1,8 +1,8 @@
 # Local assets and third-party source
-/data/
-/models/
+/data
+/models
 /outputs/
-/external/
+/external
 /.venv*/
 /.cache/
 /.tmp/

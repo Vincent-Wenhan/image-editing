@@ -6,7 +6,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 
-from image_editing.transport import download_file, download_ranges
+from src.infra.transport import download_file, download_ranges
 
 
 @pytest.fixture
@@ -61,7 +61,7 @@ def test_completed_ranges_are_reused(tmp_path, range_server):
 
 
 def test_bad_checksum_does_not_publish_an_asset(tmp_path, range_server, monkeypatch):
-    from image_editing import transport
+    from src.infra import transport
 
     url, payload, _ = range_server
     monkeypatch.setattr(transport, "endpoint", lambda: url.removesuffix("/redirect"))

@@ -5,8 +5,11 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from image_editing.data import align_images, editable_mask, export_rows
-from image_editing.validation import validate
+from src.conditioning.masks import editable_mask
+from src.core.io import read_rows, write_rows
+from src.datasets.export import export_rows
+from src.datasets.images import align_images
+from src.datasets.validation import validate
 
 
 def sample(session, color):
@@ -93,3 +96,36 @@ def test_colored_image_cannot_be_interpreted_as_a_gray_mask():
     image.putpixel((1, 0), (0, 255, 255))
     with pytest.raises(ValueError, match="ambiguous"):
         editable_mask(image)
+
+
+def test_image_checksum_corruption_fails(paired_data):
+    row = read_rows(paired_data / "dev/manifest.csv")[0]
+    Image.new("RGB", (32, 48), "yellow").save(paired_data / row["source_path"])
+    with pytest.raises(ValueError, match="Checksum"):
+        validate(paired_data)
+
+
+@pytest.mark.parametrize("change", ["duplicate", "split", "escape"])
+def test_manifest_identity_split_and_path_guards(paired_data, change):
+    manifest = paired_data / "dev/manifest.csv"
+    rows = read_rows(manifest)
+    if change == "duplicate":
+        rows.append(rows[0].copy())
+    elif change == "split":
+        rows[0]["split"] = "train"
+    else:
+        rows[0]["target_path"] = "../outside.png"
+    write_rows(manifest, rows)
+    with pytest.raises(ValueError):
+        validate(paired_data)
+
+
+def test_threshold_semantics_for_gray_and_alpha_masks():
+    gray = Image.new("L", (2, 1))
+    gray.putdata([127, 128])
+    mask, encoding = editable_mask(gray)
+    assert [mask.getpixel((x, 0)) for x in range(2)] == [0, 255] and encoding == "white_is_edit"
+    rgba = Image.new("RGBA", (2, 1), "blue")
+    rgba.putalpha(gray)
+    mask, encoding = editable_mask(rgba)
+    assert [mask.getpixel((x, 0)) for x in range(2)] == [255, 0] and encoding == "inverse_alpha"

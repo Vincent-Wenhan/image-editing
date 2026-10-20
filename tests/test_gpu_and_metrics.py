@@ -3,9 +3,9 @@
 import numpy as np
 import pytest
 
-from image_editing.common import sample_seed
-from image_editing.evaluation import metrics
-from image_editing.gpu import is_idle, require_lease
+from src.core.random import sample_seed
+from src.evaluation.metrics import metrics
+from src.infra.gpu import is_idle, require_lease
 
 
 @pytest.mark.parametrize("change", [dict(process=True), dict(used=129), dict(utilization=6)])
@@ -43,7 +43,7 @@ def test_launcher_does_not_start_task_on_locked_gpu(tmp_path, monkeypatch):
     import os
     import sys
 
-    from image_editing import gpu
+    from src.infra import gpu
 
     card = dict(
         index=0, uuid="GPU-test", name="test", total=48000, process=False, used=0, utilization=0
@@ -66,7 +66,7 @@ def test_launcher_does_not_start_task_on_locked_gpu(tmp_path, monkeypatch):
 def test_launcher_rechecks_idleness_after_lock(tmp_path, monkeypatch):
     import argparse
 
-    from image_editing import gpu
+    from src.infra import gpu
 
     card = dict(
         index=0, uuid="GPU-test", name="test", total=48000, process=False, used=0, utilization=0

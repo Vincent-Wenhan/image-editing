@@ -1,0 +1,63 @@
+{
+  "gpu": {
+    "device": null,
+    "command": []
+  },
+  "env": {
+    "output": "outputs/environment.json",
+    "cuda": false
+  },
+  "download": {
+    "lock": "configs/assets.lock.json",
+    "asset": "base",
+    "workers": 4,
+    "transport": "hub",
+    "payload_mirror": null
+  },
+  "prepare": {
+    "root": "data/magicbrush",
+    "lock": "configs/assets.lock.json",
+    "train": 200,
+    "dev": 30,
+    "side": 512,
+    "transport": "streaming"
+  },
+  "validate": {
+    "root": "data/magicbrush"
+  },
+  "infer": {
+    "model": "models/FLUX.2-klein-base-4B",
+    "manifest": "data/magicbrush/dev/manifest.csv",
+    "data_root": "data/magicbrush",
+    "output": "outputs/base_inference",
+    "limit": 12,
+    "side": 512,
+    "steps": 50,
+    "guidance": 4.0,
+    "seed": 42,
+    "lora": null
+  },
+  "evaluate": {
+    "data_root": "data/magicbrush",
+    "manifest": "data/magicbrush/dev/manifest.csv",
+    "predictions": "outputs/base_inference",
+    "threshold": 0.05
+  },
+  "train-config": {
+    "template": "configs/flux2_edit_lora.yaml",
+    "data_root": "data/magicbrush",
+    "output_root": "outputs/lora",
+    "name": "flux2_magicbrush_smoke",
+    "steps": 150,
+    "batch_size": 1,
+    "rank": 16,
+    "output": "outputs/configs/flux2_edit_lora.yaml"
+  },
+  "gallery": {
+    "data_root": "data/magicbrush",
+    "manifest": "data/magicbrush/dev/manifest.csv",
+    "predictions": null,
+    "output": "outputs/data_gallery",
+    "limit": 30
+  }
+}

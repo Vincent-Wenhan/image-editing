@@ -10,7 +10,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from image_editing.common import command
+from src.infra.process import command
 
 
 def inventory():

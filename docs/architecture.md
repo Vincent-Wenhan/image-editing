@@ -67,4 +67,122 @@ ai-toolkit 在其根目录下以独立 Python worker 启动，使用正常的 `-
 不改变父进程 cwd/导入路径，不修改第三方文件。GPU 租约、离线加载、commit
 校验、checkpoint 有限性和现有 report 字段继续保留。
 
-最终目录、运行指南、迁移映射及实测结果在实施后补齐。
+## 当前目录
+
+```text
+src/                          # package，不是传统 src-layout 的搜索根
+  __init__.py, __main__.py, cli.py
+  core/                       # types, config, paths, images, io, metadata, random, logging
+  datasets/                   # images, export, magicbrush, manifest, validation
+  conditioning/               # controls（数据契约）, masks（原有 alpha/灰度语义）
+  backends/                   # base（Protocol）, flux2（实际 Diffusers 调用）
+  training/                   # config, launcher, worker, checkpoints, __main__
+  inference/                  # runner
+  evaluation/                 # metrics, evaluate, gallery
+  infra/                      # assets, transport, gpu, environment, process,
+                              # repositories, repository, acceptance
+configs/
+  assets.lock.json            # 模型、数据、第三方 commit；格式不变
+  flux2_edit_lora.yaml         # 完整旧配方；字段和算法不变
+  datasets/magicbrush.yaml    # 输出根和子集数量
+  experiments/stage0.yaml     # 验收预算、选择数量、诊断阈值
+  conda-linux-64.lock         # 现有环境冻结
+scripts/                     # train/run_stage0/check_repo 兼容入口和 bootstrap shell
+tests/                       # CPU 契约、配对、传输、配置、CLI 与记录回归
+docs/, notes/                # 设计、研究边界、实际实验记录
+data/, models/, outputs/, external/  # 本地资产，全部忽略
+```
+
+### 核心数据流
+
+```mermaid
+flowchart LR
+    A[固定 MagicBrush revision] --> B[decode / align / mask alpha]
+    B --> C[atomic export + manifest / SHA256]
+    C --> D[split / session / hash validation]
+    D --> E[source + instruction → EditInput]
+    E --> F[inference runner → EditingBackend]
+    F --> G[PNG + incremental run.json]
+    G --> H[pixel diagnostics / gallery]
+    D --> I[target + paired reference → training recipe]
+    I --> J[leased ai-toolkit worker]
+    J --> K[finite checkpoint + report.json]
+    K --> F
+```
+
+推理流程只调用 `load_edit_input`，不加载 target/mask/oracle 标签。训练器只消费原来的
+`target` + `control_path=reference` 配对，训练目标仍由固定版本的 ai-toolkit 实现。
+target/mask 只在独立监督加载或评估中打开。`ControlKind.ORACLE_ROLE` 数据接口留给
+将来的显式上界实验；当前普通推理和 FLUX 后端拒绝使用。类型边界不能验证未来研究者
+手工标错来源的控制图，新增方法仍需按场景 split 与独立监督通路审查。
+
+训练 worker 继承租约，在外部仓库 cwd 下运行 `python -m src.training.worker`。
+安装的 `src` 包与上游 `toolkit` 通过正常导入规则共存，不依赖 `PYTHONPATH`。
+上游代码只读，checkpoint 和运行报告仍写入配置指定的位置。
+
+### 未来扩展位置
+
+- Static/Dilated/Soft Mask：在 `conditioning` 实现处理，明确图名、顺序、归一化和几何；
+  在 FLUX adapter/训练配方中接入，统一消融预算，不能只在最终 RGB 上混合。
+- Dynamic Role：在 `datasets` 增加合成场景读取、分组 split 和有效区域；
+  在 `conditioning` 加入强度条件预测，`EditSupervision` 单独承载角色真值。
+  实际预测返回 `PREDICTED_ROLE`，oracle 上界使用单独、显式的实验流程。
+- Qwen：在 `backends` 增加独立 adapter，在 `training` 增加对应训练集成；
+  复用外部编辑协议和记录，不复用 FLUX Transformer/latent packing。
+
+这些都是下一阶段位置说明，本次没有实现新控制或训练方法。
+
+## 开发、安装和运行
+
+首先按 README 用新的命名 Conda 环境恢复锁定依赖，再从仓库根执行：
+
+```bash
+pip install -e '.[dev]'
+image-edit --help
+python -m src --help
+python -m ruff check .
+python -m ruff format --check .
+python -m pytest -q
+python scripts/check_repo.py --all
+```
+
+setuptools 显式只发现 `src` 和 `src.*`；wheel 附带运行默认配置，避免安装后找不到 YAML。
+CPU CI 可用 `pip install --no-deps --no-build-isolation -e .`，只安装 NumPy/Pillow/YAML
+和测试工具；torch/safetensors 相关测试按依赖可用性执行，不能算作真实 GPU 验证。
+无需设置 `PYTHONPATH`。`src.datasets` 不会遮蔽 Hugging Face 的顶层 `datasets`。
+
+所有原有 CLI 子命令与默认参数保留。推理 `run.json`、逐图字段、metrics CSV/JSON、
+manifest、下载 marker、训练 report 和 Stage 0 status 的键保持兼容。
+检查旧记录时复制小型记录/预测到新的 `outputs/` 目录再评估，保留旧实验。
+新旧 Python 包路径有意不兼容：旧 `image_editing.*` 导入与 `python -m image_editing`
+改用本文件迁移表；命名环境需要在切换分支后重新 `pip install -e .`。
+
+### 旧文件到新模块
+
+| 原位置 | 新位置 / 职责 |
+|---|---|
+| `common.py` | `core/io.py`, `metadata.py`, `random.py`；命令查询 → `infra/process.py` |
+| `data.py` | `datasets/images.py`, `export.py`, `magicbrush.py`；Mask → `conditioning/masks.py` |
+| `validation.py` | `datasets/validation.py`；安全路径 → `core/paths.py` |
+| `inference.py` | `inference/runner.py` + `backends/flux2.py`；尺寸 → `core/images.py` |
+| `training.py` | `training/config.py` |
+| `scripts/train.py` | `training/launcher.py`, `worker.py`, `checkpoints.py`；原脚本保留为入口 |
+| `evaluation.py` | `evaluation/metrics.py`, `evaluate.py` |
+| `gallery.py` | `evaluation/gallery.py` |
+| `assets.py`, `transport.py` | `infra/assets.py`, `transport.py` |
+| `gpu.py`, `environment.py` | `infra/gpu.py`, `environment.py` |
+| `scripts/run_stage0.py` | `infra/acceptance.py`；原脚本保留为入口 |
+| `scripts/check_repo.py` | `infra/repository.py`；原脚本保留为入口 |
+| setup shell 中的仓库逻辑 | `infra/repositories.py` |
+| `cli.py`, `__main__.py` | `src/cli.py`, `src/__main__.py` |
+
+除 `scripts/` 行外，旧文件均位于已删除的 `src/image_editing/`；没有保留双份实现。
+
+## 验证进度
+
+- 原 19 项测试迁移并补充协议、CLI、配置和历史记录回归后，42 项测试通过；Ruff 与依赖检查通过。
+- 已完成新结构下一例真实 Base 推理（512²、50 steps、CFG 4）：23.36 秒，
+  峰值 reserved 15.95 GiB；sample `dev_140513_t1` 与旧记录 seed 相同，
+  PNG SHA256 完全相同：`890bcd4efb235202410f73ed1f6f1ef0eca52d00bed2c0b35b91755c40c4e614`。
+- 证据留在 worktree 的 `outputs/refactor_validation/base/`，不进入 Git。
+- 完整最终检查和训练兼容性验证将在后续提交更新。

@@ -1,4 +1,4 @@
-"""Pixel diagnostics only: these do not measure semantic success or necessity."""
+"""Evaluate the exact completed subset using the existing metrics file formats."""
 
 import json
 from pathlib import Path
@@ -6,26 +6,9 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from image_editing.common import read_rows, write_json, write_rows
-
-
-def load_image(path, size, mode="RGB"):
-    with Image.open(path) as image:
-        image = image.convert(mode)
-        interpolation = Image.Resampling.NEAREST if mode == "L" else Image.Resampling.LANCZOS
-        return np.asarray(image.resize(size, interpolation), dtype=np.float32) / 255
-
-
-def metrics(source, target, prediction, mask, threshold):
-    drift = np.abs(prediction - source).mean(axis=2)
-    outside = mask < 0.5
-    return dict(
-        target_mae=float(np.abs(prediction - target).mean()),
-        identity_target_mae=float(np.abs(source - target).mean()),
-        changed_area_fraction=float((drift > threshold).mean()),
-        source_drift_mae=float(drift.mean()),
-        outside_mask_drift_proxy=float(drift[outside].mean()) if outside.any() else None,
-    )
+from src.core.config import ProjectSettings
+from src.core.io import read_rows, write_json, write_rows
+from src.evaluation.metrics import load_image, metrics
 
 
 def run(args):
@@ -72,8 +55,11 @@ def run(args):
 
 
 def configure(parser):
-    parser.add_argument("--data-root", default="data/magicbrush")
-    parser.add_argument("--manifest", default="data/magicbrush/dev/manifest.csv")
+    settings = ProjectSettings.load()
+    parser.add_argument("--data-root", default=settings.dataset["root"])
+    parser.add_argument("--manifest", default=settings.manifest)
     parser.add_argument("--predictions", default="outputs/base_inference")
-    parser.add_argument("--threshold", type=float, default=0.05)
+    parser.add_argument(
+        "--threshold", type=float, default=settings.experiment["evaluation_threshold"]
+    )
     parser.set_defaults(func=run)

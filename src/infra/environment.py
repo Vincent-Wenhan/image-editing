@@ -5,8 +5,10 @@ import shutil
 import sys
 from pathlib import Path
 
-from image_editing.common import command, now, versions, write_json
-from image_editing.gpu import inventory, require_lease
+from src.core.io import write_json
+from src.core.metadata import now, versions
+from src.infra.gpu import inventory, require_lease
+from src.infra.process import command
 
 
 def run(args):

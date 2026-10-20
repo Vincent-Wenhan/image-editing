@@ -17,6 +17,7 @@
 ```bash
 bash scripts/setup_environment.sh
 conda activate image-edit
+pip install -e '.[dev]'
 # 仅当官方站点不可达时使用镜像；不写入系统配置。
 export HF_ENDPOINT=https://hf-mirror.com
 export HF_HUB_DISABLE_XET=1
@@ -70,20 +71,38 @@ image-edit gpu -- image-edit infer --lora outputs/lora/flux2_magicbrush_smoke/fl
 
 训练 wrapper 校验上游 commit，将上游公开 class attribute 指向本地 Qwen3 权重，并强制离线加载；不修改外部仓库。短训练只验收 forward/backward/checkpoint/reload，不能预设质量提升。
 
+`python scripts/train.py ...` 保持兼容，也可使用 `python -m src.training ...`。
+训练器在自己的目录中通过独立 worker 导入，父进程的导入路径与工作目录保持稳定。
+
 也可运行 `python scripts/run_stage0.py --output outputs/stage0_new_run`，等待固定资产准备完成后自动执行上述工程验收；状态写入该目录的 `status.json`。每次 GPU 启动仍会检查空闲卡，下载等待阶段不占用 GPU。新验收使用新的输出目录。
 
 ## 开发与目录
 
 ```bash
-ruff check .
-ruff format --check .
-pytest -q
+pip install -e '.[dev]'
+python -m ruff check .
+python -m ruff format --check .
+python -m pytest -q
+image-edit --help
+python scripts/check_repo.py --all
 git add <本次改动>
 git commit -m "feat(scope): concise description"
 git push
 ```
 
-`src/image_editing/` 放公共实现，`scripts/` 放环境和上游训练入口，`configs/` 放可审查配方；`docs/` 和 `notes/` 跟踪设计与实验。
+`src/` 本身是 Python package，使用 `src.xxx` 绝对导入；模块入口为 `python -m src`。
+`src/core/` 管理数据契约、配置与记录；`datasets/` 管理数据，`conditioning/` 管理控制图契约；
+`backends/` 封装 FLUX.2，`inference/` 与 `training/` 组织执行，`evaluation/` 评估与可视化，
+`infra/` 管理下载、GPU 和环境。`scripts/` 保留轻量兼容入口。
+完整目录、依赖、数据流、旧新映射和扩展指南见 [architecture.md](docs/architecture.md)。
+
+配置分为 `configs/assets.lock.json`（模型/数据 revision）、`configs/datasets/`（数据选择）、
+`configs/experiments/`（验收预算）和原有 `configs/flux2_edit_lora.yaml`（完整训练配方）。
+CLI 从这些配置读取默认值，原有命令行覆盖有效。采样默认值复用配方的 `sample`，不在 Python/shell 中另写一份。
+从仓库根执行默认命令；在其他目录使用已安装的 CLI 时，显式传入数据、模型和模板路径。
+
+`EditInput` 与 `EditSupervision` 独立，推理只读取 source/instruction；`ControlBundle` 标记控制来源，
+普通推理拒绝 oracle。当前后端仍只实现 Stage 0，无空间控制；Mask/Role/Qwen 的扩展位置已预留为接口。
 `data/`、`models/`、`outputs/`、`external/`、`.venv/` 全部忽略。Git hooks 检查提交信息、代码行数和禁止上传的资产。实验原始日志应留在本地 `outputs/logs/`，一次性文件放 `.tmp/` 并在完成后清理。
 
 所有 GPU 任务使用 `image-edit gpu -- ...`：实时检查占用、利用率和计算进程，再获取 UUID 锁。可用 `--device 2` 指定物理卡，若忙则拒绝；不允许通过直接设置 CUDA 序号绕过检查。锁协调同一用户的本项目任务，共享机器仍需遵循管理员调度。

@@ -1,17 +1,18 @@
 """Download only locked assets; keep all weights outside Git."""
 
-import json
 from concurrent.futures import ThreadPoolExecutor
 from fnmatch import fnmatch
 from pathlib import Path
 
-from image_editing.common import now, write_json
+from src.core.config import load_assets
+from src.core.io import write_json
+from src.core.metadata import now
 
 
 def run(args):
     from huggingface_hub import snapshot_download
 
-    lock = json.loads(Path(args.lock).read_text())
+    lock = load_assets(args.lock)
     selected = [args.asset] if args.asset != "all" else list(lock["models"])
     for name in selected:
         asset = lock["models"][name]
@@ -28,7 +29,7 @@ def run(args):
                         if not target.exists():
                             target.symlink_to(source.resolve())
         elif args.transport == "ranges":
-            from image_editing.transport import download_file, repo_info
+            from src.infra.transport import download_file, repo_info
 
             info = repo_info(asset["repo_id"], asset["revision"])
             items = [
