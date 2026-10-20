@@ -73,6 +73,9 @@ image-edit gpu -- image-edit infer --lora outputs/lora/flux2_magicbrush_smoke/fl
 
 `python scripts/train.py ...` 保持兼容，也可使用 `python -m src.training ...`。
 训练器在自己的目录中通过独立 worker 导入，父进程的导入路径与工作目录保持稳定。
+固定训练器在缓存后把 VAE 留在 CPU；本地适配在 reference 编码前恢复其设备，
+保留原 dtype、forward 和 loss。已通过两步真实训练、checkpoint 有限性检查与一例 LoRA 重载推理，
+这不代表原定 20/150-step 全量基线已完成。
 
 也可运行 `python scripts/run_stage0.py --output outputs/stage0_new_run`，等待固定资产准备完成后自动执行上述工程验收；状态写入该目录的 `status.json`。每次 GPU 启动仍会检查空闲卡，下载等待阶段不占用 GPU。新验收使用新的输出目录。
 

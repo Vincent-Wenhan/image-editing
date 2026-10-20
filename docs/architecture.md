@@ -186,3 +186,17 @@ manifest、下载 marker、训练 report 和 Stage 0 status 的键保持兼容�
   PNG SHA256 完全相同：`890bcd4efb235202410f73ed1f6f1ef0eca52d00bed2c0b35b91755c40c4e614`。
 - 证据留在 worktree 的 `outputs/refactor_validation/base/`，不进入 Git。
 - 完整最终检查和训练兼容性验证将在后续提交更新。
+
+### 固定训练器的设备兼容修复
+
+旧运行的错误发生在固定 ai-toolkit `flux2_model.py:415`：主 latent 在 CUDA，
+reference 编码结果在 CPU。其缓存流程主动卸载 VAE 到 CPU，随后 FLUX 在
+`get_noise_prediction` 仍调用 VAE 编码原始 reference，造成跨设备拼接。
+本次在自有 `training/flux2_compat.py` 对固定 Klein 类的公开调用边界做小型适配：
+存在 reference 时，将 VAE 放回当前 latent 的 device，再委托原方法。
+仅调整设备放置，不改 tensor 数值转换、flow loss、采样或任何网络结构；保留原 dtype。
+适配只在校验固定 commit 后安装，不写入第三方文件。6 项 CPU stub 测试检查条件与调用
+透传；已在复制出的 8 train /2 dev 小数据目录运行两步 batch 2 训练，保存 160 个有限
+LoRA 张量，训练含加载/缓存共 72.25s，峰值 reserved 15.04 GiB。
+同样本 50-step LoRA 重载通过：27.08s，峰值 reserved 16.26 GiB。
+原 20/150-step 失败记录保留，完整预算验收未重跑。

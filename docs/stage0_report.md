@@ -22,7 +22,7 @@
 | Base 全部权重和本地文本编码器链接 | 已完成；复用已有资产 | `models/FLUX.2-klein-base-4B/download.json` |
 | 固定 12 例 Base 编辑推理 | 原流程已完成 | `outputs/stage0/base/run.json` |
 | 20-step debug、150-step LoRA、同配置重载 | debug 在第一步因 VAE 条件 CPU/CUDA 混用失败，后续未执行 | `outputs/stage0/debug_report.json` |
-| 架构重构验收 | 模块迁移、42 测试及 1 例 GPU 推理通过；训练兼容性检查进行中 | [架构文档](architecture.md) |
+| 架构重构验收 | 原 42 测试和 6 个设备适配测试通过；1 例 Base、两步训练及 1 例 LoRA 重载通过，最终安装/兼容审计待汇总 | [架构文档](architecture.md) |
 | 静态 Mask、动态 Role、Qwen 迁移 | 研究后续阶段，尚未实现 | 原始 roadmap 与 proposal review |
 
 网络存在 SSL 超时、连接重置和大文件 CDN 签名过期；传输使用可续传的 4 MiB 分块，逐次通过稳定 URL 获取重定向，最终验证固定版本的完整文件 SHA256。下载分块数量和下载进程存在都不代表模型已验收。

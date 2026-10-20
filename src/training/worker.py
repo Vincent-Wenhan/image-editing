@@ -6,11 +6,13 @@ import os
 import time
 from pathlib import Path
 
+from src.core.config import ProjectSettings
 from src.core.io import sha256, write_json
 from src.core.metadata import now, versions
 from src.infra.gpu import require_lease
 from src.infra.process import command
 from src.training.checkpoints import validate_checkpoint
+from src.training.flux2_compat import configure_flux2_trainer
 
 
 def main():
@@ -42,11 +44,10 @@ def main():
     from extensions_built_in.diffusion_models.flux2.flux2_klein_model import Flux2Klein4BModel
     from toolkit.job import get_job
 
-    # The upstream architecture exposes this class attribute, not a YAML field.
-    Flux2Klein4BModel.flux2_klein_te_path = str(root / "models/klein_text_encoder")
+    configure_flux2_trainer(Flux2Klein4BModel, root / lock["models"]["training_text"]["path"])
     configuration = yaml.safe_load(config.read_text())["config"]
     settings = configuration["process"][0]
-    set_seed(settings["train"].get("seed", 42))
+    set_seed(settings["train"].get("seed", ProjectSettings.load().process["train"]["seed"]))
     torch.cuda.reset_peak_memory_stats()
     result = dict(
         created=now(),
