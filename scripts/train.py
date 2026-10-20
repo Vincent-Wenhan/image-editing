@@ -37,7 +37,7 @@ def main():
     from toolkit.job import get_job
 
     # The upstream architecture exposes this class attribute, not a YAML field.
-    Flux2Klein4BModel.flux2_klein_te_path = str(root / "models/Qwen3-4B")
+    Flux2Klein4BModel.flux2_klein_te_path = str(root / "models/klein_text_encoder")
     torch.manual_seed(42)
     torch.cuda.reset_peak_memory_stats()
     result = dict(

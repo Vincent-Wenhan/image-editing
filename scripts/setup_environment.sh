@@ -2,11 +2,14 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-# Reuse the project environment; never alter other projects or the NVIDIA driver.
-if [[ ! -x .venv/bin/python ]]; then
-  conda create --prefix "$PWD/.venv" python=3.11 pip -y
+# Keep this project isolated from base and all other project environments.
+if ! conda env list --json | python3 -c 'import json,sys; from pathlib import Path; sys.exit(not any(Path(p).name == "image-edit" for p in json.load(sys.stdin)["envs"]))'; then
+  conda create -n image-edit python=3.11 pip -y
 fi
-.venv/bin/python -m pip install uv
+PROJECT_PYTHON=$(conda run -n image-edit python -c 'import sys; print(sys.executable)')
+"$PROJECT_PYTHON" -m pip install uv
+export UV_HTTP_TIMEOUT="${UV_HTTP_TIMEOUT:-120}"
+export UV_CONCURRENT_DOWNLOADS="${UV_CONCURRENT_DOWNLOADS:-4}"
 
 python3 - <<'PY'
 import json
@@ -31,11 +34,14 @@ for name, repo in repositories.items():
 PY
 
 if [[ -f requirements.lock ]]; then
-  .venv/bin/uv pip install --python .venv/bin/python -r requirements.lock
+  "$PROJECT_PYTHON" -m uv pip install --python "$PROJECT_PYTHON" -r requirements.lock
 else
-  .venv/bin/uv pip install --python .venv/bin/python -r requirements-train.in
-  .venv/bin/uv pip install --python .venv/bin/python ./external/diffusers -e '.[dev]'
+  "$PROJECT_PYTHON" -m uv pip install --python "$PROJECT_PYTHON" \
+    torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 \
+    --index-url https://download.pytorch.org/whl/cu118
+  "$PROJECT_PYTHON" -m uv pip install --python "$PROJECT_PYTHON" -r requirements-train.in
+  "$PROJECT_PYTHON" -m uv pip install --python "$PROJECT_PYTHON" ./external/diffusers -e '.[dev]'
 fi
-.venv/bin/uv pip install --python .venv/bin/python --no-deps -e .
-.venv/bin/python -m pip check
+"$PROJECT_PYTHON" -m uv pip install --python "$PROJECT_PYTHON" --no-deps -e .
+"$PROJECT_PYTHON" -m pip check
 git config core.hooksPath .githooks

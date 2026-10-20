@@ -31,18 +31,18 @@ CODE_SUFFIXES = {".py", ".sh", ".js", ".ts", ".tsx", ".jsx"}
 
 
 def main():
-    if len(sys.argv) > 1:
+    check_all = "--all" in sys.argv
+    if len(sys.argv) > 1 and not check_all:
         subject = Path(sys.argv[1]).read_text().splitlines()[0]
         if not SUBJECT.fullmatch(subject):
             raise SystemExit("Use Conventional Commits: type(scope): description")
         return
-    paths = (
-        subprocess.check_output(
-            ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR", "-z"]
-        )
-        .decode()
-        .split("\0")
+    command = (
+        ["git", "ls-files", "-z"]
+        if check_all
+        else ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR", "-z"]
     )
+    paths = subprocess.check_output(command).decode().split("\0")
     errors = []
     for name in filter(None, paths):
         path = Path(name)

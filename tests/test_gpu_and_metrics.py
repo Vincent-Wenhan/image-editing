@@ -35,3 +35,44 @@ def test_seed_is_independent_of_order():
     after = {name: sample_seed(42, name) for name in ["b", "a"]}
     assert before == after
     assert before["a"] != before["b"]
+
+
+def test_launcher_does_not_start_task_on_locked_gpu(tmp_path, monkeypatch):
+    import argparse
+    import fcntl
+    import os
+    import sys
+
+    from image_editing import gpu
+
+    card = dict(
+        index=0, uuid="GPU-test", name="test", total=48000, process=False, used=0, utilization=0
+    )
+    monkeypatch.setattr(gpu, "inventory", lambda: [card])
+    monkeypatch.setattr(gpu.tempfile, "gettempdir", lambda: str(tmp_path))
+    root = tmp_path / f"image-edit-gpu-{os.getuid()}"
+    root.mkdir()
+    marker = tmp_path / "should-not-exist"
+    args = argparse.Namespace(
+        device=None, command=[sys.executable, "-c", f"open({str(marker)!r}, 'w').close()"]
+    )
+    with (root / "GPU-test.lock").open("a+") as lease:
+        fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        with pytest.raises(RuntimeError, match="No idle, unlocked"):
+            gpu.run(args)
+    assert not marker.exists()
+
+
+def test_launcher_rechecks_idleness_after_lock(tmp_path, monkeypatch):
+    import argparse
+
+    from image_editing import gpu
+
+    card = dict(
+        index=0, uuid="GPU-test", name="test", total=48000, process=False, used=0, utilization=0
+    )
+    responses = iter([[card], [card | {"process": True}]])
+    monkeypatch.setattr(gpu, "inventory", lambda: next(responses))
+    monkeypatch.setattr(gpu.tempfile, "gettempdir", lambda: str(tmp_path))
+    with pytest.raises(RuntimeError, match="No idle, unlocked"):
+        gpu.run(argparse.Namespace(device=None, command=["must-not-run"]))

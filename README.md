@@ -10,11 +10,11 @@
 
 ## 环境与资产
 
-从项目根目录执行，Python 3.11。服务器驱动为 535，固定 PyTorch 2.7.1 / CUDA 12.6 的兼容组合，实际运行状态以实验记录为准。
+从项目根目录执行，Python 3.11。服务器驱动为 535，使用已通过 BF16 CUDA 运算检查的 PyTorch 2.6.0 / CUDA 11.8，实际实验状态以实验记录为准。
 
 ```bash
 bash scripts/setup_environment.sh
-export PATH="$PWD/.venv/bin:$PATH"
+conda activate image-edit
 # 仅当官方站点不可达时使用镜像；不写入系统配置。
 export HF_ENDPOINT=https://hf-mirror.com
 export HF_HUB_DISABLE_XET=1
@@ -28,7 +28,16 @@ image-edit gpu -- image-edit env --cuda
 
 下载固定 revision 见 [assets.lock.json](configs/assets.lock.json)。`base` 同时包含 Diffusers 与 BFL 原格式，后者供 ai-toolkit 使用；`training_text` 是 Klein 的 Qwen3 文本编码器，`training_vae` 是训练器需要的 VAE，不是第二阶段 Qwen-Image-Edit 模型。
 
-MagicBrush 使用官方 train/dev、每个会话的第一轮，固定上游顺序；不接触 test。保持原尺寸，训练框架负责 bucket，推理按比例调整为 16 倍数。导出保存样本身份、指令、尺寸及 SHA256，严格检查配对和跨 split 泄漏。重复执行仅复用通过校验且 revision/数量一致的完整 split。
+`training_text` 通过本地链接复用 Base 附带的 Qwen3 权重和 tokenizer，不重复下载另一份文本模型。网络不稳定时可使用经过 SHA256 校验的分块下载：
+
+```bash
+image-edit download --asset all --transport ranges --payload-mirror modelscope
+image-edit prepare --transport shards
+```
+
+ModelScope 只作为 Base 权重的传输镜像；每个权重必须匹配 Hugging Face 固定 revision 的 SHA256。数据只下载满足样本数所需的前几个 parquet 分片，并保留在本地 `data/raw/`。
+
+MagicBrush 使用官方 train/dev、每个会话的第一轮，固定上游顺序；不接触 test。实际 source 为 500×500，target/mask 为 1024×1024；先检查宽高比，再统一长边 512。RGBA mask 用反向 alpha 提取编辑区，普通灰度 mask 才使用白色区域。导出保存原始与输出尺寸、mask 编码、样本身份、指令及 SHA256，严格检查配对和跨 split 泄漏。重复执行仅复用通过校验且 revision/数量/预处理一致的完整 split。
 
 ## 基线推理与诊断
 
