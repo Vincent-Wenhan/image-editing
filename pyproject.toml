@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Reproducible FLUX.2 Klein editing baselines and spatial-control research"
 requires-python = ">=3.11,<3.13"
 dependencies = [
-  "torch>=2.7,<2.8", "diffusers>=0.36", "transformers>=4.57,<5",
+  "torch>=2.7,<2.8", "diffusers==0.37.0", "transformers>=4.57,<5",
   "accelerate>=1.10", "peft>=0.17", "huggingface-hub>=0.36,<1",
   "datasets>=4,<5", "safetensors>=0.6", "Pillow>=11", "numpy<2",
   "PyYAML>=6", "sentencepiece>=0.2", "pyarrow==19.0.1", "pandas<3",

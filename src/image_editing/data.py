@@ -8,7 +8,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from image_editing.common import now, sha256, write_json, write_rows
+from image_editing.common import now, read_rows, sha256, write_json, write_rows
 
 
 def as_image(value):
@@ -97,9 +97,27 @@ def run(args):
         selection="first turn; fixed upstream order",
         requested={"train": args.train, "dev": args.dev},
     )
+    state_path = root / "dataset.json"
+    if state_path.exists():
+        previous = json.loads(state_path.read_text())
+        for key in ("repo_id", "revision", "selection", "requested"):
+            if previous[key] != metadata[key]:
+                raise ValueError(f"Existing dataset has different {key}; use a new root")
+    elif root.exists() and any(root.iterdir()):
+        raise ValueError("Existing data has no provenance; use a new export root")
+    write_json(state_path, dict(metadata, status="running"))
     for split, count in (("train", args.train), ("dev", args.dev)):
         if count <= 0:
             raise ValueError("Both train and dev counts must be positive")
+        manifest = root / split / "manifest.csv"
+        if manifest.exists():
+            from image_editing.validation import scan
+
+            scan(root, split)
+            if len(read_rows(manifest)) != count:
+                raise ValueError(f"Existing {split} has an unexpected sample count")
+            print(f"Reusing verified {split} export", flush=True)
+            continue
         rows = load_dataset(
             lock["repo_id"],
             revision=lock["revision"],
@@ -110,10 +128,10 @@ def run(args):
         for column in ("source_img", "target_img", "mask_img"):
             rows = rows.cast_column(column, DatasetImage(decode=False))
         export_rows(rows, root, split, count)
-    write_json(root / "dataset.json", metadata)
     from image_editing.validation import validate
 
     write_json(root / "validation.json", validate(root))
+    write_json(state_path, dict(metadata, status="complete"))
 
 
 def configure(parser):
