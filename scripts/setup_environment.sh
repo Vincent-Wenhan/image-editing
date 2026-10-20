@@ -4,9 +4,15 @@ cd "$(dirname "$0")/.."
 
 # Keep this project isolated from base and all other project environments.
 if ! conda env list --json | python3 -c 'import json,sys; from pathlib import Path; sys.exit(not any(Path(p).name == "image-edit" for p in json.load(sys.stdin)["envs"]))'; then
-  conda create -n image-edit python=3.11 pip gcc_linux-64 gxx_linux-64 -y
+  if [[ -f configs/conda-linux-64.lock ]]; then
+    conda create -n image-edit --file configs/conda-linux-64.lock -y
+  else
+    conda env create -f environment.yml
+  fi
 fi
-conda install -n image-edit gcc_linux-64 gxx_linux-64 -y
+if ! conda run -n image-edit sh -c 'test -n "${CC:-}" && test -x "$CC"'; then
+  conda install -n image-edit gcc_linux-64 gxx_linux-64 -y
+fi
 PROJECT_PYTHON=$(conda run -n image-edit python -c 'import sys; print(sys.executable)')
 "$PROJECT_PYTHON" -m pip install uv
 export UV_HTTP_TIMEOUT="${UV_HTTP_TIMEOUT:-120}"
