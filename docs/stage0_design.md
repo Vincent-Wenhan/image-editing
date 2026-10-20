@@ -15,8 +15,8 @@
 
 - `data/magicbrush/{train,dev}/{reference,target,mask}`，target 中同名 `.txt` 为指令。
 - manifest 保留原始 session、turn、split、尺寸、文件路径与 SHA256；仅按固定 revision 顺序选取 first-turn 样本。
-- 保留原始几何与 mask 值，推理时统一缩放到 512 边长的 16 倍数尺寸；禁止源图、目标和 mask 独立裁剪。Mask 使用最近邻，不使用 kit 原来的 Lanczos。
-- 明确检查 mask 的 alpha / 黑白方向；导出白色为允许编辑区域，并记录实际源编码。缺文件、尺寸错位、重复 ID、空指令和跨 split 会话泄漏必须失败。
+- 实测源图 500×500、目标/Mask 1024×1024；核对宽高比后统一到长边 512 的 16 倍数尺寸，保留原尺寸记录；禁止独立裁剪。Mask 使用最近邻，不使用 kit 原来的 Lanczos。宽高比不一致必须失败。
+- 实测 RGBA mask 的透明区为编辑区域：取反 alpha 并在 128 阈值二值化；普通灰度 mask 才按白色为编辑区处理。导出白色为允许编辑区域，记录实际编码。缺文件、重复 ID、空指令和跨 split 会话泄漏必须失败。
 - 输出目录不可静默覆盖；不把不足指定数量或缺少预测的评估报告为完整通过。
 
 ## 推理与训练

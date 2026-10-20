@@ -29,6 +29,7 @@ Static / Dilated / Soft / Predicted Role 使用同一 backbone、原始提示、
 - [官方 Edit LoRA 指南](https://huggingface.co/blog/black-forest-labs/flux-2-klein-lora) 的成对 source/target + `control_path` 与计划一致。当前训练器主分支依赖已经变化，因此固定可用 commit，不直接执行不带版本的 `pip install -U`。
 - [MagicBrush 数据卡](https://huggingface.co/datasets/osunlp/MagicBrush) 定义白色 mask 为编辑区；它提供 8,807 train、528 dev、1,053 test 编辑步骤。首阶段只取 train/dev 的 first-turn 子集；按顺序取样仅用于工程 smoke，不作为无偏正式 benchmark。
 - 原 kit 会对 mask 使用 Lanczos、在校验中放过缺失 mask、在预测缺失/尺寸不符时跳过、按运行顺序派生 seed，并生成未验证 YAML。新实现改为严格校验、按样本 ID 固定 seed、固定 revision、保存运行状态与显存/耗时。
+- **真实分片核验补充：** 该 revision 的首个 train 分片中，source 为 500×500，target/mask 为 1024×1024；mask 为带擦除透明区的 RGBA 原图，RGB 通道仍含场景内容。必须使用 `alpha < 128` 提取编辑区，再按最近邻缩放。数据卡的“白色编辑区”不能直接理解成原始 RGBA 图转灰度；kit 的 `convert('L')` 在这里会生成错误空间标签。已抽查前 30 个编辑对并加入回归测试。
 - kit 的示例数据仅证明目录结构，不能代替真实 MagicBrush 运行。归档 zip 不作为可执行代码分支上传；只保留维护中的模块实现。
 - 实机为 **8× RTX A6000 48GB**，并非 A6000 40GB；驱动 535.230.02。先验证单卡 BF16 和 batch，再提高有效 GPU 使用率。
 

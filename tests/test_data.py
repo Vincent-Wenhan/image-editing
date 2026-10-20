@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from image_editing.data import export_rows
+from image_editing.data import align_images, editable_mask, export_rows
 from image_editing.validation import validate
 
 
@@ -64,3 +64,32 @@ def test_failed_export_cleans_partial_and_preserves_existing(tmp_path):
     export_rows([sample("1", "blue")], tmp_path, "train", 1)
     with pytest.raises(FileExistsError):
         export_rows([sample("2", "green")], tmp_path, "train", 1)
+
+
+def test_magicbrush_transparency_and_different_native_resolutions():
+    source = Image.new("RGB", (500, 500), "blue")
+    target = Image.new("RGB", (1024, 1024), "red")
+    mask = Image.new("RGBA", (1024, 1024), (100, 200, 50, 255))
+    mask.paste((0, 0, 0, 0), (256, 256, 768, 768))
+    src, tgt, editable, encoding = align_images(source, target, mask, side=512)
+    assert src.size == tgt.size == editable.size == (512, 512)
+    assert encoding == "inverse_alpha"
+    assert editable.getpixel((256, 256)) == 255
+    assert editable.getpixel((0, 0)) == 0
+    assert {index for index, count in enumerate(editable.histogram()) if count} == {0, 255}
+
+
+def test_misaligned_aspect_ratios_are_rejected():
+    with pytest.raises(ValueError, match="aspect ratios"):
+        align_images(
+            Image.new("RGB", (500, 400)),
+            Image.new("RGB", (1024, 1024)),
+            Image.new("L", (1024, 1024)),
+        )
+
+
+def test_colored_image_cannot_be_interpreted_as_a_gray_mask():
+    image = Image.new("RGB", (2, 1), "red")
+    image.putpixel((1, 0), (0, 255, 255))
+    with pytest.raises(ValueError, match="ambiguous"):
+        editable_mask(image)

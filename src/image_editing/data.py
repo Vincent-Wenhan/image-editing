@@ -6,9 +6,9 @@ import re
 import shutil
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageChops
 
-from image_editing.common import now, read_rows, sha256, write_json, write_rows
+from image_editing.common import now, sha256, write_json, write_rows
 
 
 def as_image(value):
@@ -21,7 +21,30 @@ def as_image(value):
     raise TypeError(f"Unsupported image value: {type(value)}")
 
 
-def export_rows(rows, root, split, count):
+def editable_mask(mask):
+    if "A" in mask.getbands():
+        return mask.getchannel("A").point(lambda value: 255 if value < 128 else 0), "inverse_alpha"
+    red, green, blue = mask.convert("RGB").split()
+    if ImageChops.difference(red, green).getbbox() or ImageChops.difference(red, blue).getbbox():
+        raise ValueError("Colored mask without alpha has ambiguous edit semantics")
+    return mask.convert("L").point(lambda value: 255 if value >= 128 else 0), "white_is_edit"
+
+
+def align_images(source, target, mask, side=None):
+    ratio = source.width / source.height
+    if any(abs(image.width / image.height - ratio) > 0.001 for image in (target, mask)):
+        raise ValueError("Different image aspect ratios; cannot safely align this pair")
+    size = source.size
+    if side:
+        scale = side / max(size)
+        size = tuple(max(16, round(value * scale / 16) * 16) for value in size)
+    source = source.convert("RGB").resize(size, Image.Resampling.LANCZOS)
+    target = target.convert("RGB").resize(size, Image.Resampling.LANCZOS)
+    mask, encoding = editable_mask(mask)
+    return source, target, mask.resize(size, Image.Resampling.NEAREST), encoding
+
+
+def export_rows(rows, root, split, count, side=None):
     if split not in {"train", "dev"} or count < 1:
         raise ValueError("Use train/dev and a positive count")
     root = Path(root)
@@ -45,10 +68,12 @@ def export_rows(rows, root, split, count):
             source, target, mask = [
                 as_image(row[k]) for k in ("source_img", "target_img", "mask_img")
             ]
-            if not source.size == target.size == mask.size:
-                raise ValueError(f"Unaligned images: {session}")
-            # The official MagicBrush card defines WHITE as the edit region.
-            # Keep native geometry and record the source mode to audit mask semantics.
+            original_sizes = {
+                f"{key}_original_size": f"{image.width}x{image.height}"
+                for key, image in (("source", source), ("target", target), ("mask", mask))
+            }
+            original_mode = mask.mode
+            source, target, mask, encoding = align_images(source, target, mask, side)
             stem = f"{split}_{session}_t{turn}"
             record = dict(
                 id=stem,
@@ -58,7 +83,9 @@ def export_rows(rows, root, split, count):
                 instruction=instruction,
                 width=source.width,
                 height=source.height,
-                mask_original_mode=mask.mode,
+                mask_original_mode=original_mode,
+                mask_encoding=encoding,
+                **original_sizes,
             )
             for folder, key, image in [
                 ("reference", "source", source.convert("RGB")),
@@ -85,53 +112,93 @@ def export_rows(rows, root, split, count):
     return manifest
 
 
-def run(args):
+def streaming_rows(lock, split):
     from datasets import Image as DatasetImage
     from datasets import load_dataset
 
+    rows = load_dataset(
+        lock["repo_id"],
+        revision=lock["revision"],
+        split=split,
+        data_files={split: f"data/{split}-*.parquet"},
+        streaming=True,
+    )
+    for column in ("source_img", "target_img", "mask_img"):
+        rows = rows.cast_column(column, DatasetImage(decode=False))
+    yield from rows
+
+
+def parquet_rows(info, split, cache):
+    """Download only the successive shards needed to satisfy the subset count."""
+    import pyarrow.parquet as parquet
+
+    from image_editing.transport import download_file
+
+    files = sorted(
+        (item for item in info["siblings"] if item["rfilename"].startswith(f"data/{split}-")),
+        key=lambda item: item["rfilename"],
+    )
+    for item in files:
+        path = download_file(info["id"], info["sha"], item, cache, repo_type="dataset")
+        with parquet.ParquetFile(path) as shard:
+            for batch in shard.iter_batches(batch_size=16):
+                yield from batch.to_pylist()
+
+
+def prepare(args):
+    from concurrent.futures import ThreadPoolExecutor
+
+    from image_editing.transport import repo_info
+    from image_editing.validation import scan, validate
+
     lock = json.loads(Path(args.lock).read_text())["dataset"]
     root = Path(args.root)
-    metadata = dict(
+    state = dict(
         lock,
-        created=now(),
         selection="first turn; fixed upstream order",
         requested={"train": args.train, "dev": args.dev},
+        side=args.side,
+        mask_policy="inverse_alpha_or_white_binary",
     )
     state_path = root / "dataset.json"
     if state_path.exists():
         previous = json.loads(state_path.read_text())
-        for key in ("repo_id", "revision", "selection", "requested"):
-            if previous[key] != metadata[key]:
-                raise ValueError(f"Existing dataset has different {key}; use a new root")
+        if any(previous[k] != state[k] for k in ("repo_id", "revision", "selection", "requested")):
+            raise ValueError("Existing export provenance differs; use a new root")
     elif root.exists() and any(root.iterdir()):
-        raise ValueError("Existing data has no provenance; use a new export root")
-    write_json(state_path, dict(metadata, status="running"))
-    for split, count in (("train", args.train), ("dev", args.dev)):
-        if count <= 0:
-            raise ValueError("Both train and dev counts must be positive")
-        manifest = root / split / "manifest.csv"
-        if manifest.exists():
-            from image_editing.validation import scan
+        raise ValueError("Existing data has no provenance; use a new root")
+    if args.side < 16 or min(args.train, args.dev) < 1:
+        raise ValueError("Positive sample counts and side >=16 required")
+    if state_path.exists() and any((root / x / "manifest.csv").exists() for x in ("train", "dev")):
+        if any(previous.get(k) != state[k] for k in ("side", "mask_policy")):
+            raise ValueError("Existing export uses different preprocessing")
+    state.update(created=now(), status="running", transport=args.transport)
+    write_json(state_path, state)
+    info = (
+        repo_info(lock["repo_id"], lock["revision"], repo_type="dataset")
+        if args.transport == "shards"
+        else None
+    )
 
-            scan(root, split)
-            if len(read_rows(manifest)) != count:
-                raise ValueError(f"Existing {split} has an unexpected sample count")
-            print(f"Reusing verified {split} export", flush=True)
-            continue
-        rows = load_dataset(
-            lock["repo_id"],
-            revision=lock["revision"],
-            split=split,
-            data_files={split: f"data/{split}-*.parquet"},
-            streaming=True,
-        )
-        for column in ("source_img", "target_img", "mask_img"):
-            rows = rows.cast_column(column, DatasetImage(decode=False))
-        export_rows(rows, root, split, count)
-    from image_editing.validation import validate
+    def export(split, count):
+        if (root / split / "manifest.csv").exists():
+            rows, *_ = scan(root, split)
+            if len(rows) != count:
+                raise ValueError(f"Unexpected count for {split}")
+            return
+        cache = root.parent / "raw" / root.name
+        rows = parquet_rows(info, split, cache) if info else streaming_rows(lock, split)
+        export_rows(rows, root, split, count, args.side)
 
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futures = [
+            pool.submit(export, split, count)
+            for split, count in (("train", args.train), ("dev", args.dev))
+        ]
+        for future in futures:
+            future.result()
     write_json(root / "validation.json", validate(root))
-    write_json(state_path, dict(metadata, status="complete"))
+    write_json(state_path, state | {"status": "complete"})
 
 
 def configure(parser):
@@ -139,4 +206,6 @@ def configure(parser):
     parser.add_argument("--lock", default="configs/assets.lock.json")
     parser.add_argument("--train", type=int, default=200)
     parser.add_argument("--dev", type=int, default=30)
-    parser.set_defaults(func=run)
+    parser.add_argument("--side", type=int, default=512)
+    parser.add_argument("--transport", choices=["streaming", "shards"], default="streaming")
+    parser.set_defaults(func=prepare)
