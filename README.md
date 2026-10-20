@@ -5,7 +5,8 @@
 - [方案评审](docs/proposal_review.md)：可行性、贡献边界、标签定义与必要对照。
 - [Stage 0 设计](docs/stage0_design.md)：当前准备工作的范围和验收。
 - [当前验收状态](docs/stage0_report.md)：已验证内容、下载进度入口和待运行实验。
-- [原始 roadmap](Image_Editing_Preparation_and_InterEdit_Roadmap.md)：研究输入与长期路线。
+- [原始 roadmap](docs/Image_Editing_Preparation_and_InterEdit_Roadmap.md)：研究输入与长期路线。
+- [架构重构设计与验收](docs/architecture.md)：模块边界、兼容约定与实施步骤。
 - [Inter-Edit 代码走读](notes/inter_edit_code_review.md)：CJT 张量流及 FLUX 适配边界。
 - [开发规则](AGENTS.md)：Conventional Commits、500 行限制、文档同步和 GPU 规范。
 

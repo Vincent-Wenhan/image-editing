@@ -2,6 +2,13 @@
 
 时间以 Asia/Shanghai 为准。每条记录说明配置、输入、产物、实际结果与限制。
 
+## 2026-10-21：架构重构开始
+
+- 在独立 `refactor/modular-architecture` worktree 开始；保留主工作区和命名 Conda 环境。
+- 完整阅读研究文档、代码与测试；原有 19 项 CPU 测试通过。启动前没有活动项目任务，8 张 GPU 空闲。
+- 发现旧验收已完成 200/30 数据准备和 12 例 Base 推理；debug 在第一步出现 CPU/CUDA 条件张量设备错误，LoRA 尚未验收。
+- 设计与分步验收见 `docs/architecture.md`；本条不是重构或训练完成声明。
+
 ## 2026-10-20：Stage 0 准备（进行中）
 
 - 初始仓库为空。保留用户原始 roadmap；审阅 starter kit，建立维护中的包和开发规则。
