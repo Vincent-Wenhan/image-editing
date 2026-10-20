@@ -53,6 +53,10 @@ image-edit gallery --predictions outputs/base_inference --output outputs/base_ga
 
 默认 Base 50 steps、CFG 4、长边 512、BF16、模型常驻 GPU；每个 sample ID 有稳定 seed。新实验用新输出目录，保留 `run.json`、逐图结果与诊断，避免静默覆盖。画廊为本地 HTML 和 contact sheets。MAE、变化面积、mask 外漂移只是诊断指标，不是编辑成功率或物理因果准确率。
 
+评估会复核 manifest 与 source/target/mask 的真实 SHA256、尺寸、样本顺序和种子。
+新记录带配置摘要；配对比较可加 `--reference-run outputs/base_inference` 强制采样预算一致。
+输入、监督、硬标签与软角色概率场的数值/几何约束见架构文档，当前未实现空间控制。
+
 ## Edit LoRA
 
 ```bash

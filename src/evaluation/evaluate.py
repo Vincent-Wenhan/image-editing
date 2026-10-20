@@ -7,8 +7,10 @@ import numpy as np
 from PIL import Image
 
 from src.core.config import ProjectSettings
-from src.core.io import read_rows, write_json, write_rows
+from src.core.io import write_json, write_rows
+from src.core.paths import data_path
 from src.evaluation.metrics import load_image, metrics
+from src.evaluation.provenance import verify_comparison, verify_run
 
 
 def run(args):
@@ -16,9 +18,11 @@ def run(args):
         raise ValueError("Threshold must be in [0, 1]")
     root, predictions = Path(args.data_root), Path(args.predictions)
     run_info = json.loads((predictions / "run.json").read_text())
-    if run_info["status"] != "complete":
-        raise ValueError("Cannot evaluate an incomplete inference run")
-    rows = {row["id"]: row for row in read_rows(args.manifest)}
+    rows = verify_run(root, args.manifest, run_info)
+    if getattr(args, "reference_run", None):
+        reference = json.loads((Path(args.reference_run) / "run.json").read_text())
+        verify_run(root, args.manifest, reference)
+        verify_comparison(reference, run_info)
     collected = []
     for item in run_info["results"]:
         row = rows[item["id"]]
@@ -31,7 +35,7 @@ def run(args):
                 raise ValueError(f"Prediction dimensions changed: {path}")
         prediction = load_image(path, size)
         source, target, mask = [
-            load_image(root / row[f"{key}_path"], size, mode)
+            load_image(data_path(root, row[f"{key}_path"]), size, mode)
             for key, mode in (("source", "RGB"), ("target", "RGB"), ("mask", "L"))
         ]
         collected.append(
@@ -59,6 +63,7 @@ def configure(parser):
     parser.add_argument("--data-root", default=settings.dataset["root"])
     parser.add_argument("--manifest", default=settings.manifest)
     parser.add_argument("--predictions", default="outputs/base_inference")
+    parser.add_argument("--reference-run", help="Require identical Base/LoRA sampling and samples")
     parser.add_argument(
         "--threshold", type=float, default=settings.experiment["evaluation_threshold"]
     )

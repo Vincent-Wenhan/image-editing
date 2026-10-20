@@ -32,7 +32,7 @@ def test_inference_loading_never_opens_supervision(paired_data):
 
 
 def test_oracle_and_metadata_cannot_silently_enter_inference():
-    oracle = ControlBundle(ControlKind.ORACLE_ROLE, {"roles": Image.new("RGB", (2, 2))})
+    oracle = ControlBundle(ControlKind.ORACLE_ROLE, {"roles": Image.new("L", (2, 2))})
     with pytest.raises(ValueError, match="Oracle"):
         oracle.require_inference_safe()
     with pytest.raises(TypeError, match="supervision"):
@@ -50,7 +50,7 @@ def test_unimplemented_conditions_are_rejected(kind):
     with pytest.raises(error):
         backend.edit(
             EditInput(Image.new("RGB", (32, 32)), "edit"),
-            ControlBundle(kind, {"control": Image.new("L", (32, 32))}),
+            ControlBundle(kind, {"roles" if "role" in kind else "mask": Image.new("L", (32, 32))}),
             GenerationOptions(32, 32, 1, 4.0, 42),
         )
 

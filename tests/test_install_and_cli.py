@@ -18,6 +18,8 @@ def test_all_command_defaults_match_pre_refactor_snapshot():
         actual = vars(parser.parse_args([name]))
         actual.pop("func")
         actual.pop("subcommand")
+        if name == "evaluate":
+            assert actual.pop("reference_run") is None
         assert actual == expected, name
 
 

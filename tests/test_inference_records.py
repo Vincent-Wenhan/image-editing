@@ -62,6 +62,7 @@ def test_records_metrics_and_gallery_keep_legacy_format(inference_args, paired_d
         "packages",
         "manifest_sha256",
         "results",
+        "config_sha256",
     }
     assert record["manifest_sha256"] == sha256(args.manifest)
     assert "func" not in record["config"]

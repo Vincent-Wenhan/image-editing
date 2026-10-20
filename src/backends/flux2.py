@@ -25,6 +25,7 @@ class Flux2Backend:
         self, edit_input: EditInput, controls: ControlBundle, options: GenerationOptions
     ) -> EditOutput:
         controls.require_inference_safe()
+        controls.validate_geometry(edit_input.source.size)
         if (
             controls.kind != ControlKind.NONE
             or edit_input.mask is not None

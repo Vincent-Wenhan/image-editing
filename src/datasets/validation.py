@@ -9,6 +9,24 @@ from src.core.io import read_rows, sha256, write_json
 from src.core.paths import data_path
 
 
+def verify_images(root: Path, row: dict) -> float:
+    """Verify the bytes and geometry of all three images, even for pixel evaluation."""
+    dimensions = (int(row["width"]), int(row["height"]))
+    coverage = 0.0
+    for key in ("source", "target", "mask"):
+        path = data_path(root, row[f"{key}_path"])
+        if sha256(path) != row[f"{key}_sha256"]:
+            raise ValueError(f"Checksum mismatch: {path}")
+        with Image.open(path) as image:
+            image.load()
+            expected_mode = "L" if key == "mask" else "RGB"
+            if image.size != dimensions or image.mode != expected_mode:
+                raise ValueError(f"Image shape/mode mismatch: {path}")
+            if key == "mask":
+                coverage = sum(image.histogram()[128:]) / (image.width * image.height)
+    return coverage
+
+
 def scan(root: Path, split: str) -> tuple[list[dict], set[str], set[str], list[float]]:
     rows = read_rows(root / split / "manifest.csv")
     identifiers, sessions, sources = set(), set(), set()
@@ -18,19 +36,7 @@ def scan(root: Path, split: str) -> tuple[list[dict], set[str], set[str], list[f
             raise ValueError(f"Invalid/duplicate sample: {row['id']}")
         identifiers.add(row["id"])
         sessions.add(row["source_session"])
-        dimensions = (int(row["width"]), int(row["height"]))
-        for key in ("source", "target", "mask"):
-            path = data_path(root, row[f"{key}_path"])
-            with Image.open(path) as image:
-                image.load()
-                expected_mode = "L" if key == "mask" else "RGB"
-                if image.size != dimensions or image.mode != expected_mode:
-                    raise ValueError(f"Image shape/mode mismatch: {path}")
-                if key == "mask":
-                    histogram = image.histogram()
-                    coverage.append(sum(histogram[128:]) / (image.width * image.height))
-            if sha256(path) != row[f"{key}_sha256"]:
-                raise ValueError(f"Checksum mismatch: {path}")
+        coverage.append(verify_images(root, row))
         caption = root / split / "target" / f"{row['id']}.txt"
         if not row["instruction"].strip() or caption.read_text().strip() != row["instruction"]:
             raise ValueError(f"Caption mismatch: {caption}")

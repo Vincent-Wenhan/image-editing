@@ -56,7 +56,7 @@ setuptools 从仓库根发现 `src` / `src.*`，console entry point 保持 `imag
 
 | 模块 | 职责 | 允许依赖 |
 |---|---|---|
-| `src/core` | 输入/监督契约、IO、配置、路径、种子、实验元数据 | 标准库、Pillow、YAML |
+| `src/core` | 输入/监督契约、IO、配置、路径、种子、实验元数据 | 标准库、Pillow、NumPy、YAML |
 | `src/conditioning` | 控制图容器与现有 Mask 语义 | core、Pillow |
 | `src/datasets` | MagicBrush 读取/对齐/导出、manifest、哈希与 split 验证 | core、conditioning、infra 下载 |
 | `src/backends` | 公共编辑协议、FLUX.2 Diffusers 适配器 | core、conditioning、infra GPU |
@@ -70,6 +70,24 @@ setuptools 从仓库根发现 `src` / `src.*`，console entry point 保持 `imag
 导入只发生在实际 GPU 执行时，帮助命令与 CPU 数据检查不初始化 CUDA。
 
 ## 数据与执行边界
+
+稳定性收尾已实现以下契约，相关 CPU 回归通过：source/target 为非空 PIL RGB；
+mask 为同尺寸 H×W 单通道，NumPy 使用有限 [0,1] 值，PIL `L` 使用 [0,255]
+并按 255 归一化（`1`/`F` 也可）。`strength` 是有限 [0,1] 实数，拒绝 bool。
+`EditSupervision` 的有效域必须二值且与 target 同尺寸；硬角色标签是 H×W 整数
+0=T、1=D、2=P、255=ignore，ignore 不能被标为有效；软角色标签是 H×W×3 浮点
+T/D/P 概率，每像素有限、在 [0,1] 且和为 1（容差 1e-5）。软场在无效像素也须
+归一化，有效域单独决定监督范围。没有执行角色预测或空间控制。
+
+`ControlBundle` 的 Mask 类型使用唯一 `mask` 图，角色类型使用唯一 `roles` 图；
+Static/Dilated 必须二值，Soft 允许连续值，角色使用上述硬/软表示。构建时检查数值，
+交给后端时再检查 source 几何。oracle 仍只用于未来显式上界，普通推理拒绝它。
+
+评估现在先核实 manifest SHA256 和全部 manifest 行的 source/target/mask 实际
+SHA256/模式/尺寸，再核对选择顺序、prompt、sample seed 和配置尺寸。新 `run.json`
+增加可选 `config_sha256`；旧记录仍可读取，但不能仅凭旧记录独立证明 steps/CFG
+从未被手工修改。`evaluate --reference-run BASE` 额外要求 Base/LoRA 的模型版本、
+manifest、采样预算和固定样本完全一致。路径可迁移，数据内容不可漂移；指标公式不变。
 
 - `EditInput` 只有 source、instruction、可选 mask/strength；不含 target、role label。
 - `EditSupervision` 保存 target、可选角色标签和有效区域，单独显式加载。

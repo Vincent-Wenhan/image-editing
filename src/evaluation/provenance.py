@@ -1,0 +1,73 @@
+"""Validate saved-run identity and actual data before calculating any metrics."""
+
+import math
+import re
+from pathlib import Path
+
+from src.core.images import dimensions
+from src.core.io import read_rows, sha256
+from src.core.metadata import config_digest
+from src.core.random import sample_seed
+from src.datasets.validation import verify_images
+
+COMPARISON_KEYS = ("side", "steps", "guidance", "seed")
+
+
+def verify_run(root: Path, manifest: str | Path, record: dict) -> dict[str, dict]:
+    if record["status"] != "complete":
+        raise ValueError("Cannot evaluate an incomplete inference run")
+    if sha256(manifest) != record.get("manifest_sha256"):
+        raise ValueError("Manifest SHA256 differs from the inference run")
+    config = record["config"]
+    if "config_sha256" in record and config_digest(config) != record["config_sha256"]:
+        raise ValueError("Inference configuration SHA256 changed")
+    for key in ("limit", "side", "steps", "seed"):
+        if not isinstance(config.get(key), int) or isinstance(config[key], bool):
+            raise ValueError(f"Invalid inference configuration: {key}")
+    if min(config["limit"], config["steps"]) < 1 or config["side"] < 16:
+        raise ValueError("Invalid inference limit/steps/side")
+    if not isinstance(config.get("guidance"), int | float) or not math.isfinite(config["guidance"]):
+        raise ValueError("Invalid inference guidance")
+    rows = read_rows(manifest)
+    identifiers = [row["id"] for row in rows]
+    if len(set(identifiers)) != len(identifiers) or any(
+        not re.fullmatch(r"[A-Za-z0-9_-]+", name) for name in identifiers
+    ):
+        raise ValueError("Invalid/duplicate manifest sample IDs")
+    for row in rows:
+        verify_images(root, row)
+    selected = rows[: config["limit"]]
+    if [item["id"] for item in record["results"]] != [row["id"] for row in selected]:
+        raise ValueError("Inference sample selection differs from configured manifest subset")
+    for row, item in zip(selected, record["results"], strict=True):
+        expected_size = dimensions((int(row["width"]), int(row["height"])), config["side"])
+        if (item["width"], item["height"]) != expected_size:
+            raise ValueError(f"Inference dimensions differ from configuration: {row['id']}")
+        if item["source_sha256"] != row["source_sha256"]:
+            raise ValueError(f"Source changed: {row['id']}")
+        if item["prompt"] != row["instruction"] or item["seed"] != sample_seed(
+            config["seed"], row["id"]
+        ):
+            raise ValueError(f"Inference prompt/seed differs from configuration: {row['id']}")
+    return dict(zip(identifiers, rows, strict=True))
+
+
+def verify_comparison(reference: dict, record: dict) -> None:
+    """Compare sampling budget and sample identity, allowing a different LoRA/output path."""
+    if reference["status"] != "complete" or record["status"] != "complete":
+        raise ValueError("Paired evaluation requires complete runs")
+    if reference["manifest_sha256"] != record["manifest_sha256"]:
+        raise ValueError("Paired runs use different manifests")
+    for key in COMPARISON_KEYS:
+        if reference["config"][key] != record["config"][key]:
+            raise ValueError(f"Paired inference configuration differs: {key}")
+    for key in ("repo_id", "revision"):
+        if reference["model"].get(key) != record["model"].get(key):
+            raise ValueError(f"Paired base model differs: {key}")
+    identity_keys = ("id", "seed", "width", "height", "source_sha256", "prompt")
+
+    def identities(value):
+        return [tuple(item[key] for key in identity_keys) for item in value["results"]]
+
+    if identities(reference) != identities(record):
+        raise ValueError("Paired runs use different fixed samples")

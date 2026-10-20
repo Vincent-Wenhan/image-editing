@@ -14,7 +14,8 @@ from src.conditioning.controls import ControlBundle
 from src.core.config import ProjectSettings
 from src.core.images import dimensions
 from src.core.io import read_rows, sha256, write_json
-from src.core.metadata import config_snapshot, now, versions
+from src.core.metadata import config_digest, config_snapshot, now, versions
+from src.core.paths import data_path
 from src.core.random import sample_seed
 from src.core.types import GenerationOptions
 from src.datasets.manifest import load_edit_input
@@ -43,12 +44,15 @@ def run(args, *, backend_factory: Callable[..., EditingBackend] = Flux2Backend) 
         manifest_sha256=sha256(args.manifest),
         results=[],
     )
+    run_info["config_sha256"] = config_digest(run_info["config"])
     if args.lora:
         run_info["lora_sha256"] = sha256(args.lora)
     write_json(output / "run.json", run_info)
     try:
         backend = backend_factory(model, args.lora)
         for row in rows:
+            if sha256(data_path(args.data_root, row["source_path"])) != row["source_sha256"]:
+                raise ValueError(f"Source checksum mismatch: {row['id']}")
             edit_input = load_edit_input(args.data_root, row)
             width, height = dimensions(edit_input.source.size, args.side)
             edit_input = replace(
