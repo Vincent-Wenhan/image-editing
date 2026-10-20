@@ -94,14 +94,14 @@ def test_launcher_uses_worker_cwd_and_checks_revision(tmp_path, monkeypatch):
     monkeypatch.setattr(launcher, "command", lambda _: "locked")
     calls = []
     monkeypatch.setattr(
-        launcher.subprocess, "run", lambda args, **kwargs: calls.append((args, kwargs))
+        launcher, "wait_for_worker", lambda args, trainer: calls.append((args, trainer))
     )
     previous_cwd = Path.cwd()
     launcher.launch(config, report, tmp_path)
     argv, kwargs = calls[0]
     assert argv[1:3] == ["-m", "src.training.worker"]
     assert str(config.resolve()) in argv and str(report.resolve()) in argv
-    assert kwargs == {"cwd": trainer, "check": True}
+    assert kwargs == trainer
     assert Path.cwd() == previous_cwd
     monkeypatch.setattr(launcher, "command", lambda _: "different")
     with pytest.raises(ValueError, match="revision"):

@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import shutil
 import subprocess
 import sys
 import time
@@ -11,6 +12,7 @@ from src.core.config import ProjectSettings
 from src.core.io import write_json
 from src.core.metadata import now
 from src.core.paths import PROJECT_ROOT
+from src.evaluation.provenance import verify_run
 
 
 def main():
@@ -20,6 +22,9 @@ def main():
     parser.add_argument("--data-root", default=settings.dataset["root"])
     parser.add_argument("--wait-hours", type=float, default=budget["wait_hours"])
     parser.add_argument("--output", default="outputs/stage0")
+    parser.add_argument(
+        "--base-run", type=Path, help="Reuse a verified complete fixed-sample Base run"
+    )
     args = parser.parse_args()
     root = PROJECT_ROOT
     output = Path(args.output).resolve()
@@ -28,6 +33,7 @@ def main():
     if status_path.exists():
         raise FileExistsError("Use a new output directory for a new acceptance run")
     state = dict(created=now(), status="waiting_for_assets", completed=[], data_root=args.data_root)
+    started = time.perf_counter()
     write_json(status_path, state)
     python = sys.executable
     cli = [python, "-m", "src"]
@@ -61,8 +67,15 @@ def main():
             write_json(status_path, state)
             if gpu:
                 command = cli + ["gpu", "--"] + command
-            with (output / f"{name}.log").open("w") as log:
-                subprocess.run(command, cwd=root, stdout=log, stderr=subprocess.STDOUT, check=True)
+            step_started = time.perf_counter()
+            try:
+                with (output / f"{name}.log").open("w") as log:
+                    subprocess.run(
+                        command, cwd=root, stdout=log, stderr=subprocess.STDOUT, check=True
+                    )
+            finally:
+                state.setdefault("timings", {})[name] = time.perf_counter() - step_started
+                write_json(status_path, state)
             state["completed"].append(name)
             write_json(status_path, state)
 
@@ -75,18 +88,38 @@ def main():
             True,
         )
         base = output / "base"
-        run(
-            "base_inference",
-            cli + ["infer", *data_args, "--output", str(base)],
-            True,
-        )
+        if args.base_run:
+            original = args.base_run.resolve()
+            record = json.loads((original / "run.json").read_text())
+            verify_run(root / args.data_root, manifest, record)
+            if record.get("lora_sha256") or record["config"].get("lora"):
+                raise ValueError("A LoRA run cannot serve as the Base reference")
+            for key in ("repo_id", "revision"):
+                if record["model"].get(key) != assets["base"][key]:
+                    raise ValueError(f"Reused Base model differs from the lock: {key}")
+            expected = settings.process["sample"]
+            for key, value in dict(
+                side=expected["width"],
+                steps=expected["sample_steps"],
+                guidance=expected["guidance_scale"],
+                seed=expected["seed"],
+                limit=settings.experiment["inference_limit"],
+            ).items():
+                if record["config"][key] != value:
+                    raise ValueError(f"Reused Base configuration differs: {key}")
+            base.mkdir()
+            shutil.copy2(original / "run.json", base / "run.json")
+            for item in record["results"]:
+                shutil.copy2(original / f"{item['id']}.png", base / f"{item['id']}.png")
+            state["base_reused_from"] = str(original)
+            state["completed"].append("base_inference")
+            write_json(status_path, state)
+        else:
+            run("base_inference", cli + ["infer", *data_args, "--output", str(base)], True)
         run("base_metrics", cli + ["evaluate", *data_args, "--predictions", str(base)])
         train_root = output / "lora"
-        batch_size = budget["debug_batch_size"]
-        for name, steps in (
-            ("debug", budget["debug_steps"]),
-            ("smoke", settings.process["train"]["steps"]),
-        ):
+
+        def train(name, steps, batch_size, reference=None):
             config = output / f"{name}.yaml"
             report = output / f"{name}_report.json"
             run(
@@ -108,19 +141,29 @@ def main():
                     str(config),
                 ],
             )
-            run(
-                f"{name}_training",
-                [python, "-m", "src.training", str(config), "--report", str(report)],
-                True,
+            training = [python, "-m", "src.training", str(config), "--report", str(report)]
+            if reference:
+                training += ["--memory-reference", str(reference)]
+            state.setdefault("training_attempts", []).append(dict(name=name, report=str(report)))
+            run(f"{name}_training", training, True)
+            return report
+
+        debug = train("debug", budget["debug_steps"], budget["debug_batch_size"])
+        smoke = output / "smoke_report.json"
+        try:
+            train("smoke", settings.process["train"]["steps"], budget["smoke_batch_size"], debug)
+        except subprocess.CalledProcessError:
+            failed = json.loads(smoke.read_text()) if smoke.is_file() else {}
+            if (
+                not failed.get("out_of_memory")
+                or failed.get("batch_size", 0) <= budget["debug_batch_size"]
+            ):
+                raise
+            smoke = train(
+                "smoke_retry", settings.process["train"]["steps"], budget["debug_batch_size"], debug
             )
-            if name == "debug":
-                measured = json.loads(report.read_text())
-                batch_size = (
-                    budget["smoke_batch_size"]
-                    if measured["peak_reserved_gib"] < budget["scale_up_reserved_gib"]
-                    else budget["debug_batch_size"]
-                )
-        checkpoint = train_root / "smoke/smoke.safetensors"
+        state["training_reports"] = dict(debug=str(debug), smoke=str(smoke))
+        checkpoint = Path(json.loads(smoke.read_text())["checkpoint"])
         if not checkpoint.is_file():
             raise FileNotFoundError(f"Expected final LoRA checkpoint: {checkpoint}")
         lora = output / "lora_inference"
@@ -137,7 +180,11 @@ def main():
             ],
             True,
         )
-        run("lora_metrics", cli + ["evaluate", *data_args, "--predictions", str(lora)])
+        run(
+            "lora_metrics",
+            cli
+            + ["evaluate", *data_args, "--predictions", str(lora), "--reference-run", str(base)],
+        )
         for name, predictions in (("base", base), ("lora", lora)):
             run(
                 f"{name}_gallery",
@@ -160,6 +207,7 @@ def main():
         state.update(status="failed", error=repr(error), updated=now())
         raise
     finally:
+        state["seconds"] = time.perf_counter() - started
         write_json(status_path, state)
 
 

@@ -52,7 +52,7 @@ HF_ENDPOINT=https://hf-mirror.com bash scripts/prepare_assets.sh data
 python scripts/run_stage0.py --output outputs/stage0_new_run
 ```
 
-验收流程最多等待资产 24 小时，随后执行 Base 推理、诊断、20-step/150-step LoRA 和配对重载，记录逐步日志与状态。debug 使用 batch 2；若其峰值 reserved 显存低于 22 GiB，再用 batch 4 做 150-step 检查。任何 GPU 工作都通过空闲检查与 UUID 锁启动；等待下载时不占用 GPU。失败即记录并停止，不将失败写成成功。
+验收流程最多等待资产 24 小时，随后执行 Base 推理、诊断、20-step/150-step LoRA 和配对重载，记录逐步日志与状态。可通过 `--base-run` 复用通过检查的旧 Base。debug 使用 batch 2；下一次训练依据当前租约卡容量和 debug 实测峰值规划，最多增至 batch 4，预留 max(20% 容量, 4 GiB)。放大后 OOM 最多用新实验名降到已验证 batch 重试一次；其他失败停止并保留报告。
 
 画廊：`outputs/data_audit/gallery/index.html`、`outputs/dev_gallery/index.html`。所有数据、图片、权重、检查点和原始日志均留在服务器，不上传 GitHub。
 

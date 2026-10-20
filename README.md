@@ -84,6 +84,11 @@ image-edit gpu -- image-edit infer --lora outputs/lora/flux2_magicbrush_smoke/fl
 
 也可运行 `python scripts/run_stage0.py --output outputs/stage0_new_run`，等待固定资产准备完成后自动执行上述工程验收；状态写入该目录的 `status.json`。每次 GPU 启动仍会检查空闲卡，下载等待阶段不占用 GPU。新验收使用新的输出目录。
 
+可加 `--base-run <已完成的Base目录>` 复用经版本、哈希与采样配置检查的固定样本。
+20-step debug 后，下一次训练在实际租约卡上保守规划 batch，保留显存余量；
+实际配置、决策和失败均单独记录，放大后 OOM 最多以新实验名降级一次。
+设备补丁幂等；worker 失败时执行清理并保留原始异常、统计及报告。
+
 ## 开发与目录
 
 ```bash

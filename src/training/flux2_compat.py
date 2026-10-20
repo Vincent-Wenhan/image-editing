@@ -9,10 +9,16 @@ pinned upstream method. No external source files are changed.
 from functools import wraps
 from pathlib import Path
 
+SUPPORTED_TRAINER_REVISION = "a055947d56a156411abb4ef0301b35d0fe5f51a5"
 
-def configure_flux2_trainer(model_type: type, text_encoder: Path) -> None:
+
+def configure_flux2_trainer(model_type: type, text_encoder: Path, *, revision: str) -> None:
+    if revision != SUPPORTED_TRAINER_REVISION:
+        raise ValueError("FLUX.2 device compatibility requires the reviewed ai-toolkit revision")
     model_type.flux2_klein_te_path = str(text_encoder)
     original = model_type.get_noise_prediction
+    if getattr(original, "_image_edit_flux2_revision", None) == revision:
+        return
 
     @wraps(original)
     def predict(
@@ -40,4 +46,5 @@ def configure_flux2_trainer(model_type: type, text_encoder: Path) -> None:
             **kwargs,
         )
 
+    predict._image_edit_flux2_revision = revision
     model_type.get_noise_prediction = predict

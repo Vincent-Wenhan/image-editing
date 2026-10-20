@@ -259,6 +259,28 @@ FLUX adapter/训练配置 → 公平消融的顺序开发 Static Mask。
 
 ### 固定训练器的设备兼容修复
 
+本轮加固后，补丁绑定 `SUPPORTED_TRAINER_REVISION`，launcher/worker 仍各自核实 Git
+版本；重复安装保留同一个 wrapper，只允许更新本地文本编码器路径。新增 CPU 测试
+检查多次设备变化、dtype 保留，以及同输入下 loss、梯度和两次 AdamW 更新逐值一致。
+没有更改原方法计算或网络结构。
+
+worker 从初始化开始创建报告，训练异常与 traceback 原样保留；finally 在清理前
+分别采集显存数据，即使同步失败也继续读取其余统计。cleanup/empty_cache/报告写入
+失败单独记录或输出日志，不能替换原训练异常。清理失败也不能报告成功。
+SIGTERM 进入同一清理路径，launcher 等待 worker 退出后才结束租约任务。
+
+自动 batch 规划在当前 UUID 租约内读取实际卡容量及占用，核对 debug 报告和其配置
+SHA256。只有训练参数/数据一致、参考至少 20 steps、统计完整时才允许增长，最多
+2 倍，并按全部 reserved 峰值线性放大作保守估计；预留 max(卡容量×20%, 4 GiB)。
+不再使用固定 22 GiB 阈值。实际 batch 和依据写入新的 `.effective.yaml` / `.memory.json`
+并进入训练报告。预检不通过直接拒绝；放大后仍 OOM 时，Stage 0 最多用新实验名
+`smoke_retry` 降到已验证 batch 重试一次，保留第一份失败报告及 checkpoint。
+估计不能保证永不 OOM，因此保留这条有界恢复路径；其他异常直接失败。
+
+验收脚本新增 `--base-run`，仅复用与锁定 Base、默认采样预算和当前数据内容一致的
+无 LoRA 记录。12 例只复制到新输出；重载评估使用 `--reference-run` 检查预算。
+目前稳定性 CPU 回归通过，完整 20/150-step 结果在执行后更新。
+
 旧运行的错误发生在固定 ai-toolkit `flux2_model.py:415`：主 latent 在 CUDA，
 reference 编码结果在 CPU。其缓存流程主动卸载 VAE 到 CPU，随后 FLUX 在
 `get_noise_prediction` 仍调用 VAE 编码原始 reference，造成跨设备拼接。
