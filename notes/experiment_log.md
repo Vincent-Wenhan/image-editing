@@ -2,6 +2,13 @@
 
 时间以 Asia/Shanghai 为准。每条记录说明配置、输入、产物、实际结果与限制。
 
+## 2026-10-21：架构稳定性收尾开始
+
+- 保持 `refactor/modular-architecture` 的目录设计，在原独立 worktree 修改。
+- 启动时无活动项目 GPU 任务，8 张 A6000 均为 0 MiB /0%；不会中断其他任务。
+- 发现设备补丁可重复叠加、失败清理/统计可遮蔽异常、评估未核实数据内容，以及固定 22 GiB 扩 batch 阈值。
+- 设计与验收步骤见 `docs/architecture.md`；先补测试，再执行 20/150-step 与固定样本重载。旧权重和实验保留。
+
 ## 2026-10-21：架构重构开始
 
 - 在独立 `refactor/modular-architecture` worktree 开始；保留主工作区和命名 Conda 环境。

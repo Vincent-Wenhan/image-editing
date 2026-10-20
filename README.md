@@ -7,6 +7,7 @@
 - [当前验收状态](docs/stage0_report.md)：已验证内容、下载进度入口和待运行实验。
 - [原始 roadmap](docs/Image_Editing_Preparation_and_InterEdit_Roadmap.md)：研究输入与长期路线。
 - [架构重构设计与验收](docs/architecture.md)：模块边界、兼容约定与实施步骤。
+- 当前正在按架构文档收尾：补丁幂等、失败清理、评估校验和容量约束 batch；20/150-step 验收结果随后记录。
 - [Inter-Edit 代码走读](notes/inter_edit_code_review.md)：CJT 张量流及 FLUX 适配边界。
 - [开发规则](AGENTS.md)：Conventional Commits、500 行限制、文档同步和 GPU 规范。
 
