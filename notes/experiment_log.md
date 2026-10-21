@@ -193,3 +193,9 @@
 - 独立监督与oracle loader，role RGB=one-hot T/D/P、ignore=黑；普通infer/edit继续拒绝，显式edit_oracle检查用途/哈希/几何/图序，不接收target。
 - 32项场景/接口/旧推理回归通过（20.29s），另13项编码/后端/共享hook清理通过（15.14s）。删除target/反事实后可加载条件；仅CPU测试，真实角色GPU消费待运行。
 - 共用生成流程和诊断hook，无loss/网络修改；未训练Role Predictor、Oracle adapter或Qwen。
+
+### Blender本地运行库与版本探测
+
+- wheelSHA验证、Cython/zstandard安装完成，首次bpy导入因缺libXrender失败；新输出保存安装日志。固定9个Ubuntu包版本/SHA本地提取，仅CPU渲染子进程追加库路径，父进程/CUDA任务不改动。
+- 真实bpy4.5.3 LTS/build67807e1800cc导入与场景构建通过；版本严格按4.5.3数值tuple核验。20项相关测试通过（15.26s），真实多强度渲染待执行。
+- Constant150步训练已complete：1153.01s，峰值reserved17.09GiB，固定30例重载正在运行。No-mask两种预处理及Static的30例推理完成，另两组Mask尚在运行。

@@ -1,5 +1,6 @@
 """Non-overwriting CPU scene generation and read-only verification CLI."""
 
+import os
 import shutil
 import subprocess
 import sys
@@ -16,7 +17,7 @@ from src.datasets.scene_pairs import compile_pairs
 from src.datasets.scene_validation import validate_scene_dataset
 
 
-def generate(config_path: Path, output: Path) -> dict:
+def generate(config_path: Path, output: Path, *, runtime_library_path: Path | None = None) -> dict:
     config = load_yaml(config_path)
     validate_scene_config(config)
     if output.exists():
@@ -55,8 +56,20 @@ def generate(config_path: Path, output: Path) -> dict:
             str(output / "raw"),
         ]
         report["argv"] = argv
+        environment = os.environ.copy()
+        environment["CUDA_VISIBLE_DEVICES"] = ""
+        if runtime_library_path:
+            if not runtime_library_path.is_dir():
+                raise FileNotFoundError(runtime_library_path)
+            library = str(runtime_library_path.resolve())
+            environment["LD_LIBRARY_PATH"] = library + (
+                os.pathsep + environment["LD_LIBRARY_PATH"]
+                if environment.get("LD_LIBRARY_PATH")
+                else ""
+            )
+            report["runtime_library_path"] = library
         with (output / "render.log").open("w") as log:
-            subprocess.run(argv, stdout=log, stderr=subprocess.STDOUT, check=True)
+            subprocess.run(argv, env=environment, stdout=log, stderr=subprocess.STDOUT, check=True)
         compile_pairs(output, config)
         validation = validate_scene_dataset(output)
         write_json(output / "validation.json", validation)
@@ -73,7 +86,15 @@ def generate(config_path: Path, output: Path) -> dict:
 
 
 def run_generate(args) -> None:
-    print(generate(Path(args.config).resolve(), Path(args.output).resolve()))
+    print(
+        generate(
+            Path(args.config).resolve(),
+            Path(args.output).resolve(),
+            runtime_library_path=Path(args.runtime_library_path)
+            if args.runtime_library_path
+            else None,
+        )
+    )
 
 
 def run_validate(args) -> None:
@@ -87,6 +108,9 @@ def configure(parser) -> None:
         "--config", default=str(CONFIG_ROOT / "datasets/blender_translation.yaml")
     )
     generate_parser.add_argument("--output", required=True)
+    generate_parser.add_argument(
+        "--runtime-library-path", help="Optional local Linux shared libraries"
+    )
     generate_parser.set_defaults(func=run_generate)
     validate_parser = actions.add_parser("validate")
     validate_parser.add_argument("--root", required=True)

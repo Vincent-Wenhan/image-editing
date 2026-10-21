@@ -18,3 +18,11 @@ EXR是明确标注的测试占位，不是渲染证据，不计为真实Blender�
 （20.29s），另13项共享tracing/编码/后端测试通过（15.14s）。删除target和原始
 反事实RGB后仍能构建source/Oracle，默认拒绝Oracle及非法数值/几何/未消费strength。
 GPU角色消费与真实Blender仍待验收；没有训练角色adapter，不能声称Oracle质量上界。
+
+## 软件实际探测
+
+官方wheel校验及可选依赖安装完成。首次导入缺libXrender；已按固定Ubuntu包SHA
+本地提取X/GL运行库。使用子进程局部环境后，真实bpy导入和场景构建通过：
+4.5.3 LTS，build `67807e1800cc`，background=True，Cycles/device=CPU。
+真实显示字符串含LTS，修正版本比较为数值tuple而非放宽pin；增加回归。
+20项运行库/场景/CLI相关回归通过（15.26s）。完整渲染仍待运行。

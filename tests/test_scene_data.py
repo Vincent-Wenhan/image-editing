@@ -197,22 +197,48 @@ def test_invalid_scene_configuration_fails_before_rendering(change):
 
 
 def test_renderer_failure_preserves_report_and_original_exception(tmp_path, monkeypatch):
+    import os
     import subprocess
 
     error = subprocess.CalledProcessError(17, ["renderer"])
 
     def fail(*args, **kwargs):
+        assert kwargs["env"]["CUDA_VISIBLE_DEVICES"] == ""
+        assert str(libraries) in kwargs["env"]["LD_LIBRARY_PATH"]
         raise error
 
     monkeypatch.setattr("src.datasets.scene.subprocess.run", fail)
     output = tmp_path / "failed"
+    libraries = tmp_path / "libraries"
+    libraries.mkdir()
+    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "parent-task-is-unchanged")
     with pytest.raises(subprocess.CalledProcessError) as raised:
-        generate(CONFIG_ROOT / "datasets/blender_translation.yaml", output)
+        generate(
+            CONFIG_ROOT / "datasets/blender_translation.yaml",
+            output,
+            runtime_library_path=libraries,
+        )
     assert raised.value is error
+    assert os.environ["CUDA_VISIBLE_DEVICES"] == "parent-task-is-unchanged"
     report = json.loads((output / "generation.json").read_text())
     assert report["status"] == "failed" and "CalledProcessError" in report["traceback"]
     with pytest.raises(FileExistsError):
         generate(CONFIG_ROOT / "datasets/blender_translation.yaml", output)
+
+
+def test_blender_lts_display_suffix_does_not_bypass_or_break_numeric_pin(tmp_path, monkeypatch):
+    import sys
+    from types import SimpleNamespace
+
+    from src.datasets.blender_render import run
+
+    app = SimpleNamespace(version=(4, 5, 3), version_string="4.5.3 LTS")
+    monkeypatch.setitem(sys.modules, "bpy", SimpleNamespace(app=app))
+    with pytest.raises(FileExistsError):
+        run(CONFIG_ROOT / "datasets/blender_translation.yaml", tmp_path)
+    app.version = (4, 5, 2)
+    with pytest.raises(ValueError, match="pinned"):
+        run(CONFIG_ROOT / "datasets/blender_translation.yaml", tmp_path)
 
 
 def test_oracle_loading_never_reads_target_or_counterfactual_rgb(scene_data, monkeypatch):

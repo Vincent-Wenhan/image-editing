@@ -27,7 +27,7 @@ include = ["src", "src.*"]
 namespaces = false
 
 [tool.setuptools.data-files]
-"share/image-editing/configs" = ["configs/assets.lock.json", "configs/flux2_edit_lora.yaml"]
+"share/image-editing/configs" = ["configs/assets.lock.json", "configs/flux2_edit_lora.yaml", "configs/blender-runtime-linux.lock.json"]
 "share/image-editing/configs/datasets" = ["configs/datasets/*.yaml"]
 "share/image-editing/configs/experiments" = ["configs/experiments/*.yaml"]
 

@@ -392,3 +392,8 @@ oracle条件；后者核对canonical manifest和实际标签/source哈希，不�
 标量strength额外输入明确拒绝；当前物理强度写在数据指令与监督元数据，未开发预测器。
 共享 `reference_trace.py` 的作用域hooks供预处理/Oracle smoke验证真实编码和attention，
 异常也移除hook。角色条件本轮只接推理，训练CLI仍不接受Oracle，不修改网络或loss。
+
+`infra/blender_runtime.py` 使用固定Ubuntu包锁将可选动态库提取到忽略目录，支持
+已有完整缓存的哈希验证；scene仅在CPU渲染子进程追加LD_LIBRARY_PATH并隐藏CUDA。
+Blender严格核对数值版本4.5.3，保留显示字符串“4.5.3 LTS”和build hash作元数据。
+不把LTS显示后缀当版本漂移，也不放宽成任意4.5版本。

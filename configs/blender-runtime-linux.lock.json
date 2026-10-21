@@ -1,0 +1,60 @@
+{
+  "platform": "linux-x86_64",
+  "source": "Ubuntu 22.04 official package metadata; optional local shared libraries only",
+  "packages": [
+    {
+      "name": "libxrender1",
+      "version": "1:0.9.10-1build4",
+      "url": "https://archive.ubuntu.com/ubuntu/pool/main/libx/libxrender/libxrender1_0.9.10-1build4_amd64.deb",
+      "sha256": "a68f6db4320b5963dd499b83b6cc8c7b5cd39b05e84862d5945da9244e4c96d6"
+    },
+    {
+      "name": "libxfixes3",
+      "version": "1:6.0.0-1",
+      "url": "https://archive.ubuntu.com/ubuntu/pool/main/libx/libxfixes/libxfixes3_6.0.0-1_amd64.deb",
+      "sha256": "f627555440060edf19801d77d369c99547cf47123fe4e30c5bdb8b664f0b4467"
+    },
+    {
+      "name": "libxi6",
+      "version": "2:1.8-1build1",
+      "url": "https://archive.ubuntu.com/ubuntu/pool/main/libx/libxi/libxi6_1.8-1build1_amd64.deb",
+      "sha256": "47662736cca4be456fd42a5f0a9d3bed8a5cfad4ee08b809a95dde6004daf275"
+    },
+    {
+      "name": "libxkbcommon0",
+      "version": "1.4.0-1",
+      "url": "https://archive.ubuntu.com/ubuntu/pool/main/libx/libxkbcommon/libxkbcommon0_1.4.0-1_amd64.deb",
+      "sha256": "a0470edb237d52b71ad41f755c043164abed01423585ed5ea19525b3baaf84f7"
+    },
+    {
+      "name": "libsm6",
+      "version": "2:1.2.3-1build2",
+      "url": "https://archive.ubuntu.com/ubuntu/pool/main/libs/libsm/libsm6_1.2.3-1build2_amd64.deb",
+      "sha256": "e652e286a79d9e8e15189d79b290bdce20aca83651f3dfed1b9b7dc0bbf0702f"
+    },
+    {
+      "name": "libice6",
+      "version": "2:1.0.10-1build2",
+      "url": "https://archive.ubuntu.com/ubuntu/pool/main/libi/libice/libice6_1.0.10-1build2_amd64.deb",
+      "sha256": "eea6d52d12ad610d70b0f70c825ed3c560dafb09f4c272e3c6b0b493d984d13f"
+    },
+    {
+      "name": "libgl1",
+      "version": "1.4.0-1",
+      "url": "https://archive.ubuntu.com/ubuntu/pool/main/libg/libglvnd/libgl1_1.4.0-1_amd64.deb",
+      "sha256": "4fb2bbff94bb1a59bbdb40041e7a8ab58db2a003a151f4055357af03f0b78666"
+    },
+    {
+      "name": "libglx0",
+      "version": "1.4.0-1",
+      "url": "https://archive.ubuntu.com/ubuntu/pool/main/libg/libglvnd/libglx0_1.4.0-1_amd64.deb",
+      "sha256": "950068e8a3ad3905058d21a8c870c37989e48c0a537a7c57231c277af19f5395"
+    },
+    {
+      "name": "libglvnd0",
+      "version": "1.4.0-1",
+      "url": "https://archive.ubuntu.com/ubuntu/pool/main/libg/libglvnd/libglvnd0_1.4.0-1_amd64.deb",
+      "sha256": "6956d8be93b160b439a043141a061adfd54561d877423a956ace84d2fb3bfb4e"
+    }
+  ]
+}

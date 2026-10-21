@@ -67,3 +67,9 @@ Oracle 显式作为上界：监督 loader 独立读取 target/roles/valid；普�
 参考：[Blender 官方 Python 包](https://pypi.org/project/bpy/4.5.3/)、
 [Cycles 对象可见性](https://docs.blender.org/manual/en/4.5/render/cycles/object_settings/object_data.html)、
 [Inter-Edit 走读](../notes/inter_edit_code_review.md)、[proposal 审查](proposal_review.md)。
+
+### 无系统写权限的渲染依赖
+
+服务器首次导入bpy缺少X/GL动态库；补充固定Ubuntu 22.04包URL/版本/SHA256的本地
+运行库引导，仅提取到忽略目录并在Blender子进程的LD_LIBRARY_PATH使用，不改变
+命名Conda环境或其他任务的动态库。普通已安装系统库的环境无需此路径。

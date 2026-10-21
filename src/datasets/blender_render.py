@@ -97,7 +97,8 @@ def run(config_path: Path, output: Path) -> None:
 
     config = load_yaml(config_path)
     validate_scene_config(config)
-    if bpy.app.version_string != config["renderer"]["version"]:
+    numeric_version = ".".join(str(value) for value in bpy.app.version)
+    if numeric_version != config["renderer"]["version"]:
         raise ValueError("Installed Blender does not match the pinned scene version")
     if output.exists():
         raise FileExistsError(output)
@@ -105,7 +106,9 @@ def run(config_path: Path, output: Path) -> None:
     started = time.perf_counter()
     index = dict(
         schema_version=1,
-        renderer=bpy.app.version_string,
+        renderer=numeric_version,
+        renderer_display=bpy.app.version_string,
+        build_hash=bpy.app.build_hash.decode(),
         device="CPU",
         config_sha256=config_digest(config),
         groups=[],

@@ -208,3 +208,8 @@ Oracle仅走显式实验接口：`src.datasets.scene_manifest.load_oracle_condit
 T/D/P为RGB单位向量，ignore为黑；普通 `edit`/`infer` 仍拒绝Oracle。
 `image-edit gpu -- python -m src.inference.oracle_smoke --data-root <scenes> --output <new-smoke>`
 验证真实条件消费与T/D置换敏感性；没有角色训练adapter时不能作为质量上界结果。
+
+无系统写权限且导入bpy缺少X/GL库时，运行 `python -m src.infra.blender_runtime`。
+该入口按固定URL/SHA256提取本地运行库；随后给 `scene generate` 添加
+`--runtime-library-path .cache/blender/runtime/usr/lib/x86_64-linux-gnu`。
+只影响渲染子进程，不修改系统库或其他任务的环境。
