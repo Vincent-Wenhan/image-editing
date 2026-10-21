@@ -5,7 +5,9 @@
 - [方案评审](docs/proposal_review.md)：可行性、贡献边界、标签定义与必要对照。
 - [Stage 0 设计](docs/stage0_design.md)：当前准备工作的范围和验收。
 - [当前验收状态](docs/stage0_report.md)：已验证内容、下载进度入口和待运行实验。
-- [原始 roadmap](Image_Editing_Preparation_and_InterEdit_Roadmap.md)：研究输入与长期路线。
+- [原始 roadmap](docs/Image_Editing_Preparation_and_InterEdit_Roadmap.md)：研究输入与长期路线。
+- [架构重构设计与验收](docs/architecture.md)：模块边界、兼容约定与实施步骤。
+- 稳定性收尾与 20/150-step、固定 12 例重载验收已完成；真实结果见 Stage 0 报告。
 - [Inter-Edit 代码走读](notes/inter_edit_code_review.md)：CJT 张量流及 FLUX 适配边界。
 - [开发规则](AGENTS.md)：Conventional Commits、500 行限制、文档同步和 GPU 规范。
 
@@ -16,6 +18,7 @@
 ```bash
 bash scripts/setup_environment.sh
 conda activate image-edit
+pip install -e '.[dev]'
 # 仅当官方站点不可达时使用镜像；不写入系统配置。
 export HF_ENDPOINT=https://hf-mirror.com
 export HF_HUB_DISABLE_XET=1
@@ -50,6 +53,10 @@ image-edit gallery --predictions outputs/base_inference --output outputs/base_ga
 
 默认 Base 50 steps、CFG 4、长边 512、BF16、模型常驻 GPU；每个 sample ID 有稳定 seed。新实验用新输出目录，保留 `run.json`、逐图结果与诊断，避免静默覆盖。画廊为本地 HTML 和 contact sheets。MAE、变化面积、mask 外漂移只是诊断指标，不是编辑成功率或物理因果准确率。
 
+评估会复核 manifest 与 source/target/mask 的真实 SHA256、尺寸、样本顺序和种子。
+新记录带配置摘要；配对比较可加 `--reference-run outputs/base_inference` 强制采样预算一致。
+输入、监督、硬标签与软角色概率场的数值/几何约束见架构文档，当前未实现空间控制。
+
 ## Edit LoRA
 
 ```bash
@@ -69,20 +76,55 @@ image-edit gpu -- image-edit infer --lora outputs/lora/flux2_magicbrush_smoke/fl
 
 训练 wrapper 校验上游 commit，将上游公开 class attribute 指向本地 Qwen3 权重，并强制离线加载；不修改外部仓库。短训练只验收 forward/backward/checkpoint/reload，不能预设质量提升。
 
+`python scripts/train.py ...` 保持兼容，也可使用 `python -m src.training ...`。
+训练器在自己的目录中通过独立 worker 导入，父进程的导入路径与工作目录保持稳定。
+固定训练器在缓存后把 VAE 留在 CPU；本地适配在 reference 编码前恢复其设备，
+保留原 dtype、forward 和 loss。现已通过 200 个训练样本上的 20-step debug、
+150-step 训练、checkpoint 有限性检查与固定 12 例 LoRA 重载评估。
+
 也可运行 `python scripts/run_stage0.py --output outputs/stage0_new_run`，等待固定资产准备完成后自动执行上述工程验收；状态写入该目录的 `status.json`。每次 GPU 启动仍会检查空闲卡，下载等待阶段不占用 GPU。新验收使用新的输出目录。
+
+可加 `--base-run <已完成的Base目录>` 复用经版本、哈希与采样配置检查的固定样本。
+20-step debug 后，下一次训练在实际租约卡上保守规划 batch，保留显存余量；
+实际配置、决策和失败均单独记录，放大后 OOM 最多以新实验名降级一次。
+设备补丁幂等；worker 失败时执行清理并保留原始异常、统计及报告。
 
 ## 开发与目录
 
 ```bash
-ruff check .
-ruff format --check .
-pytest -q
+pip install -e '.[dev]'
+python -m ruff check .
+python -m ruff format --check .
+python -m pytest -q
+image-edit --help
+python scripts/check_repo.py --all
 git add <本次改动>
 git commit -m "feat(scope): concise description"
 git push
 ```
 
-`src/image_editing/` 放公共实现，`scripts/` 放环境和上游训练入口，`configs/` 放可审查配方；`docs/` 和 `notes/` 跟踪设计与实验。
+`src/` 本身是 Python package，使用 `src.xxx` 绝对导入；模块入口为 `python -m src`。
+`src/core/` 管理数据契约、配置与记录；`datasets/` 管理数据，`conditioning/` 管理控制图契约；
+`backends/` 封装 FLUX.2，`inference/` 与 `training/` 组织执行，`evaluation/` 评估与可视化，
+`infra/` 管理下载、GPU 和环境。`scripts/` 保留轻量兼容入口。
+完整目录、依赖、数据流、旧新映射和扩展指南见 [architecture.md](docs/architecture.md)。
+
+配置分为 `configs/assets.lock.json`（模型/数据 revision）、`configs/datasets/`（数据选择）、
+`configs/experiments/`（验收预算）和原有 `configs/flux2_edit_lora.yaml`（完整训练配方）。
+CLI 从这些配置读取默认值，原有命令行覆盖有效。采样默认值复用配方的 `sample`，不在 Python/shell 中另写一份。
+从仓库根执行默认命令；在其他目录使用已安装的 CLI 时，显式传入数据、模型和模板路径。
+
+`EditInput` 与 `EditSupervision` 独立，推理只读取 source/instruction；`ControlBundle` 标记控制来源，
+普通推理拒绝 oracle。当前后端仍只实现 Stage 0，无空间控制；Mask/Role/Qwen 的扩展位置已预留为接口。
+
+本轮完整环境 97 项 CPU 回归、Ruff 与 CLI 检查通过；20-step /batch 2 和 150-step /
+batch 4 均保存了有限 checkpoint，固定 12 例重载和配对校验完成。此前 editable/wheel
+安装及 Base 单例字节一致验证保留。新证据在 `outputs/stage0_stability_20261021/`，
+只用于工程验收，不据像素诊断宣称编辑成功率提升。
+
+合并前已重新检查完整提交范围、资产、依赖与 CLI，结果见架构文档的合并检查记录；
+GitHub PR 的合并状态单独确认。Stage 0 原始结果继续保留在独立 worktree。
+
 `data/`、`models/`、`outputs/`、`external/`、`.venv/` 全部忽略。Git hooks 检查提交信息、代码行数和禁止上传的资产。实验原始日志应留在本地 `outputs/logs/`，一次性文件放 `.tmp/` 并在完成后清理。
 
 所有 GPU 任务使用 `image-edit gpu -- ...`：实时检查占用、利用率和计算进程，再获取 UUID 锁。可用 `--device 2` 指定物理卡，若忙则拒绝；不允许通过直接设置 CUDA 序号绕过检查。锁协调同一用户的本项目任务，共享机器仍需遵循管理员调度。

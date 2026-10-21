@@ -1,2 +1,2 @@
 #!/bin/sh
-exec python3 scripts/check_repo.py "$1"
+exec python3 -m src.infra.repository "$1"

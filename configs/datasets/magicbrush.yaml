@@ -1,0 +1,4 @@
+# Selection only; upstream identity/revision lives in assets.lock.json.
+root: data/magicbrush
+train: 200
+dev: 30

@@ -1,0 +1,13 @@
+# Sampling, resolution and seed defaults come from flux2_edit_lora.yaml.
+inference_limit: 12
+evaluation_threshold: 0.05
+acceptance:
+  wait_hours: 24
+  poll_seconds: 30
+  debug_steps: 20
+  debug_batch_size: 2
+  smoke_batch_size: 4
+  memory_policy:
+    headroom_fraction: 0.20
+    minimum_headroom_gib: 4
+    max_growth_factor: 2

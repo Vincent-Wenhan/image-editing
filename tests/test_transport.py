@@ -6,7 +6,20 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 
-from image_editing.transport import download_file, download_ranges
+from src.infra.transport import download_file, download_ranges
+
+
+def test_metadata_cache_must_match_locked_dataset_revision(tmp_path, monkeypatch):
+    import json
+
+    from src.infra.transport import repo_info
+
+    monkeypatch.chdir(tmp_path)
+    cache = tmp_path / ".cache/asset-metadata/dataset-test--repo-locked.json"
+    cache.parent.mkdir(parents=True)
+    cache.write_text(json.dumps({"id": "test/repo", "sha": "different"}))
+    with pytest.raises(ValueError, match="does not match the lock"):
+        repo_info("test/repo", "locked", repo_type="dataset")
 
 
 @pytest.fixture
@@ -61,7 +74,7 @@ def test_completed_ranges_are_reused(tmp_path, range_server):
 
 
 def test_bad_checksum_does_not_publish_an_asset(tmp_path, range_server, monkeypatch):
-    from image_editing import transport
+    from src.infra import transport
 
     url, payload, _ = range_server
     monkeypatch.setattr(transport, "endpoint", lambda: url.removesuffix("/redirect"))
