@@ -4,6 +4,7 @@
 
 ## 2026-10-21：Stage 1 编码与 Mask 消融通过
 
+- 三组正式配置/独立数据和条件索引已准备，预算验证均通过：200/30、150 steps、batch4、seed42，完整 train/network/model/sample 与 Stage 0 No-mask 一致，原 config/checkpoint 实际哈希相符；尚未启动正式训练。
 - 同一 2-step adapter、固定 dev_140513_t1/seed3662387196/4 steps/CFG4，真实 encoder 接收两图；joint attention 的 T=0/10/20 各 1024 tokens。
 - Static/零图/Shuffled 保持 source/noise 不变，mask token 和输出发生变化；Static repeat PNG 完全一致。worker 110.64s、wall126.63s，峰值 reserved16.56 GiB；仅证明条件接入，未证明正确空间编辑。
 - FP32 算术 source/mask 相对 RMSE0.000306/0.000414，BF16为0.007261/0.021445；打包形状/位置一致，但数值非字节相等，未调整既定容差。

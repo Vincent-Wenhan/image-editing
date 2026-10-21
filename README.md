@@ -66,6 +66,9 @@ image-edit gallery --predictions outputs/base_inference --output outputs/base_ga
 
 ## Stage 1 联合 Mask 条件
 
+复用 No-mask 时，`src.evaluation.budget.verify_training_budget` 校验原报告、配置、
+checkpoint 和真实数据，比较完整训练参数与更新预算；结果保存在每组 `budget.json`。
+
 `prepare-controls` 支持 `static_mask`、`dilated_mask`、`shuffled_mask`，生成独立的
 RGB 二值控制图和 SHA256 索引。Shuffle 固定完整 split 的 donor，不跨 train/dev；
 Dilated 默认 16 px 方形核半径。研究运行先复制验证过的数据以隔离训练缓存。

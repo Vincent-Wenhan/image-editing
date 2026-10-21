@@ -120,3 +120,52 @@ def test_device_patch_checks_actual_two_control_batches(tmp_path):
     assert len(calls) == 1
     with pytest.raises(ValueError):
         verify_joint_batch(SimpleNamespace(control_tensor_list=None), latent)
+
+
+@pytest.mark.parametrize("change", [None, "optimizer", "rank", "config_hash", "checkpoint"])
+def test_budget_reuse_checks_recipe_and_real_reference_assets(joint_recipe, tmp_path, change):
+    from src.core.io import sha256
+    from src.evaluation.budget import verify_training_budget
+
+    candidate = tmp_path / "candidate.yaml"
+    candidate.write_text(yaml.safe_dump(joint_recipe))
+    baseline = copy.deepcopy(joint_recipe)
+    baseline["meta"].pop("spatial_control")
+    dataset = baseline["config"]["process"][0]["datasets"][0]
+    dataset["control_path"] = dataset["control_path"][0]
+    dataset.pop("full_size_control_images")
+    path = tmp_path / "baseline.yaml"
+    path.write_text(yaml.safe_dump(baseline))
+    checkpoint = tmp_path / "checkpoint.safetensors"
+    checkpoint.write_bytes(b"test checkpoint bytes")
+    report = tmp_path / "report.json"
+    report.write_text(
+        json.dumps(
+            dict(
+                status="complete",
+                trainer_revision=SUPPORTED_TRAINER_REVISION,
+                config=str(path),
+                config_sha256=sha256(path),
+                checkpoint=str(checkpoint),
+                checkpoint_sha256=sha256(checkpoint),
+                steps=150,
+                batch_size=1,
+            )
+        )
+    )
+    if change == "config_hash":
+        path.write_text(path.read_text() + "\n")
+    elif change == "checkpoint":
+        checkpoint.write_bytes(b"changed")
+    elif change in {"optimizer", "rank"}:
+        process = joint_recipe["config"]["process"][0]
+        if change == "optimizer":
+            process["train"]["optimizer"] = "sgd"
+        else:
+            process["network"]["linear"] = 32
+        candidate.write_text(yaml.safe_dump(joint_recipe))
+    if change:
+        with pytest.raises(ValueError):
+            verify_training_budget(report, candidate)
+    else:
+        assert verify_training_budget(report, candidate)["train_count"] == 3

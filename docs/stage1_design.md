@@ -90,4 +90,7 @@ GPU smoke 和三组初步对照尚待执行，不能将 CPU 测试写成 GPU 验
 2-step 双参考训练现已完成，194.61s、峰值 reserved 15.04 GiB，两个 batch 均被检查，
 checkpoint 张量有限；编码/消融仍待运行。VAE FP32 算术对照先把两边权重都量化为
 实际训练使用的 BF16 再转 FP32，避免一边恢复精度、一边已丢失精度导致伪差异。
+三组正式配置已生成且通过预算验证：与 Stage 0 No-mask 的完整训练配方、实际
+config/checkpoint SHA256、200/30 数据和更新预算一致。新增预算/参考资产漂移回归
+后本机 125 项通过；正式 GPU 训练尚待容量检查。
 Stage 0 完整记录仍在原架构 worktree，详见 Stage 0 报告。

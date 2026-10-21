@@ -16,6 +16,10 @@ cast 顺序，No-mask 不进入该处理器。runner 只读 source/声明的 mas
 `--control none`。2-step 双参考训练与真实编码/消融已经完成，证据与 BF16 数值差异
 见 [stage1_report.md](stage1_report.md)；三组初步对照仍待执行。
 
+`evaluation/budget.py` 独立核对原 No-mask 报告/config/checkpoint 的实际 SHA256，比较
+完整 train/network/model/sample、数据处理参数和两个 split manifest；只允许路径与
+声明的参考数量差异。其依赖限于 core/datasets，不反向调用训练器。
+
 ## 合并前检查（2026-10-21）
 
 `origin/main=5c505e5` 是 `eaa30dc` 的祖先，分支没有分叉冲突；工作区干净，
