@@ -4,6 +4,9 @@ Stage 0 架构已通过 [PR #1](https://github.com/Vincent-Wenhan/image-editing/
 合并。Stage 1 的双参考条件、128 项回归和最小 GPU 编码/消融验证已完成，三组
 150-step 初步对照运行中。见 [设计](docs/stage1_design.md) 和 [实际报告](docs/stage1_report.md)。
 
+Mask 画廊新增 `annotation_mask` 与 `control_input` 两列，分别展示评估用原标注和模型
+实际收到的控制图；No-mask 的原四列保持不变。初次画廊保留，新视图另存 `gallery_controls/`。
+
 以 **FLUX.2 Klein Base 4B** 建立可复现编辑与 LoRA 基线，随后研究随编辑强度变化的空间角色预测。方法改进尚未验证。
 
 - [方案评审](docs/proposal_review.md)：可行性、贡献边界、标签定义与必要对照。

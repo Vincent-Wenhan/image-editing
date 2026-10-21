@@ -57,6 +57,8 @@
 - `training`：双控制配方与调用边界校验，保留设备适配和异常清理。
 - `backends` / `inference`：双参考调用、输入协议与逐例条件来源记录。
 - `evaluation`：条件 provenance，沿用原像素诊断与相同样本/预算比较。
+- Mask 实验画廊同时显示原始标注与按记录尺寸重建的实际控制输入；No-mask 原布局保持
+  不变。新视图另存目录，保留初次画廊，避免误将原始 Mask 当作 Dilated/Shuffled 输入。
 - `infra` / 薄 `scripts`：可重复 smoke/初步对照，始终检查空闲 GPU 并持有租约。
 
 先提交设计，再实现 CPU 可验证路径与测试，通过后提交；随后最小 GPU smoke，

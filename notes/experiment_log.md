@@ -2,6 +2,12 @@
 
 时间以 Asia/Shanghai 为准。每条记录说明配置、输入、产物、实际结果与限制。
 
+## 2026-10-21：实际控制图的可视化补齐
+
+- 初次画廊沿用原始标注mask列，可能误导Dilated/Shuffled输入审查；新增实际控制图列，按记录尺寸重建，原No-mask布局不变。
+- Static/Dilated/Shuffled的推理无target读取及可视化回归共7项通过；新视图另存各组 `gallery_controls/`，初次画廊保留。
+- 目视抽查Static的dev_319096_t1镜面有白块残留，No-mask同例表现不同；这是探索性失败观察，不能当作编辑成功率或确定机制归因。
+
 ## 2026-10-21：同预算三组训练启动
 
 - 执行代码 `46c5885`，三组150-step/batch4从同一Base独立开始：Static/GPU2、Dilated/GPU0、Shuffled/GPU1，UUID互异；容量门禁与完整预算校验已通过。

@@ -17,6 +17,7 @@ from src.conditioning.static import MaskSpec
 from src.core.io import read_rows
 from src.core.types import EditInput, EditOutput, GenerationOptions
 from src.datasets.control_export import export_controls
+from src.evaluation.gallery import run as gallery
 from src.evaluation.provenance import verify_run
 from src.inference import runner
 
@@ -58,11 +59,16 @@ def test_actual_adapter_forwards_both_images_in_order(monkeypatch):
         reference_images(edit, controls, GenerationOptions(128, 64, 2, 4, 42))
 
 
+@pytest.mark.parametrize("kind", ["static_mask", "dilated_mask", "shuffled_mask"])
 def test_mask_runner_never_opens_target_and_records_consumed_conditions(
-    spatial_data, tmp_path, monkeypatch
+    spatial_data, tmp_path, monkeypatch, kind
 ):
     control_root = tmp_path / "controls"
-    export_controls(spatial_data, control_root, MaskSpec(ControlKind.STATIC_MASK))
+    export_controls(
+        spatial_data,
+        control_root,
+        MaskSpec(ControlKind(kind), 2 if kind == "dilated_mask" else 0, 42),
+    )
     model = tmp_path / "model"
     model.mkdir()
     (model / "download.json").write_text('{"revision":"fixed"}')
@@ -82,7 +88,7 @@ def test_mask_runner_never_opens_target_and_records_consumed_conditions(
             "--limit",
             "1",
             "--control",
-            "static_mask",
+            kind,
             "--control-root",
             str(control_root),
         ]
@@ -97,7 +103,7 @@ def test_mask_runner_never_opens_target_and_records_consumed_conditions(
 
         def edit(self, edit, controls, options):
             calls.append(controls)
-            assert controls.kind == ControlKind.STATIC_MASK
+            assert controls.kind == kind
             assert not hasattr(edit, "target")
             return EditOutput(edit.source.copy(), 1, 2, 3)
 
@@ -116,6 +122,26 @@ def test_mask_runner_never_opens_target_and_records_consumed_conditions(
     verify_run(spatial_data, args.manifest, record)
     assert len(calls) == 1
     assert record["results"][0]["conditioning"] == dict(calls[0].metadata)
+    gallery_args = build_parser().parse_args(
+        [
+            "gallery",
+            "--data-root",
+            str(spatial_data),
+            "--manifest",
+            args.manifest,
+            "--predictions",
+            args.output,
+            "--output",
+            str(tmp_path / "gallery"),
+        ]
+    )
+    gallery(gallery_args)
+    page = (tmp_path / "gallery/index.html").read_text()
+    assert "annotation_mask" in page and "control_input" in page
+    with Image.open(tmp_path / "gallery/contact_00.jpg") as sheet:
+        assert sheet.width == 5 * 224
+    with Image.open(next((tmp_path / "gallery/control_inputs").glob("*.png"))) as image:
+        assert np.array_equal(np.asarray(image)[:, :, 0], calls[0].maps["mask"])
     row = read_rows(spatial_data / "dev/manifest.csv")[0]
     Image.new("RGB", (64, 64)).save(control_root / "dev/mask_rgb" / f"{row['id']}.png")
     with pytest.raises(ValueError, match="SHA256"):
