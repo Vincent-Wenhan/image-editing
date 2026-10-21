@@ -1,5 +1,13 @@
 # 工程架构重构
 
+## Stage 1 开发入口
+
+架构分支已通过 [PR #1](https://github.com/Vincent-Wenhan/image-editing/pull/1)
+正常合并到 main `020c370`，push/PR GitHub CPU checks 均通过（95 passed、2 skipped；
+本机完整环境 97 passed）。分阶段提交和 Stage 0 实验均保留。
+`feat/static-spatial-control` 从该 main 创建；目录职责不变，新设计和实际状态见
+[stage1_design.md](stage1_design.md)。下文保留重构过程记录。
+
 ## 合并前检查（2026-10-21）
 
 `origin/main=5c505e5` 是 `eaa30dc` 的祖先，分支没有分叉冲突；工作区干净，

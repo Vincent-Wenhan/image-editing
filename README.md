@@ -1,5 +1,9 @@
 # Image Editing Research
 
+Stage 0 架构已通过 [PR #1](https://github.com/Vincent-Wenhan/image-editing/pull/1)
+合并；Stage 1 在独立分支开发，设计与验收计划见 [Stage 1](docs/stage1_design.md)。
+目前该阶段只有设计，实际实现/实验状态会同步更新。
+
 以 **FLUX.2 Klein Base 4B** 建立可复现编辑与 LoRA 基线，随后研究随编辑强度变化的空间角色预测。方法改进尚未验证。
 
 - [方案评审](docs/proposal_review.md)：可行性、贡献边界、标签定义与必要对照。

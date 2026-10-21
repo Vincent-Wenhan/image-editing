@@ -2,6 +2,13 @@
 
 时间以 Asia/Shanghai 为准。每条记录说明配置、输入、产物、实际结果与限制。
 
+## 2026-10-21：PR 合并与 Stage 1 设计
+
+- PR #1 在两组 GitHub checks 通过后正常 merge 到 `020c370`，保留原提交，无 force push。CI 为 95 passed/2 skipped，本机完整环境 97 passed。
+- main 已 fast-forward；用户原 roadmap 移动与已提交内容 SHA256 完全一致，现由 main 跟踪，没有丢失修改。Stage 0 所有输出留在原架构 worktree。
+- 从最新 main 建立 `feat/static-spatial-control`，独立 worktree/`.venv` 复用命名 Conda 依赖，原模型/数据/外部源码通过忽略的链接复用。
+- 已阅读固定 CJT、ai-toolkit 双参考与 Diffusers 编码路径；设计见 `docs/stage1_design.md`。当前只完成设计，未实现空间控制或运行新 GPU 实验。
+
 ## 2026-10-21：架构分支合并门禁
 
 - 远端 main `5c505e5` 是分支 `eaa30dc` 的祖先；无分叉冲突，diff whitespace 检查通过。
