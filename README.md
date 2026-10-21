@@ -213,6 +213,11 @@ image-edit review merge --bundle <review> --import <import-a> --import <import-b
 交叉bootstrap、固定seed、配对比较两项评分；NA不计零分。失败分类是结果筛选后的
 描述，不作收益推断。工具无法证明真人独立性，须由评审组织者保证。
 
+`review audit` 接受同名 `--run METHOD=PATH` 和 `--training METHOD=REPORT`、共同
+`--data-root/--manifest`、`--annotations` 与新 `--output`，检查实际训练预算/资产，
+并从真实图片重算按任务分组的像素诊断。固定30例任务描述在
+`configs/experiments/stage1_task_groups.csv`；它不是成功/失败评分。
+
 `image-edit gpu -- python -m src.inference.reference_smoke --data-root <data> --lora <lora> --output <new-smoke>`
 可单独检查单/双参考结构与cast差异；这类smoke不代表编辑质量。
 

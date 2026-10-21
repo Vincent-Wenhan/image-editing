@@ -260,3 +260,11 @@
 以及独立Oracle/Dynamic Binary条件索引。58项相关回归通过（51.03s），128²真实
 CPU渲染20组/60对通过，36/12/12分割，48.44s，背景误差max0.006304<0.01。
 512²相同物理组正在验证；角色训练与GPU结果另记，当前不宣称上界质量。
+
+## Stage 1 实际公平性与分组复核
+
+Constant/Static/Dilated三组实际训练report/config/checkpoint/控制索引/manifest及
+完整配方一致性审计通过。30例指令分为6类（只描述任务，不给成功分），实际图片
+重算的诊断与旧metrics逐项一致。输出 `role_validation_20261022/stage1/audit.json`。
+三份独立顺序的180项评审页面已导出；真实reviewer输入为0，合并结果pending3位。
+28项协议/人工/worker回归通过（34.25s），未将fixture或代理观察作为真人评分。

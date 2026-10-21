@@ -1,5 +1,9 @@
 # 工程架构重构
 
+`evaluation/fairness.py` 对已完成训练的实际report/config/checkpoint/条件索引及
+各split manifest核验等预算；复核原图与预测后重算metrics，再按显式任务注释汇总。
+任务描述与人工结果分开；失败分类依赖真实评分，空表保持pending。
+
 2026-10-22 开发范围见 [角色研究验证计划](role_validation_design.md)。沿用现有模块
 职责，新增多评审统计、程序化 scene 配置和显式 Oracle 训练/评估，保持原 loss。
 Dynamic Binary 依赖真值，也属于显式上界；普通推理不能使用它。计划与实际状态分开。

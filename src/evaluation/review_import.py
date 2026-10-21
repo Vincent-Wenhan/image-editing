@@ -10,7 +10,7 @@ import numpy as np
 
 from src.core.io import read_rows, sha256, write_json, write_rows
 from src.core.metadata import now
-from src.evaluation.review_page import FIELDS, page
+from src.evaluation.review_page import FAILURES, FIELDS, page
 from src.evaluation.review_stats import summarize
 
 
@@ -160,9 +160,7 @@ def merge_reviews(
         failure_cases=[row for row in judgements if row["failure"]],
     )
     for key, field in (("by_edit_task", "edit_task"), ("by_failure", "failure")):
-        categories = (
-            set(groups.values()) if field == "edit_task" else {r[field] for r in judgements} - {""}
-        )
+        categories = set(groups.values()) if field == "edit_task" else set(FAILURES)
         for value in sorted(categories):
             selected = [r for r in judgements if r[field] == value]
             # Failure strata are outcome-selected descriptions, not efficacy inference.

@@ -218,9 +218,11 @@ def configure_score(parser) -> None:
 
 
 def configure(parser) -> None:
+    from src.evaluation.fairness import configure as configure_audit
     from src.evaluation.review_import import configure as configure_imports
 
     actions = parser.add_subparsers(dest="review_action", required=True)
     configure_export(actions.add_parser("export"))
     configure_score(actions.add_parser("score"))
     configure_imports(actions)
+    configure_audit(actions)

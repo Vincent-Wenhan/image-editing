@@ -254,3 +254,35 @@ def test_scene_bootstrap_does_not_count_strengths_as_independent_samples():
     result = paired_estimate(cells, seed=7, resamples=500, inference_ready=True)
     assert result["mean_difference"] == 0.5
     assert result["scenes"] == 2 and result["ci95"] == [0, 1]
+
+
+def test_grouped_diagnostics_recomputes_saved_metrics(review_bundle, tmp_path):
+    from types import SimpleNamespace
+
+    from src.evaluation.evaluate import run
+    from src.evaluation.fairness import grouped_diagnostics
+
+    mapping = json.loads((review_bundle / "private/mapping.json").read_text())
+    root, manifest = Path(mapping["data_root"]), Path(mapping["manifest"])
+    runs = {name: Path(info["path"]) for name, info in mapping["runs"].items()}
+    for directory in runs.values():
+        run(
+            SimpleNamespace(
+                data_root=root, manifest=manifest, predictions=directory, threshold=0.05
+            )
+        )
+    annotations = tmp_path / "groups.csv"
+    write_rows(
+        annotations,
+        [dict(sample_id=row["id"], edit_task="fixture_color") for row in read_rows(manifest)],
+    )
+    result = grouped_diagnostics(root, manifest, runs, annotations)
+    assert all(
+        row["by_edit_task"]["fixture_color"]["count"] == 3 for row in result["methods"].values()
+    )
+    directory = next(iter(runs.values()))
+    rows = read_rows(directory / "metrics.csv")
+    rows[0]["target_mae"] = "100"
+    write_rows(directory / "metrics.csv", rows)
+    with pytest.raises(ValueError, match="actual images"):
+        grouped_diagnostics(root, manifest, runs, annotations)
