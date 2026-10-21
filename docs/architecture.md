@@ -1,5 +1,11 @@
 # 工程架构重构
 
+`training/spatial.py` 区分binary与hard one-hot batch，固定版本设备补丁只增加验证，
+不改上游forward/loss。`role_study.py`生成独立缓存数据副本、同预算四方法双seed配置，
+按smoke→重载消费验证→batch容量→训练→固定评估执行；`infra/experiment.py`记录
+argv、源码摘要、版本、时间和原始失败。`evaluation/role_metrics.py`分别量化T/D编辑
+误差与P漂移，按scene等权和场景bootstrap；两seed逐项报告，不把场景区间当训练方差。
+
 `evaluation/fairness.py` 对已完成训练的实际report/config/checkpoint/条件索引及
 各split manifest核验等预算；复核原图与预测后重算metrics，再按显式任务注释汇总。
 任务描述与人工结果分开；失败分类依赖真实评分，空表保持pending。

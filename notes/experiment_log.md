@@ -268,3 +268,15 @@ Constant/Static/Dilated三组实际训练report/config/checkpoint/控制索引/m
 重算的诊断与旧metrics逐项一致。输出 `role_validation_20261022/stage1/audit.json`。
 三份独立顺序的180项评审页面已导出；真实reviewer输入为0，合并结果pending3位。
 28项协议/人工/worker回归通过（34.25s），未将fixture或代理观察作为真人评分。
+
+## Oracle训练通路与512数据验收
+
+已实现Oracle/Dynamic Binary训练/显式上界推理、实际one-hot batch校验，以及同预算
+四组双seed编排和T/D/P分区诊断；保留原flowmatch/sigmoid、网络和loss。CPU测试证明
+补丁前后loss/梯度一致，普通推理拒绝真值条件，标签消费不读target/反事实RGB。
+第一轮全套193 passed/145.15s；新增协议28 passed/34.25s、分区指标2 passed。
+512²真实CPU生成/重算60对，473.42s，背景误差max0.007431<0.01，未放宽阈值。
+GPU smoke、容量、正式训练和重载尚未执行；下步冻结代码后启动，结果单独记录。
+
+冻结前全量检查：199 passed/88.62s，Ruff check/format通过；新增上界runner、配方
+漂移、角色指标与scene聚合均覆盖。512数据副本/控制图/配置正在CPU准备，不占GPU。

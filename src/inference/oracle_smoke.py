@@ -30,7 +30,7 @@ def run(args) -> None:
     args.output.mkdir(parents=True)
     report = dict(
         status="running",
-        scope="protocol only; no role-specific adapter or training",
+        scope="protocol/sensitivity only; not a quality upper-bound result",
         results={},
         model=json.loads((Path(args.model) / "download.json").read_text()),
     )
@@ -59,7 +59,9 @@ def run(args) -> None:
             {"roles": labels},
             dict(oracle.metadata, role_sha256=sha256(path), diagnostic_intervention="swap_T_D"),
         )
-        backend = Flux2Backend(args.model)
+        if args.lora:
+            report["lora_sha256"] = sha256(args.lora)
+        backend = Flux2Backend(args.model, args.lora)
         for name, controls in (("oracle", oracle), ("swapped_td", altered), ("repeat", oracle)):
             with trace_references(backend.pipe) as trace:
                 result = backend.edit_oracle(edit, controls, options, allow_oracle=True)
@@ -109,6 +111,7 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--model", default=settings.assets["models"]["base"]["path"])
     parser.add_argument("--steps", type=int, default=4)
+    parser.add_argument("--lora", help="Optional completed role adapter for reload protocol check")
     parser.add_argument(
         "--guidance", type=float, default=settings.process["sample"]["guidance_scale"]
     )

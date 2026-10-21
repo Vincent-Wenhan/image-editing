@@ -9,7 +9,7 @@ from src.core.io import read_rows, sha256
 from src.core.metadata import config_digest
 from src.core.random import sample_seed
 from src.core.references import reference_preprocessing
-from src.datasets.controls import ControlDataset
+from src.datasets.role_controls import ORACLE_KINDS, load_controls
 from src.datasets.validation import verify_images
 
 COMPARISON_KEYS = ("side", "steps", "guidance", "seed")
@@ -21,6 +21,8 @@ def verify_run(root: Path, manifest: str | Path, record: dict) -> dict[str, dict
     if sha256(manifest) != record.get("manifest_sha256"):
         raise ValueError("Manifest SHA256 differs from the inference run")
     config = record["config"]
+    if (config.get("control") in ORACLE_KINDS) != bool(config.get("allow_oracle", False)):
+        raise ValueError("Inference oracle upper-bound permission differs from method")
     preprocessing = reference_preprocessing(
         config.get("control", "none"), config.get("reference_preprocessing", "auto")
     )
@@ -45,7 +47,7 @@ def verify_run(root: Path, manifest: str | Path, record: dict) -> dict[str, dict
         verify_images(root, row)
     condition_data = None
     if config.get("control", "none") != "none":
-        condition_data = ControlDataset(Path(config["control_root"]), root, config["control"])
+        condition_data = load_controls(Path(config["control_root"]), root, config["control"])
         if record.get("conditioning") != condition_data.metadata():
             raise ValueError("Inference control index SHA256 or method changed")
     elif record.get("conditioning"):

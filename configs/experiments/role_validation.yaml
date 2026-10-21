@@ -1,0 +1,16 @@
+schema_version: 1
+methods: [static_mask, dilated_mask, dynamic_binary, oracle_role]
+train_seeds: [42, 43]
+steps: 60
+batch_size: 4
+rank: 16
+dilation_radius: 16
+inference:
+  steps: 20
+  guidance: 4.0
+  seed: 42
+  splits: [dev, test]
+max_parallel: 4
+smoke:
+  steps: 2
+  batch_size: 1

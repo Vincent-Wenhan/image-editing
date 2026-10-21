@@ -267,3 +267,25 @@ scene sweep支持物体初始位置、几何/颜色、点光位置/能量、背�
 新test split按完整scene group保留；旧train/dev格式仍可读。Oracle/Dynamic Binary
 用 `prepare-controls --kind oracle_role|dynamic_binary` 编译，前者one-hot角色，后者
 valid内T∪D。二者都是依赖真值的上界，导出先做完整反事实校验，推理加载不读target。
+
+Oracle LoRA 使用原训练入口，`train-config --control oracle_role --control-root <roles>`；
+Static/Dilated/Dynamic Binary分别指定其kind。重载上界必须显式使用
+`infer --control oracle_role --control-root <roles> --allow-oracle --lora <checkpoint>`。
+训练端检查one-hot角色通道与实际batch，沿用固定ai-toolkit的flow-matching目标。
+
+有界四组研究入口（激活Conda后，在冻结的已安装worktree中运行）：
+
+```bash
+python -m src.training.role_study prepare --data <verified-512-scenes> --output <new-study>
+python -m src.training.role_study run --output <new-study> --phase smoke
+image-edit gpu -- python -m src.inference.oracle_smoke --data-root <new-study>/smoke_oracle_role_42/data \
+  --lora <smoke-checkpoint> --output <new-study>/oracle_reload_smoke
+python -m src.training.role_study run --output <new-study> --phase capacity
+python -m src.training.role_study run --output <new-study> --phase train --parallel 4
+python -m src.training.role_study run --output <new-study> --phase infer --parallel 4
+python -m src.evaluation.role_metrics --study <new-study> --output <new-diagnostics>
+```
+
+训练预算唯一配置为 `configs/experiments/role_validation.yaml`；各子任务均由GPU租约
+入口启动，重复目录会失败。先单卡测量，再扩大batch/并行；同一对照不自动调batch。
+P区域报告source漂移，T/D报告target误差，分别按scene聚合，不称为编辑成功率。

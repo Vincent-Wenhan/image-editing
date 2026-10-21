@@ -6,6 +6,7 @@ import yaml
 
 from src.conditioning.static import MASK_KINDS
 from src.core.config import ProjectSettings, load_yaml
+from src.datasets.role_controls import ORACLE_KINDS
 from src.datasets.validation import validate
 from src.training.spatial import attach_controls
 
@@ -63,6 +64,6 @@ def configure(parser) -> None:
     parser.add_argument("--batch-size", type=int, default=process["train"]["batch_size"])
     parser.add_argument("--rank", type=int, default=process["network"]["linear"])
     parser.add_argument("--output", default="outputs/configs/flux2_edit_lora.yaml")
-    parser.add_argument("--control", choices=["none", *MASK_KINDS], default="none")
+    parser.add_argument("--control", choices=["none", *MASK_KINDS, *ORACLE_KINDS], default="none")
     parser.add_argument("--control-root", help="Prepared, hashed mask condition directory")
     parser.set_defaults(func=run)

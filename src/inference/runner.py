@@ -20,8 +20,8 @@ from src.core.paths import data_path
 from src.core.random import sample_seed
 from src.core.references import reference_preprocessing
 from src.core.types import GenerationOptions
-from src.datasets.controls import ControlDataset
 from src.datasets.manifest import load_edit_input
+from src.datasets.role_controls import ORACLE_KINDS, load_controls
 from src.infra.gpu import require_lease
 
 logger = logging.getLogger(__name__)
@@ -53,6 +53,11 @@ def run(args, *, backend_factory: Callable[..., EditingBackend] = Flux2Backend) 
     write_json(output / "run.json", run_info)
     try:
         kind = getattr(args, "control", "none")
+        oracle = kind in ORACLE_KINDS
+        if oracle != bool(getattr(args, "allow_oracle", False)):
+            raise ValueError(
+                "Ground-truth conditions require an explicit --allow-oracle upper-bound run"
+            )
         preprocessing = reference_preprocessing(
             kind, getattr(args, "reference_preprocessing", "auto")
         )
@@ -62,7 +67,7 @@ def run(args, *, backend_factory: Callable[..., EditingBackend] = Flux2Backend) 
         if (kind == "none") != (control_root is None):
             raise ValueError("Mask inference requires both --control and --control-root")
         condition_data = (
-            ControlDataset(Path(control_root), Path(args.data_root), kind) if control_root else None
+            load_controls(Path(control_root), Path(args.data_root), kind) if control_root else None
         )
         if condition_data:
             run_info["conditioning"] = condition_data.metadata()
@@ -84,12 +89,12 @@ def run(args, *, backend_factory: Callable[..., EditingBackend] = Flux2Backend) 
             )
             if not condition_data and preprocessing == "training":
                 controls = ControlBundle(metadata={"reference_preprocessing": preprocessing})
-            controls.require_inference_safe()
-            prediction = backend.edit(
-                edit_input,
-                controls,
-                GenerationOptions(width, height, args.steps, args.guidance, seed),
-            )
+            options = GenerationOptions(width, height, args.steps, args.guidance, seed)
+            if oracle:
+                prediction = backend.edit_oracle(edit_input, controls, options, allow_oracle=True)
+            else:
+                controls.require_inference_safe()
+                prediction = backend.edit(edit_input, controls, options)
             if prediction.image.size != (width, height):
                 raise ValueError(f"Backend output dimensions differ for {row['id']}")
             prediction.image.save(output / f"{row['id']}.png")
@@ -131,7 +136,10 @@ def configure(parser) -> None:
     parser.add_argument("--guidance", type=float, default=sample["guidance_scale"])
     parser.add_argument("--seed", type=int, default=sample["seed"])
     parser.add_argument("--lora")
-    parser.add_argument("--control", choices=["none", *MASK_KINDS], default="none")
+    parser.add_argument("--control", choices=["none", *MASK_KINDS, *ORACLE_KINDS], default="none")
+    parser.add_argument(
+        "--allow-oracle", action="store_true", help="Explicit ground-truth upper bound only"
+    )
     parser.add_argument("--control-root", help="Prepared, hashed mask condition directory")
     parser.add_argument("--reference-preprocessing", choices=["auto", "training"], default="auto")
     parser.set_defaults(func=run)
