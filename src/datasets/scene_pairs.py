@@ -35,7 +35,11 @@ def compile_pairs(root: Path, config: dict) -> dict:
     raw = json.loads(raw_path.read_text())
     if raw["config_sha256"] != config_digest(config):
         raise ValueError("Render evidence uses a different scene configuration")
-    rows = {"train": [], "dev": []}
+    rows = {
+        split: []
+        for split in ("train", "dev", "test")
+        if any(s["split"] == split for s in config["scenes"])
+    }
     for group in raw["groups"]:
         scene = group["scene"]
         split = scene["split"]

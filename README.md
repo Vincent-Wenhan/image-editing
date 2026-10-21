@@ -221,6 +221,10 @@ image-edit review merge --bundle <review> --import <import-a> --import <import-b
 ```bash
 image-edit scene generate --config configs/datasets/blender_translation.yaml --output <new-scene-data>
 image-edit scene validate --root <new-scene-data>
+# 固定抽样seed后显式展开；同seed/组数可先128，再512验证。
+image-edit scene expand --seed 20261022 --train-groups 12 --dev-groups 4 --test-groups 4 \
+  --resolution 512 --output <new-scenes.yaml>
+image-edit scene generate --config <new-scenes.yaml> --output <new-expanded-data>
 ```
 
 默认使用固定4.5.3的Cycles CPU，生成多强度平移、阴影开关反事实、空背景及对象占据
@@ -253,3 +257,8 @@ Blender可选依赖固定为bpy4.5.3、Cython3.3.0、zstandard0.25.0；沿用原
 
 当前场景beauty/反事实为32次采样、occupancy为16次；轮廓ignore与背景误差校验
 处理抗锯齿差异。角色标签的可信范围以valid和Stage 2报告为准。
+
+scene sweep支持物体初始位置、几何/颜色、点光位置/能量、背景棋盘和强度变化。
+新test split按完整scene group保留；旧train/dev格式仍可读。Oracle/Dynamic Binary
+用 `prepare-controls --kind oracle_role|dynamic_binary` 编译，前者one-hot角色，后者
+valid内T∪D。二者都是依赖真值的上界，导出先做完整反事实校验，推理加载不读target。

@@ -1,7 +1,7 @@
 """Procedural direct-light scenes; bpy is imported only inside the renderer process."""
 
 
-def material(bpy, name, color, *, emission=False, checker=False):
+def material(bpy, name, color, *, emission=False, checker=False, spec=None):
     result = bpy.data.materials.new(name)
     result.use_nodes = True
     nodes = result.node_tree.nodes
@@ -11,10 +11,11 @@ def material(bpy, name, color, *, emission=False, checker=False):
     shader.inputs["Color"].default_value = (*color, 1)
     result.node_tree.links.new(shader.outputs[0], output.inputs["Surface"])
     if checker:
+        spec = spec or {}
         pattern = nodes.new("ShaderNodeTexChecker")
-        pattern.inputs["Color1"].default_value = (0.38, 0.42, 0.46, 1)
-        pattern.inputs["Color2"].default_value = (0.65, 0.60, 0.50, 1)
-        pattern.inputs["Scale"].default_value = 12
+        pattern.inputs["Color1"].default_value = (*spec.get("floor_color1", [0.38, 0.42, 0.46]), 1)
+        pattern.inputs["Color2"].default_value = (*spec.get("floor_color2", [0.65, 0.60, 0.50]), 1)
+        pattern.inputs["Scale"].default_value = spec.get("checker_scale", 12)
         result.node_tree.links.new(pattern.outputs["Color"], shader.inputs["Color"])
     return result
 
@@ -55,9 +56,11 @@ def build_scene(config: dict, spec: dict):
     bpy.ops.mesh.primitive_plane_add(size=12)
     floor = bpy.context.object
     floor.name = "background"
-    floor.data.materials.append(material(bpy, "checker_floor", (0.5, 0.5, 0.5), checker=True))
+    floor.data.materials.append(
+        material(bpy, "checker_floor", (0.5, 0.5, 0.5), checker=True, spec=spec)
+    )
     width = spec["object_width"]
-    location = (*config["source_xy"], width / 2)
+    location = (*spec.get("source_xy", config["source_xy"]), width / 2)
     if spec["shape"] == "cube":
         bpy.ops.mesh.primitive_cube_add(size=width, location=location)
     else:
@@ -70,7 +73,7 @@ def build_scene(config: dict, spec: dict):
     obj.data.materials.append(material(bpy, "object_diffuse", spec["color"]))
     bpy.ops.object.light_add(type="POINT", location=spec["light_position"])
     light = bpy.context.object
-    light.data.energy = config["light_energy"]
+    light.data.energy = spec.get("light_energy", config["light_energy"])
     light.data.shadow_soft_size = 0
     bpy.ops.object.camera_add(location=config["camera_position"])
     camera = bpy.context.object

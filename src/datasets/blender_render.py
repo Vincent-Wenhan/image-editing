@@ -56,7 +56,7 @@ def render_group(config: dict, spec: dict, output: Path) -> dict:
     for index, strength in enumerate(config["strengths"]):
         prefix = folder / f"s{index:03d}"
         displacement = strength * config["max_translation_widths"] * spec["object_width"]
-        obj.location.x = config["source_xy"][0] + displacement
+        obj.location.x = spec.get("source_xy", config["source_xy"])[0] + displacement
         obj.visible_shadow = True
         normal = render_linear(scene, prefix.with_name(prefix.name + "_normal.exr"))
         obj.visible_shadow = False

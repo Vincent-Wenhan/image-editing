@@ -11,10 +11,17 @@ from src.conditioning.static import MaskSpec, mask_rgb, transform_mask
 from src.core.io import read_rows, sha256
 from src.core.paths import data_path
 from src.datasets.control_export import donors
+from src.datasets.validation import dataset_splits
 
 
 class ControlDataset:
     """Small immutable-on-disk condition snapshot shared by training and inference."""
+
+    folder = "mask_rgb"
+
+    @property
+    def kind(self) -> ControlKind:
+        return self.spec.kind
 
     def __init__(self, root: Path, data_root: Path, kind: str) -> None:
         self.root, self.data_root = root.resolve(), data_root.resolve()
@@ -27,7 +34,9 @@ class ControlDataset:
         if self.spec.kind != ControlKind(kind):
             raise ValueError("Control method differs from requested configuration")
         self.rows = {}
-        for split in ("train", "dev"):
+        if set(self.index["splits"]) != set(dataset_splits(self.data_root)):
+            raise ValueError("Control split declarations differ from dataset")
+        for split in dataset_splits(self.data_root):
             manifest = self.data_root / split / "manifest.csv"
             section = self.index["splits"][split]
             if sha256(manifest) != section["manifest_sha256"]:

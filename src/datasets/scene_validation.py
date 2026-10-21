@@ -15,7 +15,7 @@ from src.core.paths import data_path
 from src.core.types import EditSupervision
 from src.datasets.scene_config import scene_group, validate_scene_config
 from src.datasets.scene_pairs import instruction, rgb_image
-from src.datasets.validation import validate
+from src.datasets.validation import dataset_splits, validate
 
 EVIDENCE_KEYS = {
     "source",
@@ -74,11 +74,13 @@ def validate_scene_dataset(root: Path, *, allow_running: bool = False) -> dict:
         raise ValueError("Renderer, scene order or physical configuration changed")
     result = validate(root)
     manifests = {}
-    for split in ("train", "dev"):
+    if set(dataset["manifests"]) != set(dataset_splits(root)):
+        raise ValueError("Scene split declarations differ from actual manifests")
+    for split in dataset_splits(root):
         if sha256(root / split / "manifest.csv") != dataset["manifests"][split]:
             raise ValueError("Scene manifest SHA256 changed")
         manifests[split] = {row["id"]: row for row in read_rows(root / split / "manifest.csv")}
-    seen = {"train": set(), "dev": set()}
+    seen = {split: set() for split in manifests}
     statistics = []
     for group in raw["groups"]:
         spec, entries = group["scene"], group["entries"]

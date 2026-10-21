@@ -20,7 +20,7 @@ def checked_row(root: Path, row: dict) -> None:
     dataset = json.loads((root / "dataset.json").read_text())
     if dataset.get("kind") != "blender_translation_v1" or dataset.get("status") != "complete":
         raise ValueError("Oracle loading requires a declared completed synthetic dataset")
-    if row["split"] not in {"train", "dev"}:
+    if row["split"] not in {"train", "dev", "test"} or row["split"] not in dataset["manifests"]:
         raise ValueError("Unknown scene split")
     manifest = root / row["split"] / "manifest.csv"
     if sha256(manifest) != dataset["manifests"][row["split"]]:

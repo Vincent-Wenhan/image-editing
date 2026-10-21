@@ -102,7 +102,10 @@ def run_validate(args) -> None:
 
 
 def configure(parser) -> None:
+    from src.datasets.scene_sweep import configure as configure_sweep
+
     actions = parser.add_subparsers(dest="scene_action", required=True)
+    configure_sweep(actions)
     generate_parser = actions.add_parser("generate")
     generate_parser.add_argument(
         "--config", default=str(CONFIG_ROOT / "datasets/blender_translation.yaml")

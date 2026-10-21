@@ -8,6 +8,11 @@ Dynamic Binary 依赖真值，也属于显式上界；普通推理不能使用�
 选择；`review_stats.py` 负责配对评分和scene/reviewer交叉重采样。原score仍兼容，
 新增保存原始字节副本。三人不完整时报告pending/null区间；实际真人评分尚未收到。
 
+`datasets/scene_sweep.py` 将固定抽样seed展开为显式物理配置；可选scene级位置、光源
+和背景覆盖保留旧默认/旧group SHA。配对验证、条件导出与snapshot均覆盖可选test，
+所有split两两查漏。`role_controls.py`只为验证过的合成数据导出Oracle/Dynamic
+Binary索引，消费端分离target并复核实际角色编码，普通推理权限继续收紧。
+
 ## 当前开发：评估补强与最小反事实数据
 
 Stage 1 PR #2 已正常合并 main `a03f168`；本地130项测试及 PR CI 通过，78个新增

@@ -63,8 +63,8 @@ def validate_scene_config(config: dict) -> None:
     ):
         raise ValueError("Invalid role thresholds or boundary margin")
     scenes = config["scenes"]
-    if {scene["split"] for scene in scenes} != {"train", "dev"}:
-        raise ValueError("Scene groups must include disjoint train and dev")
+    if {scene["split"] for scene in scenes} not in ({"train", "dev"}, {"train", "dev", "test"}):
+        raise ValueError("Scene groups must include disjoint train/dev with optional held-out test")
     if len({scene["id"] for scene in scenes}) != len(scenes):
         raise ValueError("Duplicate scene IDs")
     groups = set()
@@ -81,6 +81,18 @@ def validate_scene_config(config: dict) -> None:
             or scene["light_position"][2] <= 0
         ):
             raise ValueError("Invalid point light position")
+        for key, default, length, low, high in (
+            ("source_xy", config["source_xy"], 2, -1.2, 0.5),
+            ("floor_color1", [0.38, 0.42, 0.46], 3, 0, 1),
+            ("floor_color2", [0.65, 0.60, 0.50], 3, 0, 1),
+        ):
+            value = scene.get(key, default)
+            if len(value) != length or any(not finite(x, low, high) for x in value):
+                raise ValueError(f"Invalid scene {key}")
+        if not finite(scene.get("light_energy", config["light_energy"]), 1, 5000):
+            raise ValueError("Invalid scene light_energy")
+        if not finite(scene.get("checker_scale", 12), 4, 24):
+            raise ValueError("Invalid scene checker_scale")
         group = scene_group(config, scene)
         if group in groups:
             raise ValueError("Duplicate physical scene group, including across splits")
@@ -88,13 +100,21 @@ def validate_scene_config(config: dict) -> None:
 
 
 def scene_group(config: dict, scene: dict) -> str:
+    defaults = dict(
+        floor_color1=[0.38, 0.42, 0.46], floor_color2=[0.65, 0.60, 0.50], checker_scale=12
+    )
+    # Canonical physical overrides preserve hashes for every historical scene.
+    spec = {k: v for k, v in scene.items() if k not in {"id", "split", "source_xy", "light_energy"}}
+    for key, value in defaults.items():
+        if spec.get(key) == value:
+            spec.pop(key)
     return config_digest(
         dict(
-            scene={k: v for k, v in scene.items() if k not in {"id", "split"}},
+            scene=spec,
             camera_position=config["camera_position"],
             camera_target=config["camera_target"],
             ortho_scale=config["ortho_scale"],
-            source_xy=config["source_xy"],
-            light_energy=config["light_energy"],
+            source_xy=scene.get("source_xy", config["source_xy"]),
+            light_energy=scene.get("light_energy", config["light_energy"]),
         )
     )
