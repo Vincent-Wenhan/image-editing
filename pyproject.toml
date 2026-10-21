@@ -16,7 +16,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.12"]
-blender = ["bpy==4.5.3"]
+blender = ["bpy==4.5.3", "Cython==3.3.0", "zstandard==0.25.0"]
 
 [project.scripts]
 image-edit = "src.cli:main"

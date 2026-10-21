@@ -219,3 +219,6 @@ T/D/P为RGB单位向量，ignore为黑；普通 `edit`/`infer` 仍拒绝Oracle�
 
 盲评可以比较经过校验的独立数据副本；每个运行仍核对自身的控制来源，公开source/target
 另按共同manifest验证。导出同时检查prediction的实际尺寸与RGB模式。
+
+Blender可选依赖固定为bpy4.5.3、Cython3.3.0、zstandard0.25.0；沿用原命名Conda环境
+的数值依赖锁。完整本机安装快照另存实验输出，不将环境目录上传。
