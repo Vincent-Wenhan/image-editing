@@ -181,3 +181,9 @@
 ### 显式预处理与参考数量的最小追踪（已实现，GPU待运行）
 
 - reference_smoke追踪同一模型的legacy单参考、training cast单参考、constant双参考和重复采样；核对真实VAE/attention数量、T位置、source/noise摘要、全黑输入归一化、重复PNG及像素差异。仅验证协议，不作质量评价。
+
+### Stage 2 数据实现与CPU验收（真实渲染待运行）
+
+- 实现显式Cycles CPU场景、normal/no-shadow/occupancy/background线性证据、多个物理位移、兼容普通pair的manifest和独立T/D/P/valid标签。
+- 从占据与shadow-ray反事实重算角色，阈值间隙/边界/无法解释变化ignore；验证背景显露、源图一致、数据哈希和场景组split。
+- 18项CPU/CLI测试通过（18.23s）；fixture不当作真实Blender证据。正式软件安装与真实渲染尚待完成，首次软件入口403/慢链路续传日志保留。

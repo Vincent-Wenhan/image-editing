@@ -1,0 +1,46 @@
+schema_version: 1
+renderer:
+  version: '4.5.3'
+  engine: CYCLES
+  device: CPU
+  resolution: 128
+  samples: 32
+  seed: 17
+  threads: 8
+camera_position: [0, -6, 4]
+camera_target: [0, 0, 0.2]
+ortho_scale: 4.2
+source_xy: [-0.7, 0]
+light_energy: 800
+max_translation_widths: 1.5
+strengths: [0.0, 0.5, 1.0]
+roles:
+  shadow_low: 0.002
+  shadow_high: 0.02
+  unexplained_tolerance: 0.01
+  boundary_radius: 1
+scenes:
+  - id: train_cube_a
+    split: train
+    shape: cube
+    object_width: 0.65
+    color: [0.65, 0.08, 0.03]
+    light_position: [-3, -4, 6]
+  - id: train_cylinder_b
+    split: train
+    shape: cylinder
+    object_width: 0.72
+    color: [0.06, 0.45, 0.12]
+    light_position: [-4, -2, 5]
+  - id: dev_cube_c
+    split: dev
+    shape: cube
+    object_width: 0.55
+    color: [0.08, 0.18, 0.65]
+    light_position: [-2, -3, 5]
+  - id: dev_cylinder_d
+    split: dev
+    shape: cylinder
+    object_width: 0.62
+    color: [0.55, 0.30, 0.04]
+    light_position: [-3, -5, 7]

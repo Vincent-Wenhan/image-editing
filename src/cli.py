@@ -18,6 +18,7 @@ COMMANDS = {
     "train-config": "src.training.config",
     "gallery": "src.evaluation.gallery",
     "review": "src.evaluation.review",
+    "scene": "src.datasets.scene",
 }
 
 

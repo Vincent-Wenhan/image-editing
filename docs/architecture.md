@@ -370,3 +370,14 @@ No-mask默认仍为单PIL/Diffusers顺序，显式training选项才进入受限�
 
 `inference/reference_smoke.py` 为匹配结构的独立GPU协议门禁，复用同一个常驻模型，
 记录legacy/training单参考与constant双参考的真实编码/token和重复采样；不改变训练。
+
+### 最小场景数据管线
+
+- `datasets/scene.py`：CPU生成/只读校验入口、独立renderer进程、失败/耗时报告。
+- `scene_config.py`：显式物理参数与按物理场景分组的split约束。
+- `blender_scene.py` / `blender_render.py`：可选bpy，仅实际渲染进程导入；纯漫反射、点光源、关闭间接影响；保存正常/关闭shadow-ray/对象占据/空场线性证据和EXR。
+- `scene_pairs.py`：标准source/target/mask manifest与独立roles/valid监督；RGB显示变换与线性标签计算分开。
+- `conditioning/role_truth.py`：占据T、隔离阴影干预D、可信P及ignore边界。
+- `scene_validation.py`：实际SHA、配对/scene-group/强度、标签重算和背景显露复核；不依赖Blender或GPU。
+
+角色标签不进入普通输入加载；MagicBrush验证与所有旧路径保持原职责。

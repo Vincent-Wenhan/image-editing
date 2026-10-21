@@ -191,3 +191,14 @@ image-edit review score --bundle <new-review> --ratings <ratings.csv> --output <
 
 `image-edit gpu -- python -m src.inference.reference_smoke --data-root <data> --lora <lora> --output <new-smoke>`
 可单独检查单/双参考结构与cast差异；这类smoke不代表编辑质量。
+
+最小Blender数据（Python 3.11，可选安装 `pip install -e '.[blender]'`）：
+
+```bash
+image-edit scene generate --config configs/datasets/blender_translation.yaml --output <new-scene-data>
+image-edit scene validate --root <new-scene-data>
+```
+
+默认使用固定4.5.3的Cycles CPU，生成多强度平移、阴影开关反事实、空背景及对象占据
+证据；只读校验从证据重算T/D/P并验证哈希、split、位移与背景补全。配置和原始证据
+均留本地输出。当前范围是直接光硬阴影，不代表真实场景或复杂间接光的真值。
