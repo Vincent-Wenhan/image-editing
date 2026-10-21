@@ -9,6 +9,8 @@ pinned upstream method. No external source files are changed.
 from functools import wraps
 from pathlib import Path
 
+from src.training.spatial import verify_joint_batch
+
 SUPPORTED_TRAINER_REVISION = "a055947d56a156411abb4ef0301b35d0fe5f51a5"
 
 
@@ -30,6 +32,9 @@ def configure_flux2_trainer(model_type: type, text_encoder: Path, *, revision: s
         batch=None,
         **kwargs,
     ):
+        if getattr(type(self), "_image_edit_joint_controls", False):
+            verify_joint_batch(batch, latent_model_input)
+            type(self)._image_edit_joint_batches += 1
         has_reference = batch is not None and (
             getattr(batch, "control_tensor_list", None) is not None
             or getattr(batch, "control_tensor", None) is not None

@@ -11,6 +11,7 @@ COMMANDS = {
     "env": "src.infra.environment",
     "download": "src.infra.assets",
     "prepare": "src.datasets.magicbrush",
+    "prepare-controls": "src.datasets.control_export",
     "validate": "src.datasets.validation",
     "infer": "src.inference.runner",
     "evaluate": "src.evaluation.evaluate",

@@ -11,6 +11,7 @@ from PIL import Image
 from src.backends.base import EditingBackend
 from src.backends.flux2 import Flux2Backend
 from src.conditioning.controls import ControlBundle
+from src.conditioning.static import MASK_KINDS
 from src.core.config import ProjectSettings
 from src.core.images import dimensions
 from src.core.io import read_rows, sha256, write_json
@@ -18,6 +19,7 @@ from src.core.metadata import config_digest, config_snapshot, now, versions
 from src.core.paths import data_path
 from src.core.random import sample_seed
 from src.core.types import GenerationOptions
+from src.datasets.controls import ControlDataset
 from src.datasets.manifest import load_edit_input
 from src.infra.gpu import require_lease
 
@@ -49,6 +51,17 @@ def run(args, *, backend_factory: Callable[..., EditingBackend] = Flux2Backend) 
         run_info["lora_sha256"] = sha256(args.lora)
     write_json(output / "run.json", run_info)
     try:
+        kind = getattr(args, "control", "none")
+        control_root = getattr(args, "control_root", None)
+        if (kind == "none") != (control_root is None):
+            raise ValueError("Mask inference requires both --control and --control-root")
+        condition_data = (
+            ControlDataset(Path(control_root), Path(args.data_root), kind) if control_root else None
+        )
+        if condition_data:
+            run_info["conditioning"] = condition_data.metadata()
+            if any(row != condition_data.rows[row["split"]].get(row["id"]) for row in rows):
+                raise ValueError("Inference manifest differs from prepared controls")
         backend = backend_factory(model, args.lora)
         for row in rows:
             if sha256(data_path(args.data_root, row["source_path"])) != row["source_sha256"]:
@@ -60,7 +73,9 @@ def run(args, *, backend_factory: Callable[..., EditingBackend] = Flux2Backend) 
                 source=edit_input.source.resize((width, height), Image.Resampling.LANCZOS),
             )
             seed = sample_seed(args.seed, row["id"])
-            controls = ControlBundle()
+            controls = (
+                condition_data.bundle(row, (width, height)) if condition_data else ControlBundle()
+            )
             controls.require_inference_safe()
             prediction = backend.edit(
                 edit_input,
@@ -83,6 +98,8 @@ def run(args, *, backend_factory: Callable[..., EditingBackend] = Flux2Backend) 
                     peak_reserved_gib=prediction.peak_reserved_gib,
                 )
             )
+            if condition_data:
+                run_info["results"][-1]["conditioning"] = dict(controls.metadata)
             write_json(output / "run.json", run_info)
             logger.info("%s: %.1fs", row["id"], prediction.seconds)
         run_info["status"] = "complete"
@@ -106,4 +123,6 @@ def configure(parser) -> None:
     parser.add_argument("--guidance", type=float, default=sample["guidance_scale"])
     parser.add_argument("--seed", type=int, default=sample["seed"])
     parser.add_argument("--lora")
+    parser.add_argument("--control", choices=["none", *MASK_KINDS], default="none")
+    parser.add_argument("--control-root", help="Prepared, hashed mask condition directory")
     parser.set_defaults(func=run)

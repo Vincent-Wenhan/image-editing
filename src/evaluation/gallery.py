@@ -9,6 +9,7 @@ from PIL import Image, ImageDraw, ImageOps
 
 from src.core.config import ProjectSettings
 from src.core.io import read_rows
+from src.datasets.controls import ControlDataset
 
 
 def run(args):
@@ -17,19 +18,34 @@ def run(args):
     output.mkdir(parents=True, exist_ok=True)
     rows = read_rows(args.manifest)[: args.limit]
     predictions = Path(args.predictions) if args.predictions else None
+    controls, results = None, {}
     if predictions:
-        ids = {row["id"] for row in json.loads((predictions / "run.json").read_text())["results"]}
-        rows = [row for row in rows if row["id"] in ids]
+        record = json.loads((predictions / "run.json").read_text())
+        results = {row["id"]: row for row in record["results"]}
+        rows = [row for row in rows if row["id"] in results]
+        config = record.get("config", {})
+        if config.get("control", "none") != "none":
+            controls = ControlDataset(Path(config["control_root"]), root, config["control"])
+            if controls.digest != record.get("conditioning", {}).get("index_sha256"):
+                raise ValueError("Gallery control index SHA256 differs from inference")
     if not rows:
         raise ValueError("No gallery samples")
     cards = []
     for page, start in enumerate(range(0, len(rows), 6)):
         subset = rows[start : start + 6]
-        columns = 4 if predictions else 3
+        columns = 3 + int(predictions is not None) + int(controls is not None)
         sheet = Image.new("RGB", (224 * columns, len(subset) * 260), "white")
         draw = ImageDraw.Draw(sheet)
         for index, row in enumerate(subset):
             pairs = [(key, root / row[f"{key}_path"]) for key in ("source", "target", "mask")]
+            if controls:
+                item = results[row["id"]]
+                bundle = controls.bundle(row, (item["width"], item["height"]))
+                path = output / "control_inputs" / f"{row['id']}.png"
+                path.parent.mkdir(exist_ok=True)
+                bundle.maps["mask"].convert("RGB").save(path)
+                pairs[-1] = ("annotation_mask", pairs[-1][1])
+                pairs.append(("control_input", path))
             if predictions:
                 pairs.append(("prediction", predictions / f"{row['id']}.png"))
             images = []

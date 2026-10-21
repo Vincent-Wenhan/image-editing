@@ -1,0 +1,11 @@
+controls:
+  dilation_radius: 16
+  shuffle_seed: 42
+comparison:
+  steps: 150
+  batch_size: 4
+  inference_limit: 12
+smoke:
+  steps: 2
+  batch_size: 1
+  sampling_steps: 4

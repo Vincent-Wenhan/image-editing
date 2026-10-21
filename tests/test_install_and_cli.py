@@ -13,13 +13,16 @@ from src.cli import COMMANDS, build_parser
 def test_all_command_defaults_match_pre_refactor_snapshot():
     legacy = json.loads((Path(__file__).parent / "fixtures/legacy_cli_defaults.json").read_text())
     parser = build_parser()
-    assert set(COMMANDS) == set(legacy)
+    assert set(COMMANDS) == set(legacy) | {"prepare-controls"}
     for name, expected in legacy.items():
         actual = vars(parser.parse_args([name]))
         actual.pop("func")
         actual.pop("subcommand")
         if name == "evaluate":
             assert actual.pop("reference_run") is None
+        if name in {"train-config", "infer"}:
+            assert actual.pop("control") == "none"
+            assert actual.pop("control_root") is None
         assert actual == expected, name
 
 

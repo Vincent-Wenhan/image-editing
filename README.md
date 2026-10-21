@@ -1,5 +1,13 @@
 # Image Editing Research
 
+Stage 0 架构已通过 [PR #1](https://github.com/Vincent-Wenhan/image-editing/pull/1)
+合并。Stage 1 的联合条件、130 项回归、GPU smoke、三组150-step训练及固定12例
+评估已完成。初步像素诊断未显示优于No-mask。见 [设计](docs/stage1_design.md) 和
+[实际报告](docs/stage1_report.md)。
+
+Mask 画廊新增 `annotation_mask` 与 `control_input` 两列，分别展示评估用原标注和模型
+实际收到的控制图；No-mask 的原四列保持不变。初次画廊保留，新视图另存 `gallery_controls/`。
+
 以 **FLUX.2 Klein Base 4B** 建立可复现编辑与 LoRA 基线，随后研究随编辑强度变化的空间角色预测。方法改进尚未验证。
 
 - [方案评审](docs/proposal_review.md)：可行性、贡献边界、标签定义与必要对照。
@@ -55,7 +63,39 @@ image-edit gallery --predictions outputs/base_inference --output outputs/base_ga
 
 评估会复核 manifest 与 source/target/mask 的真实 SHA256、尺寸、样本顺序和种子。
 新记录带配置摘要；配对比较可加 `--reference-run outputs/base_inference` 强制采样预算一致。
-输入、监督、硬标签与软角色概率场的数值/几何约束见架构文档，当前未实现空间控制。
+输入、监督、硬标签与软角色概率场的约束见架构文档；Stage 0 默认仍无空间条件。
+
+## Stage 1 联合 Mask 条件
+
+本机独立开发目录为 `/home/jiangwenhan/project/image-editing-static-spatial-control`。
+进入该目录后先激活 `image-edit` Conda，再激活 `.venv`，使用此分支的editable安装；
+原 main 和 Stage 0 worktree 各自保留。新环境仍可直接 `pip install -e .`。
+
+复用 No-mask 时，`src.evaluation.budget.verify_training_budget` 校验原报告、配置、
+checkpoint 和真实数据，比较完整训练参数与更新预算；结果保存在每组 `budget.json`。
+
+`prepare-controls` 支持 `static_mask`、`dilated_mask`、`shuffled_mask`，生成独立的
+RGB 二值控制图和 SHA256 索引。Shuffle 固定完整 split 的 donor，不跨 train/dev；
+Dilated 默认 16 px 方形核半径。研究运行先复制验证过的数据以隔离训练缓存。
+方形膨胀采用与 PIL MaxFilter 等价的积分图实现，避免大核校验拖慢 GPU 任务预检。
+
+```bash
+image-edit prepare-controls --kind static_mask --output outputs/controls/static
+image-edit train-config --control static_mask --control-root outputs/controls/static \
+  --name static_debug --steps 2 --output outputs/configs/static_debug.yaml
+image-edit gpu -- python -m src.training outputs/configs/static_debug.yaml \
+  --report outputs/static_debug_report.json
+image-edit gpu -- image-edit infer --control static_mask --control-root outputs/controls/static \
+  --lora outputs/lora/static_debug/static_debug.safetensors --output outputs/static_inference
+```
+
+训练与推理均按 `[source, mask]` 逐图 VAE 编码和联合 attention；不混合最终 RGB，
+不将 target 当参考图，不使用 mask 加权 loss。缺图、错序、非二值或几何不匹配会失败。
+实际 GPU 验收与对照以 Stage 1 报告为准；条件敏感性不等于编辑质量提升。
+
+三组训练/12例重载/配对评估均已完成，每组最终checkpoint为150 steps、160个有限张量。
+Static/Dilated/Shuffled的target MAE分别0.057758/0.056720/0.074145，复用的No-mask为
+0.055915。预算、耗时、显存、失败、数值差异和下一步限制均在报告中，不据此宣称方法有效。
 
 ## Edit LoRA
 
@@ -115,9 +155,9 @@ CLI 从这些配置读取默认值，原有命令行覆盖有效。采样默认�
 从仓库根执行默认命令；在其他目录使用已安装的 CLI 时，显式传入数据、模型和模板路径。
 
 `EditInput` 与 `EditSupervision` 独立，推理只读取 source/instruction；`ControlBundle` 标记控制来源，
-普通推理拒绝 oracle。当前后端仍只实现 Stage 0，无空间控制；Mask/Role/Qwen 的扩展位置已预留为接口。
+普通推理拒绝 oracle。FLUX 已接入 Static/Dilated/Shuffled Mask；Soft/Role/Qwen 仍未实现。
 
-本轮完整环境 97 项 CPU 回归、Ruff 与 CLI 检查通过；20-step /batch 2 和 150-step /
+Stage 0 稳定性收尾的 97 项 CPU 回归、Ruff 与 CLI 检查通过；20-step /batch 2 和 150-step /
 batch 4 均保存了有限 checkpoint，固定 12 例重载和配对校验完成。此前 editable/wheel
 安装及 Base 单例字节一致验证保留。新证据在 `outputs/stage0_stability_20261021/`，
 只用于工程验收，不据像素诊断宣称编辑成功率提升。

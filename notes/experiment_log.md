@@ -2,6 +2,55 @@
 
 时间以 Asia/Shanghai 为准。每条记录说明配置、输入、产物、实际结果与限制。
 
+## 2026-10-21：Stage 1 初步对照完成
+
+- Static/Dilated/Shuffled均完成150 steps/batch4，worker耗时1234.75/1230.83/1232.95s，峰值reserved均17.09 GiB；每组150次实际双图检查、160个有限张量，header step150/epoch2，无OOM或cleanup/telemetry错误。
+- 三组固定12例/50 steps/CFG4完成，逐图生成合计450.31/456.73/450.22s，峰值reserved均16.39 GiB；完整阶段含初始化分别721.90/728.81/721.61s，不能直接把wall差异归因于算法FLOPs。
+- 复用Stage 0 No-mask，完整配方、实际数据、采样预算与checkpoint SHA均再次通过；未重复生成或覆盖其结果。target MAE：No-mask0.055915、Static0.057758、Dilated0.056720、Shuffled0.074145。
+- Static/Dilated没有改善No-mask的target MAE；Dilated外漂移略低且变化面积略少，Shuffled误差/漂移较大。单seed/12例像素诊断没有方法优越性结论；No-mask原cast顺序保留，也是后续应匹配的数值因素。
+- 150-step Static在同checkpoint/源图/seed/50 steps下做Static/零图/Shuffle/重复：替换mask的输出像素MAE0.029828/0.026414，重复为0；常规推理与独立重载Static PNG相同，证明训练后仍消费条件。
+- 补齐实际控制图画廊后，130项完整回归（111.77s）、Ruff、CLI/依赖检查通过。原数据、三组副本与固定版本外部checkout复核通过，GPU全部释放；详细SHA、失败、耗时、局限见Stage 1报告。
+
+## 2026-10-21：实际控制图的可视化补齐
+
+- 初次画廊沿用原始标注mask列，可能误导Dilated/Shuffled输入审查；新增实际控制图列，按记录尺寸重建，原No-mask布局不变。
+- Static/Dilated/Shuffled的推理无target读取及可视化回归共7项通过；新视图另存各组 `gallery_controls/`，初次画廊保留。
+- 目视抽查Static的dev_319096_t1镜面有白块残留，No-mask同例表现不同；这是探索性失败观察，不能当作编辑成功率或确定机制归因。
+
+## 2026-10-21：同预算三组训练启动
+
+- 执行代码 `46c5885`，三组150-step/batch4从同一Base独立开始：Static/GPU2、Dilated/GPU0、Shuffled/GPU1，UUID互异；容量门禁与完整预算校验已通过。
+- 计划和完整配置/哈希在 `outputs/stage1_20261021/comparison/plan.json` 与各组 `budget.json`。固定12例重载/评估尚未完成。
+- 新一轮本机128项测试（70.97s）、Ruff、依赖/仓库卫生、十个CLI和薄入口通过；远端CPU CI已恢复通过。
+
+## 2026-10-21：Stage 1 编码与 Mask 消融通过
+
+- 发现 33×33 PIL MaxFilter 使每次 Dilated 索引复核耗时较长，改用相同方形窗口的积分图；半径1/2/16及边界的15项条件回归通过。5张真实512² mask逐像素相同，CPU均值0.583s→0.00883s，仅为本次微基准，不代表GPU吞吐。
+- 2-step/batch4容量检查完成：192.63s、峰值reserved17.09 GiB、两个双图batch检查通过、checkpoint有限；相对于空闲A6000保留充分余量，正式比较固定batch4。
+- 三组正式配置/独立数据和条件索引已准备，预算验证均通过：200/30、150 steps、batch4、seed42，完整 train/network/model/sample 与 Stage 0 No-mask 一致，原 config/checkpoint 实际哈希相符；尚未启动正式训练。
+- 同一 2-step adapter、固定 dev_140513_t1/seed3662387196/4 steps/CFG4，真实 encoder 接收两图；joint attention 的 T=0/10/20 各 1024 tokens。
+- Static/零图/Shuffled 保持 source/noise 不变，mask token 和输出发生变化；Static repeat PNG 完全一致。worker 110.64s、wall126.63s，峰值 reserved16.56 GiB；仅证明条件接入，未证明正确空间编辑。
+- FP32 算术 source/mask 相对 RMSE0.000306/0.000414，BF16为0.007261/0.021445；打包形状/位置一致，但数值非字节相等，未调整既定容差。
+- 本机125项测试通过；远端 CPU CI 暴露新增fake backend测试漏mock版本查询，缺Torch metadata，已修复测试隔离，等待新checks。
+- 正在进行独立2-step/batch4容量检查；三组正式150-step对照尚未开始。详细状态见 `docs/stage1_report.md`。
+
+## 2026-10-21：Stage 1 联合条件实现与 CPU 回归
+
+- 修复后 `joint_debug_02` 完成 2 steps/batch1，194.61s，峰值 reserved 15.04 GiB，两个实际双控制 batch 检查通过，160 个 LoRA 张量有限；GPU 已正常释放。编码与消融尚待执行。
+- 数值对照采用相同 BF16 权重量化后的 FP32 算术，再检查真实 BF16；不会把未量化原始 VAE 与已经 BF16 加载的 pipeline 直接混比。
+- 第一次实际 CLI 配置生成发现 metadata 中的 StrEnum 无法由 YAML safe_dump 序列化；内存配方测试没有覆盖写盘，已改为普通字符串并增加写出/重读回归。训练随后在缺配置预检退出，没有加载模型或执行 step；日志保留在 `outputs/stage1_20261021/smoke/train.log`，下一次使用独立配置/报告。
+- 已实现 Static/Dilated/Shuffled 的纯二值变换和独立控制索引，SHA256、split 内 donor、图序与几何在配置、worker、推理、评估边界复核。
+- 训练器调用边界强制每例双图、RGB [0,1]、mask 二值且与 target latent 几何一致；No-mask 保留原调用，flow loss/网络不变，第三方源码未改。
+- 发现训练器先 cast BF16 再归一化，Diffusers 顺序相反；双参考推理限定作用域对齐训练顺序，结束/异常恢复，原 No-mask 处理器不变。
+- 最终 120 项完整环境测试通过（44.02s），含实际 adapter 转发、target 读取拒绝、像素 cast、异常恢复与 snapshot 缓存隔离；Ruff/CLI/可复用 smoke 入口帮助通过。GPU smoke 与同预算对照尚未执行。
+
+## 2026-10-21：PR 合并与 Stage 1 设计
+
+- PR #1 在两组 GitHub checks 通过后正常 merge 到 `020c370`，保留原提交，无 force push。CI 为 95 passed/2 skipped，本机完整环境 97 passed。
+- main 已 fast-forward；用户原 roadmap 移动与已提交内容 SHA256 完全一致，现由 main 跟踪，没有丢失修改。Stage 0 所有输出留在原架构 worktree。
+- 从最新 main 建立 `feat/static-spatial-control`，独立 worktree/`.venv` 复用命名 Conda 依赖，原模型/数据/外部源码通过忽略的链接复用。
+- 已阅读固定 CJT、ai-toolkit 双参考与 Diffusers 编码路径；设计见 `docs/stage1_design.md`。当前只完成设计，未实现空间控制或运行新 GPU 实验。
+
 ## 2026-10-21：架构分支合并门禁
 
 - 远端 main `5c505e5` 是分支 `eaa30dc` 的祖先；无分叉冲突，diff whitespace 检查通过。

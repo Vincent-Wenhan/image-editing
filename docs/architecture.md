@@ -1,5 +1,33 @@
 # 工程架构重构
 
+## Stage 1 开发入口
+
+架构分支已通过 [PR #1](https://github.com/Vincent-Wenhan/image-editing/pull/1)
+正常合并到 main `020c370`，push/PR GitHub CPU checks 均通过（95 passed、2 skipped；
+本机完整环境 97 passed）。分阶段提交和 Stage 0 实验均保留。
+`feat/static-spatial-control` 从该 main 创建；目录职责不变，新设计和实际状态见
+[stage1_design.md](stage1_design.md)。下文保留重构过程记录。
+
+Stage 1 已实现 `conditioning/static.py` 的纯变换，`datasets/control_export.py`、
+`controls.py`、`snapshot.py` 的不可覆盖导出/副本与来源验证；`training/spatial.py`
+在配置/worker 和实际 batch 三个边界检查双图。FLUX adapter 的双参考预处理匹配上游
+cast 顺序，No-mask 不进入该处理器。runner 只读 source/声明的 mask，评估复核条件
+索引和逐例来源。新增 `prepare-controls`；原九命令保留，`infer/train-config` 默认
+`--control none`。2-step 双参考训练与真实编码/消融已经完成，证据与 BF16 数值差异
+见 [stage1_report.md](stage1_report.md)；三组150-step、固定12例重载/配对评估均完成。
+当前完整环境130项测试、Ruff、依赖/CLI检查通过；原数据和三组副本哈希复核通过，
+原Stage 0资产与报告保留，所有GPU已释放。工程通过不等于静态空间方法优于No-mask。
+
+`evaluation/budget.py` 独立核对原 No-mask 报告/config/checkpoint 的实际 SHA256，比较
+完整 train/network/model/sample、数据处理参数和两个 split manifest；只允许路径与
+声明的参考数量差异。其依赖限于 core/datasets，不反向调用训练器。
+
+二值方形膨胀采用积分图窗口求和，与 PIL 的独立回归结果一致；条件导出索引不变。
+这样每次验证已有 Dilated 控制图时无需重复大核排序，避免租约内的 CPU 等待。
+
+Mask 画廊按逐例记录尺寸重建并展示实际控制输入，另列原始标注；No-mask 保留原布局。
+新视图输出到独立 `gallery_controls/`，初次实验的画廊和预测不覆盖。
+
 ## 合并前检查（2026-10-21）
 
 `origin/main=5c505e5` 是 `eaa30dc` 的祖先，分支没有分叉冲突；工作区干净，
