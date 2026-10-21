@@ -1,5 +1,41 @@
 # Stage 1 补充评估实际报告
 
+## 2026-10-22 研究验证补充
+
+最新实现与验收见 [角色验证设计](role_validation_design.md) 和
+[实际记录](role_validation_report.md)。以下旧章节保留其原日期/全部输出。
+本轮在新根 `outputs/role_validation_20261022/stage1/` 保存公平性审计与三人评审包，
+没有重新训练或覆盖 Stage 1 的 checkpoint、预测或评分。
+
+`audit.json` 复核三组实际 train report/config/checkpoint SHA、固定上游revision、
+真实双参考batch计数、所有split manifest、完整process配方。仅路径和条件图编码
+不同；rank/alpha、lr、seed、updates、batch、VAE、full-size输入与预处理相同。
+逐图重算metrics.csv确认与实际source/target/mask/prediction一致。旧No-mask
+单参考/Diffusers与training cast差异仍是独立消融，不混入双参考公平性结论。
+
+按30例指令策展6类任务（`configs/experiments/stage1_task_groups.csv`），不根据预测
+效果分类，也不作为人工成功评分。下表每格为 **target MAE / mask外漂移proxy**：
+
+| 任务 | n | Constant | Static | Dilated r16 |
+|---|---:|---:|---:|---:|
+| 外观/颜色/局部属性 | 6 | .060428 / .034575 | .065754 / .037179 | .062682 / .036507 |
+| 背景编辑 | 2 | .081051 / .030661 | .103014 / .034970 | .086648 / .032320 |
+| 添加对象 | 4 | .048870 / .034329 | .052611 / .038461 | .049413 / .035002 |
+| 移除对象 | 2 | .055087 / .045015 | .055957 / .046075 | .053590 / .044560 |
+| 替换对象 | 9 | .068937 / .031044 | .069877 / .031875 | .067328 / .030376 |
+| 姿态/动作/状态 | 7 | .035839 / .032101 | .039528 / .035177 | .037937 / .034336 |
+
+子组很小、单训练seed；这些是像素诊断，既不是编辑成功率，也不是无关内容保留
+人工评分。Constant可能因少编辑而误差低，仍不能据此排名语义效果。
+
+三份不同匿名顺序的180项页面在 `human_panels/rater_a|b|c/index.html`；代号只是
+组织占位，**已收到真实评审者0位、评分0条**。新 `review import/merge` 保留原字节
+和SHA、限定每位一版本，分别配对编辑成功与背景保留，至少三位完整独立声明后才
+生成scene/reviewer交叉bootstrap 95%区间。NA保留缺失。现有 `human_pending/`
+状态pending，所有人工均值/区间为null；失败类别 missed_edit、wrong_location、
+collateral_change、mask_artifact、geometry、other、unjudgeable 均未得到真实评分。
+上一轮代理非盲观察仍单列，不填入评分表、不计算人工失败率。
+
 更新时间：2026-10-21。工程与六组固定30例推理/像素评估已完成；180项真人盲评
 全部pending。尚未建立空间Mask优于匹配无信息条件的语义结论。
 
