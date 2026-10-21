@@ -13,7 +13,8 @@ Stage 1 已实现 `conditioning/static.py` 的纯变换，`datasets/control_expo
 在配置/worker 和实际 batch 三个边界检查双图。FLUX adapter 的双参考预处理匹配上游
 cast 顺序，No-mask 不进入该处理器。runner 只读 source/声明的 mask，评估复核条件
 索引和逐例来源。新增 `prepare-controls`；原九命令保留，`infer/train-config` 默认
-`--control none`。GPU 验证仍待执行，不能据 CPU 测试判断空间条件质量。
+`--control none`。2-step 双参考训练与真实编码/消融已经完成，证据与 BF16 数值差异
+见 [stage1_report.md](stage1_report.md)；三组初步对照仍待执行。
 
 ## 合并前检查（2026-10-21）
 

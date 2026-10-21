@@ -88,6 +88,7 @@ def test_mask_runner_never_opens_target_and_records_consumed_conditions(
         ]
     )
     monkeypatch.setattr(runner, "require_lease", lambda: None)
+    monkeypatch.setattr(runner, "versions", lambda: {"test": "cpu"})
     calls = []
 
     class Backend:

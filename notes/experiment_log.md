@@ -2,6 +2,14 @@
 
 时间以 Asia/Shanghai 为准。每条记录说明配置、输入、产物、实际结果与限制。
 
+## 2026-10-21：Stage 1 编码与 Mask 消融通过
+
+- 同一 2-step adapter、固定 dev_140513_t1/seed3662387196/4 steps/CFG4，真实 encoder 接收两图；joint attention 的 T=0/10/20 各 1024 tokens。
+- Static/零图/Shuffled 保持 source/noise 不变，mask token 和输出发生变化；Static repeat PNG 完全一致。worker 110.64s、wall126.63s，峰值 reserved16.56 GiB；仅证明条件接入，未证明正确空间编辑。
+- FP32 算术 source/mask 相对 RMSE0.000306/0.000414，BF16为0.007261/0.021445；打包形状/位置一致，但数值非字节相等，未调整既定容差。
+- 本机125项测试通过；远端 CPU CI 暴露新增fake backend测试漏mock版本查询，缺Torch metadata，已修复测试隔离，等待新checks。
+- 正在进行独立2-step/batch4容量检查；三组正式150-step对照尚未开始。详细状态见 `docs/stage1_report.md`。
+
 ## 2026-10-21：Stage 1 联合条件实现与 CPU 回归
 
 - 修复后 `joint_debug_02` 完成 2 steps/batch1，194.61s，峰值 reserved 15.04 GiB，两个实际双控制 batch 检查通过，160 个 LoRA 张量有限；GPU 已正常释放。编码与消融尚待执行。
