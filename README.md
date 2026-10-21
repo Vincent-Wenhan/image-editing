@@ -202,3 +202,9 @@ image-edit scene validate --root <new-scene-data>
 默认使用固定4.5.3的Cycles CPU，生成多强度平移、阴影开关反事实、空背景及对象占据
 证据；只读校验从证据重算T/D/P并验证哈希、split、位移与背景补全。配置和原始证据
 均留本地输出。当前范围是直接光硬阴影，不代表真实场景或复杂间接光的真值。
+
+Oracle仅走显式实验接口：`src.datasets.scene_manifest.load_oracle_condition` 加载labels/valid，
+`Flux2Backend.edit_oracle(..., allow_oracle=True)` 按 `[source, role_RGB]` 编码。
+T/D/P为RGB单位向量，ignore为黑；普通 `edit`/`infer` 仍拒绝Oracle。
+`image-edit gpu -- python -m src.inference.oracle_smoke --data-root <scenes> --output <new-smoke>`
+验证真实条件消费与T/D置换敏感性；没有角色训练adapter时不能作为质量上界结果。

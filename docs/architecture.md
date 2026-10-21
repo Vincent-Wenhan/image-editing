@@ -381,3 +381,14 @@ No-mask默认仍为单PIL/Diffusers顺序，显式training选项才进入受限�
 - `scene_validation.py`：实际SHA、配对/scene-group/强度、标签重算和背景显露复核；不依赖Blender或GPU。
 
 角色标签不进入普通输入加载；MagicBrush验证与所有旧路径保持原职责。
+
+### 显式 Oracle 数据/模型接口
+
+`datasets/scene_manifest.py` 分别加载 target/roles/valid 的监督和仅source/labels/valid的
+oracle条件；后者核对canonical manifest和实际标签/source哈希，不打开target或反事实RGB。
+`conditioning/oracle.py` 不接收target，按有效域编译硬标签为T/D/P，ignore为黑RGB。
+`backends/flux2_oracle.py` 要求明确upper-bound用途、encoding、哈希、几何及
+`allow_oracle=True`；`Flux2Backend.edit_oracle`复用生成流程，普通edit仍拒绝Oracle。
+标量strength额外输入明确拒绝；当前物理强度写在数据指令与监督元数据，未开发预测器。
+共享 `reference_trace.py` 的作用域hooks供预处理/Oracle smoke验证真实编码和attention，
+异常也移除hook。角色条件本轮只接推理，训练CLI仍不接受Oracle，不修改网络或loss。

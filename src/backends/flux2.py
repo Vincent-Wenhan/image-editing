@@ -5,6 +5,7 @@ from pathlib import Path
 
 from src.backends.flux2_conditions import reference_images
 from src.backends.flux2_encoding import joint_preprocessing
+from src.backends.flux2_oracle import oracle_references
 from src.conditioning.controls import ControlBundle
 from src.core.types import EditInput, EditOutput, GenerationOptions
 from src.infra.gpu import require_lease
@@ -27,6 +28,34 @@ class Flux2Backend:
         self, edit_input: EditInput, controls: ControlBundle, options: GenerationOptions
     ) -> EditOutput:
         images = reference_images(edit_input, controls, options)
+        return self._generate(
+            edit_input,
+            images,
+            options,
+            matched=isinstance(images, list)
+            or controls.metadata.get("reference_preprocessing") == "training",
+        )
+
+    def edit_oracle(
+        self,
+        edit_input: EditInput,
+        controls: ControlBundle,
+        options: GenerationOptions,
+        *,
+        allow_oracle: bool = False,
+    ) -> EditOutput:
+        """Research upper-bound interface only; ordinary edit() continues to reject labels."""
+        images = oracle_references(edit_input, controls, options, allow_oracle=allow_oracle)
+        return self._generate(edit_input, images, options, matched=True)
+
+    def _generate(
+        self,
+        edit_input: EditInput,
+        images,
+        options: GenerationOptions,
+        *,
+        matched: bool,
+    ) -> EditOutput:
         import torch
 
         generator = torch.Generator("cuda").manual_seed(options.seed)
@@ -34,11 +63,7 @@ class Flux2Backend:
         start = time.perf_counter()
         with (
             torch.inference_mode(),
-            joint_preprocessing(
-                self.pipe,
-                enabled=isinstance(images, list)
-                or controls.metadata.get("reference_preprocessing") == "training",
-            ),
+            joint_preprocessing(self.pipe, enabled=matched),
         ):
             image = self.pipe(
                 image=images,

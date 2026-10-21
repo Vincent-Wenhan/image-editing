@@ -213,3 +213,30 @@ def test_renderer_failure_preserves_report_and_original_exception(tmp_path, monk
     assert report["status"] == "failed" and "CalledProcessError" in report["traceback"]
     with pytest.raises(FileExistsError):
         generate(CONFIG_ROOT / "datasets/blender_translation.yaml", output)
+
+
+def test_oracle_loading_never_reads_target_or_counterfactual_rgb(scene_data, monkeypatch):
+    from src.datasets.manifest import load_edit_input
+    from src.datasets.scene_manifest import load_oracle_condition, load_role_supervision
+
+    row = read_rows(scene_data / "dev/manifest.csv")[1]
+    supervision = load_role_supervision(scene_data, row)
+    assert supervision.target.mode == "RGB" and supervision.role_labels.mode == "L"
+    for path in (scene_data / "dev/target").glob("*.png"):
+        path.unlink()
+    for path in (scene_data / "raw").glob("*/*.npz"):
+        path.unlink()
+    original = Image.open
+
+    def safe_open(path, *args, **kwargs):
+        if "/target/" in str(path):
+            raise AssertionError("Target read during oracle conditioning")
+        return original(path, *args, **kwargs)
+
+    monkeypatch.setattr(Image, "open", safe_open)
+    edit = load_edit_input(scene_data, row)
+    control = load_oracle_condition(scene_data, row)
+    assert not hasattr(edit, "role_labels") and not hasattr(edit, "target")
+    assert control.kind == "oracle_role" and control.metadata["sample_id"] == row["id"]
+    with pytest.raises(ValueError, match="ordinary inference"):
+        control.require_inference_safe()

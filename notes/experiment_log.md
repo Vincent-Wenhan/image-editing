@@ -187,3 +187,9 @@
 - 实现显式Cycles CPU场景、normal/no-shadow/occupancy/background线性证据、多个物理位移、兼容普通pair的manifest和独立T/D/P/valid标签。
 - 从占据与shadow-ray反事实重算角色，阈值间隙/边界/无法解释变化ignore；验证背景显露、源图一致、数据哈希和场景组split。
 - 18项CPU/CLI测试通过（18.23s）；fixture不当作真实Blender证据。正式软件安装与真实渲染尚待完成，首次软件入口403/慢链路续传日志保留。
+
+### Oracle 数据与模型接口（已实现，GPU待运行）
+
+- 独立监督与oracle loader，role RGB=one-hot T/D/P、ignore=黑；普通infer/edit继续拒绝，显式edit_oracle检查用途/哈希/几何/图序，不接收target。
+- 32项场景/接口/旧推理回归通过（20.29s），另13项编码/后端/共享hook清理通过（15.14s）。删除target/反事实后可加载条件；仅CPU测试，真实角色GPU消费待运行。
+- 共用生成流程和诊断hook，无loss/网络修改；未训练Role Predictor、Oracle adapter或Qwen。

@@ -9,7 +9,7 @@ import numpy as np
 from PIL import Image
 
 from src.backends.flux2 import Flux2Backend
-from src.backends.flux2_diagnostics import tensor_digest
+from src.backends.reference_trace import trace_references
 from src.conditioning.controls import ControlBundle, ControlKind
 from src.core.config import ProjectSettings
 from src.core.io import read_rows, sha256, write_json
@@ -28,8 +28,6 @@ def run(args) -> None:
     started = time.perf_counter()
     report = dict(status="running", created=now(), results={})
     try:
-        import torch
-
         row = read_rows(args.data_root / "dev/manifest.csv")[0]
         edit = load_edit_input(args.data_root, row)
         report.update(
@@ -53,40 +51,8 @@ def run(args) -> None:
             ("constant", constant),
             ("training_repeat", matched),
         ):
-            trace = dict(vae=[])
-
-            def encoder(_module, inputs, trace=trace):
-                value = inputs[0]
-                trace["vae"].append(
-                    dict(
-                        sha256=tensor_digest(value),
-                        shape=list(value.shape),
-                        min=value.min().item(),
-                        max=value.max().item(),
-                    )
-                )
-
-            def attention(_module, _inputs, kwargs, trace=trace):
-                if "attention" in trace:
-                    return
-                ids, hidden = kwargs["img_ids"][0], kwargs["hidden_states"]
-                offsets, counts = torch.unique(ids[:, 0], return_counts=True)
-                trace["attention"] = dict(
-                    offsets=offsets.tolist(),
-                    counts=counts.tolist(),
-                    source_sha256=tensor_digest(hidden[:, ids[:, 0] == 10]),
-                    noise_sha256=tensor_digest(hidden[:, ids[:, 0] == 0]),
-                )
-
-            handles = [
-                backend.pipe.vae.encoder.register_forward_pre_hook(encoder),
-                backend.pipe.transformer.register_forward_pre_hook(attention, with_kwargs=True),
-            ]
-            try:
+            with trace_references(backend.pipe) as trace:
                 result = backend.edit(edit, controls, options)
-            finally:
-                for handle in handles:
-                    handle.remove()
             expected = [0, 10, 20] if name == "constant" else [0, 10]
             if (
                 len(trace["vae"]) != len(expected) - 1

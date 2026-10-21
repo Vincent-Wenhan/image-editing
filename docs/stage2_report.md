@@ -11,3 +11,10 @@ EXR是明确标注的测试占位，不是渲染证据，不计为真实Blender�
 原有任务和第三方源码未改动。软件安装与传输记录在新输出根下。
 
 数据/模型的Oracle接口尚未实现；未训练Role Predictor、Oracle LoRA或Qwen。
+
+## Oracle 接口CPU验证
+
+已实现独立监督/Oracle loader与明确的FLUX上界入口。32项接口/场景/旧推理回归通过
+（20.29s），另13项共享tracing/编码/后端测试通过（15.14s）。删除target和原始
+反事实RGB后仍能构建source/Oracle，默认拒绝Oracle及非法数值/几何/未消费strength。
+GPU角色消费与真实Blender仍待验收；没有训练角色adapter，不能声称Oracle质量上界。
