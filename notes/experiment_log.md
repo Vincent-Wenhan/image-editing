@@ -324,3 +324,22 @@ checkpoint实际SHA/160个有限张量，seed43运行中；质量与真人结果
 默认新展开20个scene物理参数与已冻结v1逐项完全相同，不重新渲染；增加固定范围、
 无效边界、split字典顺序回归。正式四方法双seed训练均已完成，全部预算验证通过，
 固定dev/test重载运行中。源码冻结6879c87与当前新采样器版本分别记录，未修改旧数据。
+
+## 最终双seed对照、真实负面结果与交付
+
+四方法各seed42/43的60updates/batch4训练全部完成，worker570.32–607.25s，
+峰值15.0219/17.0859GiB；八个checkpoint均160个有限张量，实际SHA与完整预算
+验证通过。16个dev/test重载共192图，20steps/CFG4/ID-stable seed42，全部完成，
+峰值reserved16.3945GiB；全程GPU正常UUID租约，末次8卡0MiB/0%、无计算进程。
+执行源码统一冻结6879c87，CPU最终统计878c911，analysis_execution_01耗时64.63s。
+
+Oracle dev T误差seed42/43为0.361112/0.301835，Dynamic Binary为0.090875/0.094458；
+test对应Oracle0.304732/0.274173、Dynamic Binary0.088098/0.081103。场景bootstrap
+区间、全部T/D/P曲线与identity参考均保留在analysis_01。预定门槛两seed均失败，
+当前RGB Oracle路线No-Go：有控制图外观复制、重复物体、身份破坏；不进入Predictor
+或Qwen。结论限定本编码、12训练组/60步预算，不以像素MAE冒充人工成功率。
+
+Stage1三人各180项、角色dev三人各96项评审包已就绪；实际真人0位、评分0条，
+均pending/null区间，代理非盲观察独立存放。完整202 passed/86.83s，Ruff/CLI/pip
+及仓库外100项wheel/可配置scene展开通过。所有旧资产保留，临时脚本/环境完成后
+清理；Git仅代码/配置/文字报告。详见docs/role_validation_report.md。

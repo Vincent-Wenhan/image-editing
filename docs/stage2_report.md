@@ -1,8 +1,9 @@
 # Stage 2 最小反事实数据实际报告
 
-2026-10-22增量验证见 [角色实际报告](role_validation_report.md)：已完成20个独立
-train/dev/test场景组的128→512渲染及Oracle 2-step LoRA最低训练验收，正继续
-同预算四方法研究。下文是2026-10-21的历史最小阶段结果，保留其全部证据与限制。
+2026-10-22增量验证见 [角色实际报告](role_validation_report.md)：20个独立train/dev/test
+场景组的128→512渲染、Oracle最低训练/重载/容量验收、四方法双seed60步训练及
+192张dev/test评估全部完成。当前彩色Oracle Role路线No-Go，真人评分仍pending，
+未开展Role Predictor或Qwen。下文保留2026-10-21历史阶段的全部证据与限制。
 
 更新时间：2026-10-21。**最小数据管线、真实CPU渲染/标签校验、显式Oracle接口及
 GPU条件消费已验证。未训练Oracle LoRA或Role Predictor，未迁移Qwen，没有质量

@@ -7,7 +7,8 @@
 本轮在新根 `outputs/role_validation_20261022/stage1/` 保存公平性审计与三人评审包，
 没有重新训练或覆盖 Stage 1 的 checkpoint、预测或评分。
 
-`audit.json` 复核三组实际 train report/config/checkpoint SHA、固定上游revision、
+`audit.json`及补充checkpoint绑定的`audit_02.json`复核三组实际train report/config/
+checkpoint SHA、固定上游revision、
 真实双参考batch计数、所有split manifest、完整process配方。仅路径和条件图编码
 不同；rank/alpha、lr、seed、updates、batch、VAE、full-size输入与预处理相同。
 逐图重算metrics.csv确认与实际source/target/mask/prediction一致。旧No-mask
@@ -31,7 +32,7 @@
 三份不同匿名顺序的180项页面在 `human_panels/rater_a|b|c/index.html`；代号只是
 组织占位，**已收到真实评审者0位、评分0条**。新 `review import/merge` 保留原字节
 和SHA、限定每位一版本，分别配对编辑成功与背景保留，至少三位完整独立声明后才
-生成scene/reviewer交叉bootstrap 95%区间。NA保留缺失。现有 `human_pending/`
+生成scene/reviewer交叉bootstrap 95%区间。NA保留缺失。现有 `human_pending_02/`
 状态pending，所有人工均值/区间为null；失败类别 missed_edit、wrong_location、
 collateral_change、mask_artifact、geometry、other、unjudgeable 均未得到真实评分。
 上一轮代理非盲观察仍单列，不填入评分表、不计算人工失败率。

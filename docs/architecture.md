@@ -1,5 +1,11 @@
 # 工程架构重构
 
+2026-10-22收尾：202项测试及Ruff/CLI/wheel通过；20组128→512反事实场景、
+四方法双seed60步训练和192张固定重载评估已完成，数据/条件/adapter/源码来源通过。
+当前彩色Oracle Role编码未通过研究门槛，结论No-Go；真实三人评分仍pending。
+最新验收与限制见 [实际报告](role_validation_report.md)。下文保留此前Stage 0/1
+设计与实验过程，其中历史“当前”状态以其阶段日期理解。
+
 `training/spatial.py` 区分binary与hard one-hot batch，固定版本设备补丁只增加验证，
 不改上游forward/loss。`role_study.py`生成独立缓存数据副本、同预算四方法双seed配置，
 按smoke→重载消费验证→batch容量→训练→固定评估执行；`infra/experiment.py`记录

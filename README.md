@@ -1,15 +1,18 @@
 # Image Editing Research
 
-当前研究验证计划见 [role_validation_design.md](docs/role_validation_design.md)：补齐
-三位独立评审者统计、Stage 1 分组诊断、三分割程序化场景和同预算 Oracle LoRA 对照。
-计划不代表已运行；真人评分仍 pending，实际结果将在报告中逐项更新。
+2026-10-22：已完成三评审者导入/配对统计工具、Stage 1公平性分组审计、20个独立
+train/dev/test场景组的128→512渲染，以及四方法×双seed的60-step LoRA与192张
+固定评估。202项测试、Ruff、CLI、wheel检查通过；真实评分仍pending。
+**当前彩色Oracle Role编码No-Go**：两seed的T误差明显高于Dynamic Binary，且有
+控制图外观复制/重复物体/身份破坏。暂缓Role Predictor。完整数字、区间、checkpoint
+和限制见 [实际报告](docs/role_validation_report.md)，预定预算见
+[研究设计](docs/role_validation_design.md)。
 
 Stage 1 已通过 [PR #2](https://github.com/Vincent-Wenhan/image-editing/pull/2) 正常合并。
-新分支 `feat/role-data-and-evaluation` 已完成双参考无信息基线、六组各30例固定
+2026-10-21的历史里程碑：本分支完成双参考无信息基线、六组各30例固定
 验证、180项离线人工评审包，以及最小Blender反事实数据和显式Oracle Role接口。
 Constant 150步训练、12对真实CPU渲染/标签校验和Oracle GPU协议检查已通过；
-184项测试、Ruff、CLI、editable/wheel检查通过。真人评分仍待填写，未训练角色
-adapter/Predictor或Qwen，也未证明空间方法收益。详见
+当时184项测试、Ruff、CLI、editable/wheel检查通过，尚未训练角色adapter。详见
 [补充评估报告](docs/stage1_review_report.md)、[Stage 2实际报告](docs/stage2_report.md)
 和 [设计](docs/stage2_design.md)。所有历史结果保留，新资产仅存本地outputs。
 
@@ -264,16 +267,17 @@ Blender可选依赖固定为bpy4.5.3、Cython3.3.0、zstandard0.25.0；沿用原
 处理抗锯齿差异。角色标签的可信范围以valid和Stage 2报告为准。
 
 scene sweep支持物体初始位置、几何/颜色、点光位置/能量、背景棋盘和强度变化。
-物理采样范围从 `configs/datasets/blender_variations.yaml` 读取，可用 `scene expand
---variations <yaml>` 选择；强度、相机与反事实策略仍在场景template中。默认范围
+物理采样范围从 `configs/datasets/blender_variations.yaml` 读取，`scene expand` 可用
+`--variations <yaml>` 选择；强度、相机与反事实策略仍在场景template中。默认范围
 复现本轮v1物理参数，既有渲染/训练不重跑、不修改。
 新test split按完整scene group保留；旧train/dev格式仍可读。Oracle/Dynamic Binary
 用 `prepare-controls --kind oracle_role|dynamic_binary` 编译，前者one-hot角色，后者
 valid内T∪D。二者都是依赖真值的上界，导出先做完整反事实校验，推理加载不读target。
 
-Oracle LoRA 使用原训练入口，`train-config --control oracle_role --control-root <roles>`；
-Static/Dilated/Dynamic Binary分别指定其kind。重载上界必须显式使用
-`infer --control oracle_role --control-root <roles> --allow-oracle --lora <checkpoint>`。
+Oracle LoRA 使用原训练入口，指定 `train-config --data-root <scenes> --control oracle_role
+--control-root <roles>`；Static/Dilated/Dynamic Binary分别指定其kind。重载上界使用
+`infer --data-root <scenes> --manifest <scenes>/dev/manifest.csv --control oracle_role
+--control-root <roles> --allow-oracle --lora <checkpoint> --output <new-run>`。
 训练端检查one-hot角色通道与实际batch，沿用固定ai-toolkit的flow-matching目标。
 
 有界四组研究入口（激活Conda后，在冻结的已安装worktree中运行）：
