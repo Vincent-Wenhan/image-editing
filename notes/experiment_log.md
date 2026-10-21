@@ -2,6 +2,14 @@
 
 时间以 Asia/Shanghai 为准。每条记录说明配置、输入、产物、实际结果与限制。
 
+## 2026-10-21：架构分支合并门禁
+
+- 远端 main `5c505e5` 是分支 `eaa30dc` 的祖先；无分叉冲突，diff whitespace 检查通过。
+- Ruff check/format、97 项 Pytest（38.36s）、9 个 CLI 帮助及包/薄脚本入口、shell 语法、依赖和仓库卫生重新通过。
+- 检查全部新增历史 blob（128 个），无权重、数据、图片、checkpoint、第三方或实验资产；最大 blob 21,223 bytes。
+- 本地证据在 `outputs/merge_check_20261021/review.json`。完整 Stage 0 输出、checkpoint、耗时与报告继续留在原 worktree，没有重复运行或覆盖。
+- 检查期间最初只有 SSH Git 身份，随后用户完成 GitHub CLI/API 认证。当前 PR 尚未合并，将核对远端 checks 后正常 merge；Stage 1 尚未开始实现。
+
 ## 2026-10-21：架构稳定性收尾开始
 
 - 保持 `refactor/modular-architecture` 的目录设计，在原独立 worktree 修改。

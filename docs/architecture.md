@@ -1,5 +1,18 @@
 # 工程架构重构
 
+## 合并前检查（2026-10-21）
+
+`origin/main=5c505e5` 是 `eaa30dc` 的祖先，分支没有分叉冲突；工作区干净，
+`git diff --check` 通过。重新执行 Ruff check/format、97 项 Pytest（38.36s）、
+9 个 CLI 子命令、包入口、训练/验收入口、shell 语法、`pip check` 和仓库卫生检查，
+全部通过。新增提交历史的 128 个 blob 也逐一检查：没有禁止上传的资产，最大
+21,223 bytes。原始 Stage 0 输出继续保留在本 worktree，不移动到 Git 或覆盖旧结果。
+
+这些是本地合并门禁结果，不能代替 GitHub PR checks 或宣称 PR 已合并。
+服务器 GitHub API 认证已就绪；创建 PR 后复核远端 head 与 checks，
+通过正常 merge 保留分阶段提交，不 force push。之后从最新 main 创建
+`feat/static-spatial-control`，其设计与实验状态另行记录。
+
 ## 架构收尾与稳定性验收（2026-10-21）
 
 状态：工程修改已实现，97 项回归和 Ruff/CLI 通过。完整验收的 20-step debug、
