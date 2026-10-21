@@ -4,6 +4,7 @@ Stage 0 架构已通过 [PR #1](https://github.com/Vincent-Wenhan/image-editing/
 合并；Stage 1 在独立分支开发，设计与验收计划见 [Stage 1](docs/stage1_design.md)。
 双参考条件代码与 CPU 回归已完成，GPU smoke/初步对照尚待运行。
 首次 CLI 写配置发现的 YAML 枚举序列化问题已修复，失败预检与后续尝试分别记录。
+2-step 双参考训练已完成；实际编码、Mask 消融及正式对照结果随后单独记录。
 
 以 **FLUX.2 Klein Base 4B** 建立可复现编辑与 LoRA 基线，随后研究随编辑强度变化的空间角色预测。方法改进尚未验证。
 

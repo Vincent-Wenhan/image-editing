@@ -24,7 +24,9 @@ def encoding_parity(pipe, images: list, vae_path: Path) -> dict:
 
     ae = AutoEncoder(AutoEncoderParams()).eval()
     ae.load_state_dict(load_file(str(vae_path)), strict=True)
-    ae.to("cuda")
+    # The resident pipeline was loaded in BF16; compare the same weight precision
+    # even during the FP32 arithmetic check, rather than restoring only one side.
+    ae.to(device="cuda", dtype=torch.bfloat16)
     result = {}
     try:
         with torch.inference_mode():

@@ -4,6 +4,8 @@
 
 ## 2026-10-21：Stage 1 联合条件实现与 CPU 回归
 
+- 修复后 `joint_debug_02` 完成 2 steps/batch1，194.61s，峰值 reserved 15.04 GiB，两个实际双控制 batch 检查通过，160 个 LoRA 张量有限；GPU 已正常释放。编码与消融尚待执行。
+- 数值对照采用相同 BF16 权重量化后的 FP32 算术，再检查真实 BF16；不会把未量化原始 VAE 与已经 BF16 加载的 pipeline 直接混比。
 - 第一次实际 CLI 配置生成发现 metadata 中的 StrEnum 无法由 YAML safe_dump 序列化；内存配方测试没有覆盖写盘，已改为普通字符串并增加写出/重读回归。训练随后在缺配置预检退出，没有加载模型或执行 step；日志保留在 `outputs/stage1_20261021/smoke/train.log`，下一次使用独立配置/报告。
 - 已实现 Static/Dilated/Shuffled 的纯二值变换和独立控制索引，SHA256、split 内 donor、图序与几何在配置、worker、推理、评估边界复核。
 - 训练器调用边界强制每例双图、RGB [0,1]、mask 二值且与 target latent 几何一致；No-mask 保留原调用，flow loss/网络不变，第三方源码未改。

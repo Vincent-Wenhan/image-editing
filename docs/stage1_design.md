@@ -87,4 +87,7 @@ GPU forward。已修复为字符串并补充写出/重读回归，失败日志�
 联合条件导出/校验、双参考配置、实际 batch 边界、推理转发与评估 provenance 已实现。
 120 项完整环境测试通过（44.02s），Ruff check/format、CLI 和 smoke 入口帮助通过。
 GPU smoke 和三组初步对照尚待执行，不能将 CPU 测试写成 GPU 验证。
+2-step 双参考训练现已完成，194.61s、峰值 reserved 15.04 GiB，两个 batch 均被检查，
+checkpoint 张量有限；编码/消融仍待运行。VAE FP32 算术对照先把两边权重都量化为
+实际训练使用的 BF16 再转 FP32，避免一边恢复精度、一边已丢失精度导致伪差异。
 Stage 0 完整记录仍在原架构 worktree，详见 Stage 0 报告。
