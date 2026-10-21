@@ -367,3 +367,6 @@ No-mask默认仍为单PIL/Diffusers顺序，显式training选项才进入受限�
 公开表单分离；`review_page.py` 只生成离线评分界面。导入复核原运行和图片、映射及
 副本哈希，拒绝任务丢失/重复、非法评分和缺失评审者。未填写项保留pending；人工
 结果不替代原有pixel metrics，也不会自动把模型或像素诊断当作真人评分。
+
+`inference/reference_smoke.py` 为匹配结构的独立GPU协议门禁，复用同一个常驻模型，
+记录legacy/training单参考与constant双参考的真实编码/token和重复采样；不改变训练。

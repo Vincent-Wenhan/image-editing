@@ -177,3 +177,7 @@
 - 离线盲评导出/CSV导入实现成功度与无关内容保留0/1/2、失败类别及说明、reviewer；方法映射独立保存，实际图像/运行哈希复核，BOM兼容。
 - 9项评估/CLI测试通过（23.56s），包括pending、匿名页面、评分往返、重复/缺项/越界/缺评审者/改图拒绝。测试评分仅为fixture，不是研究人工结果。
 - constant的2-step/batch4真实训练已通过实时空闲检测和UUID租约启动，结果尚待完成。
+
+### 显式预处理与参考数量的最小追踪（已实现，GPU待运行）
+
+- reference_smoke追踪同一模型的legacy单参考、training cast单参考、constant双参考和重复采样；核对真实VAE/attention数量、T位置、source/noise摘要、全黑输入归一化、重复PNG及像素差异。仅验证协议，不作质量评价。

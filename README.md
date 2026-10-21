@@ -188,3 +188,6 @@ image-edit review score --bundle <new-review> --ratings <ratings.csv> --output <
 ```
 
 评分含编辑成功度、无关内容保留与失败类别/说明。空白为pending，不产生人工结论。
+
+`image-edit gpu -- python -m src.inference.reference_smoke --data-root <data> --lora <lora> --output <new-smoke>`
+可单独检查单/双参考结构与cast差异；这类smoke不代表编辑质量。
