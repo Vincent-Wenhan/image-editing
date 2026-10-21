@@ -18,6 +18,7 @@ def test_role_metrics_do_not_reward_identity_as_edit_success():
     assert identity["t_target_mae"] == identity["d_target_mae"] == 1
     assert identity["p_source_drift"] == exact["p_source_drift"] == 0
     assert exact["t_target_mae"] == exact["d_target_mae"] == 0
+    assert exact["identity_t_target_mae"] == exact["identity_d_target_mae"] == 1
     valid[0] = False
     assert region_metrics(source, target, target, labels, valid)["t_target_mae"] is None
 
@@ -35,6 +36,8 @@ def test_scene_aggregation_and_pairing_are_equal_group_weight():
                     "d_target_mae",
                     "p_source_drift",
                     "identity_target_mae",
+                    "identity_t_target_mae",
+                    "identity_d_target_mae",
                     "target_mae",
                     "changed_fraction",
                 )

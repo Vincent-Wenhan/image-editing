@@ -310,3 +310,10 @@ batch4单卡2步通过：158.4285s，峰值15.0219/17.0859GiB，checkpoint SHA
 约17GiB/卡，主机RAM仍有余量。固定batch4，不作运行中预算调整。
 补充评估的run-LoRA/训练checkpoint摘要绑定与实际RGB/尺寸门禁；23项相关回归
 通过（34.86s）。此前完整200 passed/92.45s，正式训练与质量结果尚未完成。
+
+## 分区identity参考与最终CPU检查
+
+新增T/D内“不编辑source”的误差参考，避免全图identity MAE掩盖编辑区失败；
+保持原T/D/P指标、模型与训练预算不变。201项全套通过（111.49s），Ruff/CLI/依赖
+及99项wheel文件的仓库外导入/配置检查通过。当前seed42四组各60步已完成并复核
+checkpoint实际SHA/160个有限张量，seed43运行中；质量与真人结果仍pending。

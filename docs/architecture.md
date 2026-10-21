@@ -11,6 +11,8 @@ argv、源码摘要、版本、时间和原始失败。`evaluation/role_metrics.
 
 公平性/角色评估将run的LoRA SHA与对应训练报告checkpoint绑定，拒绝错adapter；
 角色指标读取前检查实际prediction RGB/尺寸，禁止通过隐式resize掩盖产物变化。
+T/D除prediction→target误差外，另报identity source→target误差；它是诊断参考，
+不作为一个训练过的No-mask模型，也不计入人工成功率。
 
 `evaluation/fairness.py` 对已完成训练的实际report/config/checkpoint/条件索引及
 各split manifest核验等预算；复核原图与预测后重算metrics，再按显式任务注释汇总。

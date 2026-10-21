@@ -20,6 +20,8 @@ METRICS = (
     "d_target_mae",
     "p_source_drift",
     "identity_target_mae",
+    "identity_t_target_mae",
+    "identity_d_target_mae",
     "target_mae",
     "changed_fraction",
 )
@@ -44,6 +46,8 @@ def region_metrics(source, target, prediction, labels, valid) -> dict:
         selected = (labels == label) & valid
         reference = source if label == 2 else target
         result[name] = mean(np.abs(prediction - reference), selected)
+        if label < 2:
+            result[f"identity_{name}"] = mean(np.abs(source - target), selected)
     result.update(
         identity_target_mae=float(np.abs(source - target).mean()),
         target_mae=float(np.abs(prediction - target).mean()),
