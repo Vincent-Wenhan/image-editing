@@ -216,3 +216,10 @@ def test_upper_bound_runner_records_and_verifies_but_requires_permission(
     record = json.loads((tmp_path / "upper_bound/run.json").read_text())
     assert record["status"] == "complete" and len(calls) == 2
     verify_run(scene_data, scene_data / "dev/manifest.csv", record)
+    from src.evaluation.role_metrics import score_run
+
+    scored = score_run(scene_data, scene_data / "dev/manifest.csv", tmp_path / "upper_bound")
+    assert scored["all"]["samples"] == 2
+    Image.new("RGB", (32, 32)).save(tmp_path / "upper_bound" / f"{record['results'][0]['id']}.png")
+    with pytest.raises(ValueError, match="Actual prediction"):
+        score_run(scene_data, scene_data / "dev/manifest.csv", tmp_path / "upper_bound")

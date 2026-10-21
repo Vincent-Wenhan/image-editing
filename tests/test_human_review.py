@@ -286,3 +286,24 @@ def test_grouped_diagnostics_recomputes_saved_metrics(review_bundle, tmp_path):
     write_rows(directory / "metrics.csv", rows)
     with pytest.raises(ValueError, match="actual images"):
         grouped_diagnostics(root, manifest, runs, annotations)
+
+
+def test_audit_links_inference_adapter_to_its_training_report(review_bundle, tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    from src.evaluation import fairness
+
+    mapping = json.loads((review_bundle / "private/mapping.json").read_text())
+    runs = {name: Path(info["path"]) for name, info in mapping["runs"].items()}
+    monkeypatch.setattr(
+        fairness,
+        "matched_training",
+        lambda _: dict(methods={name: dict(checkpoint_sha256="a" * 64) for name in runs}),
+    )
+    args = SimpleNamespace(
+        output=tmp_path / "bad_adapter.json",
+        run=[f"{name}={p}" for name, p in runs.items()],
+        training=[f"{name}={tmp_path / name}.json" for name in runs],
+    )
+    with pytest.raises(ValueError, match="adapter differs"):
+        fairness.run(args)

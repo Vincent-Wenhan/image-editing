@@ -299,3 +299,14 @@ GPU smoke、容量、正式训练和重载尚未执行；下步冻结代码后�
 补齐preparing/prepared与完整method×seed矩阵门禁，避免提前启动不完整对照；
 重载前再次核对训练配置摘要。新回归验证partial pilot允许、正式比较拒绝、重复身份
 拒绝，Ruff通过。冻结GPU计算代码仍为6879c87；启动正式研究前单独复核全部10项。
+
+## 容量、重载与评估证据绑定
+
+Oracle重载smoke通过：512²真实两VAE输入，T0/10/20各1024tokens，T/D置换改变
+control/output但source/noise不变，重复PNG精确一致；worker71.007s，reserved16.3945GiB。
+batch4单卡2步通过：158.4285s，峰值15.0219/17.0859GiB，checkpoint SHA
+24a92347ed1efc3b18b8c1c2fd294d0c861aee4429a69bebe6fc2fc8b004a390。
+完整10项配置已复核，四方法双seed60步在四卡租约下运行，首轮GPU利用率100%、
+约17GiB/卡，主机RAM仍有余量。固定batch4，不作运行中预算调整。
+补充评估的run-LoRA/训练checkpoint摘要绑定与实际RGB/尺寸门禁；23项相关回归
+通过（34.86s）。此前完整200 passed/92.45s，正式训练与质量结果尚未完成。

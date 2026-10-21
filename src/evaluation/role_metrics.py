@@ -6,6 +6,7 @@ from itertools import combinations
 from pathlib import Path
 
 import numpy as np
+from PIL import Image
 
 from src.core.io import sha256, write_json, write_rows
 from src.core.paths import data_path
@@ -73,6 +74,9 @@ def score_run(root: Path, manifest: Path, predictions: Path) -> dict:
         size = (item["width"], item["height"])
         if size != (int(row["width"]), int(row["height"])):
             raise ValueError("Synthetic role evaluation requires exact render size")
+        with Image.open(predictions / f"{row['id']}.png") as image:
+            if image.mode != "RGB" or image.size != size:
+                raise ValueError("Actual prediction mode/geometry differs from saved run")
         supervision = load_role_supervision(root, row)
         source, target, prediction = (
             load_image(data_path(root, row["source_path"]), size),
@@ -149,6 +153,9 @@ def summarize_study(study: Path, output: Path) -> dict:
                 directory = Path(job["directory"])
                 predictions = directory / f"{split}_inference"
                 record = json.loads((predictions / "run.json").read_text())
+                training = json.loads((directory / "train_report.json").read_text())
+                if record.get("lora_sha256") != training["checkpoint_sha256"]:
+                    raise ValueError("Evaluated adapter differs from the matched trained method")
                 if reference:
                     verify_comparison(reference, record)
                 reference = record

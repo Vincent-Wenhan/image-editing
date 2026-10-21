@@ -9,6 +9,9 @@ argv、源码摘要、版本、时间和原始失败。`evaluation/role_metrics.
 研究编排校验完整phase/method/seed矩阵，preparing计划不能启动正式比较；重载前
 再核对实际train.yaml与完成报告摘要，拒绝训练后配置漂移。该门禁不改变模型计算。
 
+公平性/角色评估将run的LoRA SHA与对应训练报告checkpoint绑定，拒绝错adapter；
+角色指标读取前检查实际prediction RGB/尺寸，禁止通过隐式resize掩盖产物变化。
+
 `evaluation/fairness.py` 对已完成训练的实际report/config/checkpoint/条件索引及
 各split manifest核验等预算；复核原图与预测后重算metrics，再按显式任务注释汇总。
 任务描述与人工结果分开；失败分类依赖真实评分，空表保持pending。

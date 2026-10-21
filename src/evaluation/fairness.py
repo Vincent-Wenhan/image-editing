@@ -164,8 +164,13 @@ def run(args) -> None:
     runs, training = pairs(args.run), pairs(args.training)
     if set(runs) != set(training):
         raise ValueError("Provide a training report for each inference method")
+    verified = matched_training(training)
+    for method, directory in runs.items():
+        inference = json.loads((directory / "run.json").read_text())
+        if inference.get("lora_sha256") != verified["methods"][method]["checkpoint_sha256"]:
+            raise ValueError("Inference adapter differs from the matched training checkpoint")
     result = dict(
-        training=matched_training(training),
+        training=verified,
         diagnostics=grouped_diagnostics(args.data_root, args.manifest, runs, args.annotations),
     )
     write_json(args.output, result)
