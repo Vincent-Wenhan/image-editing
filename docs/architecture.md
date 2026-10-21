@@ -405,3 +405,7 @@ Blender严格核对数值版本4.5.3，保留显示字符串“4.5.3 LTS”和bu
 盲评支持同内容独立数据副本：按各run声明的conditioning.data_root复核控制来源，
 再核对共用展示数据的实际SHA；映射记录验证根，导入沿用同一验证路径。这样无需
 改写旧run.json路径或丢弃来源约束。预测实际RGB/尺寸也必须与记录相符。
+
+`evaluation/gallery.py --show-roles` 复用现有画廊入口，先验证场景再从真实监督生成
+T/D/P RGB和valid两列。可与实际Mask控制图/预测共同展示，原标注、valid和control
+分别命名，避免视图列错配。默认不增加列，旧No-mask/Mask布局与测试保留。

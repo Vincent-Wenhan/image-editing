@@ -222,3 +222,7 @@ T/D/P为RGB单位向量，ignore为黑；普通 `edit`/`infer` 仍拒绝Oracle�
 
 Blender可选依赖固定为bpy4.5.3、Cython3.3.0、zstandard0.25.0；沿用原命名Conda环境
 的数值依赖锁。完整本机安装快照另存实验输出，不将环境目录上传。
+
+`image-edit gallery --data-root <scenes> --manifest <scenes/dev/manifest.csv> --output <new-gallery> --show-roles`
+会先校验场景，再展示RGB角色真值与独立有效域；T红、D绿、P蓝、ignore黑。
+不加该选项时，原有No-mask/Mask画廊布局保持兼容。

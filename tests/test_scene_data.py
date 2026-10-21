@@ -291,3 +291,83 @@ def test_oracle_loading_never_reads_target_or_counterfactual_rgb(scene_data, mon
     assert control.kind == "oracle_role" and control.metadata["sample_id"] == row["id"]
     with pytest.raises(ValueError, match="ordinary inference"):
         control.require_inference_safe()
+
+
+@pytest.mark.parametrize("with_predictions", [False, True])
+def test_role_gallery_displays_actual_ground_truth_with_separate_valid_region(
+    scene_data, tmp_path, monkeypatch, with_predictions
+):
+    from src.cli import main
+    from src.conditioning.controls import ControlKind
+    from src.conditioning.oracle import role_rgb
+    from src.conditioning.static import MaskSpec
+    from src.core.types import EditOutput
+    from src.datasets.control_export import export_controls
+    from src.inference import runner
+
+    output = tmp_path / "role_gallery"
+    extra = []
+    if with_predictions:
+        monkeypatch.setattr(runner, "require_lease", lambda: None)
+        monkeypatch.setattr(runner, "versions", lambda: {"test": "cpu"})
+        model = tmp_path / "model"
+        model.mkdir()
+        (model / "download.json").write_text('{"revision":"fixed"}')
+        controls = tmp_path / "controls"
+        export_controls(scene_data, controls, MaskSpec(ControlKind.STATIC_MASK))
+        from src.cli import build_parser
+
+        class Backend:
+            def __init__(self, *args):
+                pass
+
+            def edit(self, edit, controls, options):
+                return EditOutput(edit.source, 0, 0, 0)
+
+        predictions = tmp_path / "predictions"
+        args = build_parser().parse_args(
+            [
+                "infer",
+                "--data-root",
+                str(scene_data),
+                "--manifest",
+                str(scene_data / "dev/manifest.csv"),
+                "--model",
+                str(model),
+                "--side",
+                "64",
+                "--output",
+                str(predictions),
+                "--control",
+                "static_mask",
+                "--control-root",
+                str(controls),
+            ]
+        )
+        runner.run(args, backend_factory=Backend)
+        extra = ["--predictions", str(predictions)]
+    main(
+        [
+            "gallery",
+            "--data-root",
+            str(scene_data),
+            "--manifest",
+            str(scene_data / "dev/manifest.csv"),
+            "--output",
+            str(output),
+            "--show-roles",
+        ]
+        + extra
+    )
+    assert "T=red D=green P=blue ignore=black" in (output / "index.html").read_text()
+    assert "valid_region" in (output / "index.html").read_text()
+    with Image.open(output / "contact_00.jpg") as image:
+        assert image.width == (7 if with_predictions else 5) * 224
+    if with_predictions:
+        assert "annotation_mask" in (output / "index.html").read_text()
+    row = read_rows(scene_data / "dev/manifest.csv")[1]
+    with (
+        Image.open(scene_data / row["role_path"]) as truth,
+        Image.open(output / "role_truth" / f"{row['id']}.png") as displayed,
+    ):
+        assert np.array_equal(displayed, role_rgb(truth))

@@ -25,6 +25,8 @@ def test_all_command_defaults_match_pre_refactor_snapshot():
             assert actual.pop("control_root") is None
         if name == "infer":
             assert actual.pop("reference_preprocessing") == "auto"
+        if name == "gallery":
+            assert actual.pop("show_roles") is False
         assert actual == expected, name
 
 

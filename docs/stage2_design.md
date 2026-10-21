@@ -73,3 +73,9 @@ Oracle 显式作为上界：监督 loader 独立读取 target/roles/valid；普�
 服务器首次导入bpy缺少X/GL动态库；补充固定Ubuntu 22.04包URL/版本/SHA256的本地
 运行库引导，仅提取到忽略目录并在Blender子进程的LD_LIBRARY_PATH使用，不改变
 命名Conda环境或其他任务的动态库。普通已安装系统库的环境无需此路径。
+
+### 角色核验视图
+
+复用现有gallery入口增加显式show-roles选项；验证完整场景后展示source/target/
+source-mask、T/D/P RGB和valid，不改变旧布局。角色图必须由实际标签/有效域生成，
+用于本地核验，不能当作模型预测或研究质量结论。
