@@ -397,3 +397,7 @@ oracle条件；后者核对canonical manifest和实际标签/source哈希，不�
 已有完整缓存的哈希验证；scene仅在CPU渲染子进程追加LD_LIBRARY_PATH并隐藏CUDA。
 Blender严格核对数值版本4.5.3，保留显示字符串“4.5.3 LTS”和build hash作元数据。
 不把LTS显示后缀当版本漂移，也不放宽成任意4.5版本。
+
+真实渲染发现并集内部轮廓的采样歧义：valid需分别排除source/target每条silhouette，
+不能只处理union外边缘。场景校验与oracle loader同时拒绝failed/running的生成报告；
+只有生成器内部验收允许自己的running状态，不影响默认只读验证。

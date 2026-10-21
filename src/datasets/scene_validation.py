@@ -39,7 +39,12 @@ def checked_image(root: Path, row: dict, key: str) -> Image.Image:
         return image.copy()
 
 
-def validate_scene_dataset(root: Path) -> dict:
+def validate_scene_dataset(root: Path, *, allow_running: bool = False) -> dict:
+    report = root / "generation.json"
+    if report.exists():
+        status = json.loads(report.read_text())["status"]
+        if status != "complete" and not (allow_running and status == "running"):
+            raise ValueError("Scene generation is incomplete or failed")
     dataset = json.loads((root / "dataset.json").read_text())
     if (
         dataset["schema_version"] != 1

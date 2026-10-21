@@ -213,3 +213,6 @@ T/D/P为RGB单位向量，ignore为黑；普通 `edit`/`infer` 仍拒绝Oracle�
 该入口按固定URL/SHA256提取本地运行库；随后给 `scene generate` 添加
 `--runtime-library-path .cache/blender/runtime/usr/lib/x86_64-linux-gnu`。
 只影响渲染子进程，不修改系统库或其他任务的环境。
+
+有效域分别排除旧、新物体轮廓（含占据并集内部的重叠边界）；生成失败或未完成的数据
+不能通过常规验证，也不能加载为Oracle。失败目录保留，修复后使用新的输出目录。

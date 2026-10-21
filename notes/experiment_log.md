@@ -199,3 +199,9 @@
 - wheelSHA验证、Cython/zstandard安装完成，首次bpy导入因缺libXrender失败；新输出保存安装日志。固定9个Ubuntu包版本/SHA本地提取，仅CPU渲染子进程追加库路径，父进程/CUDA任务不改动。
 - 真实bpy4.5.3 LTS/build67807e1800cc导入与场景构建通过；版本严格按4.5.3数值tuple核验。20项相关测试通过（15.26s），真实多强度渲染待执行。
 - Constant150步训练已complete：1153.01s，峰值reserved17.09GiB，固定30例重载正在运行。No-mask两种预处理及Static的30例推理完成，另两组Mask尚在运行。
+
+### 首次真实场景渲染失败与边界修复
+
+- render_01四场景×三强度完整渲染，worker8.22s。背景显露门禁拒绝train_cylinder_b/s001：两像素[55,47]、[64,47]误差0.013770 >0.01，均紧邻新轮廓。
+- 原valid只排除union外边缘，漏掉重叠内轮廓。改为分别排除旧/新silhouette，误差阈值不变；补充重叠边界及failed/running数据拒绝回归，失败全部资产保留。
+- 此前完整工程检查177 passed/71.82s，Ruff/pip/安装/嵌套CLI全部通过；本次边界修复另测后将用新目录真实重跑，不将失败写成通过。

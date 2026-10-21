@@ -26,3 +26,11 @@ GPU角色消费与真实Blender仍待验收；没有训练角色adapter，不能
 4.5.3 LTS，build `67807e1800cc`，background=True，Cycles/device=CPU。
 真实显示字符串含LTS，修正版本比较为数值tuple而非放宽pin；增加回归。
 20项运行库/场景/CLI相关回归通过（15.26s）。完整渲染仍待运行。
+
+## 首轮真实渲染：校验失败，证据保留
+
+`render_01`完整渲染4场景×3强度=12对，Cycles CPU渲染worker 8.22s。
+校验发现train_cylinder_b半强度的背景显露最大误差0.013770 >预设0.01，未通过。
+诊断发现union边界忽略策略漏掉重叠区域内的新物体轮廓；将分别排除旧/新轮廓，
+而不提高误差门限。配置、全部EXR/NPZ/PNG、失败traceback和诊断均保留，不能把
+该目录当作通过的数据。修复及新目录重跑仍待完成。

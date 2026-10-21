@@ -129,6 +129,31 @@ def test_scene_pairing_strength_roles_and_background_validate(scene_data):
         compile_pairs(scene_data, json.loads((scene_data / "dataset.json").read_text())["config"])
 
 
+def test_overlapping_silhouettes_exclude_internal_boundaries():
+    policy = load_yaml(CONFIG_ROOT / "datasets/blender_translation.yaml")["roles"]
+    values = evidence([0.7, 0.1, 0.1])
+    values["source_occupancy"][10:26, 10:36] = 1
+    values["target_occupancy"][:] = 0
+    values["target_occupancy"][10:26, 25:50] = 1
+    labels, valid = derive_roles(values, 1, policy)
+    # x=24/25 is inside the union but borders the new object's silhouette.
+    assert valid[18, 24] == valid[18, 25] == 0
+    assert labels[18, 24] == labels[18, 25] == 255
+    assert valid[18, 18] == 255
+
+
+@pytest.mark.parametrize("status", ["running", "failed"])
+def test_partial_or_failed_generation_cannot_be_validated_or_used_as_oracle(scene_data, status):
+    from src.datasets.scene_manifest import load_oracle_condition
+
+    write_json(scene_data / "generation.json", dict(status=status))
+    with pytest.raises(ValueError, match="incomplete or failed"):
+        validate_scene_dataset(scene_data)
+    row = read_rows(scene_data / "dev/manifest.csv")[1]
+    with pytest.raises(ValueError, match="failed or incomplete"):
+        load_oracle_condition(scene_data, row)
+
+
 @pytest.mark.parametrize(
     "change", ["label", "valid", "strength", "source", "mask", "raw", "config"]
 )

@@ -55,7 +55,10 @@ def derive_roles(evidence: dict, strength: float, policy: dict) -> tuple[np.ndar
     # Outside occupied geometry, a no-shadow difference is an unexplained effect/noise.
     unexplained = np.max(np.abs(target_off - source_off), axis=2) > policy["unexplained_tolerance"]
     radius = policy["boundary_radius"]
-    boundary = neighborhood(direct, radius) ^ neighborhood(direct, radius, erode=True)
+    # Each silhouette matters, including old/new boundaries inside their union.
+    boundary = np.zeros(old.shape, dtype=bool)
+    for footprint in (old > 0.5, new > 0.5):
+        boundary |= neighborhood(footprint, radius) ^ neighborhood(footprint, radius, erode=True)
     partial = ((old > 1e-5) & (old < 0.99999)) | ((new > 1e-5) & (new < 0.99999))
     invalid = boundary | partial | ambiguous | (unexplained & ~direct)
     labels = np.full(old.shape, 2, dtype=np.uint8)

@@ -14,6 +14,9 @@ from src.datasets.scene_validation import checked_image
 
 
 def checked_row(root: Path, row: dict) -> None:
+    generation = root / "generation.json"
+    if generation.exists() and json.loads(generation.read_text())["status"] != "complete":
+        raise ValueError("Oracle rejects failed or incomplete scene generation")
     dataset = json.loads((root / "dataset.json").read_text())
     if dataset.get("kind") != "blender_translation_v1" or dataset.get("status") != "complete":
         raise ValueError("Oracle loading requires a declared completed synthetic dataset")

@@ -71,7 +71,7 @@ def generate(config_path: Path, output: Path, *, runtime_library_path: Path | No
         with (output / "render.log").open("w") as log:
             subprocess.run(argv, env=environment, stdout=log, stderr=subprocess.STDOUT, check=True)
         compile_pairs(output, config)
-        validation = validate_scene_dataset(output)
+        validation = validate_scene_dataset(output, allow_running=True)
         write_json(output / "validation.json", validation)
         report.update(
             status="complete", validation=validation, dataset_sha256=sha256(output / "dataset.json")
