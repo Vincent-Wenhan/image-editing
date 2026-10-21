@@ -17,6 +17,7 @@ COMMANDS = {
     "evaluate": "src.evaluation.evaluate",
     "train-config": "src.training.config",
     "gallery": "src.evaluation.gallery",
+    "review": "src.evaluation.review",
 }
 
 

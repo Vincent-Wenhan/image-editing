@@ -177,3 +177,14 @@ GitHub PR 的合并状态单独确认。Stage 0 原始结果继续保留在独�
 评估补强新增 `prepare-controls --kind constant_mask`，按 `[source, 全黑RGB]` 提供
 与Mask相同的双参考结构。`infer --reference-preprocessing training` 显式对齐
 单参考的训练器cast顺序，默认 `auto` 保留旧No-mask。新结果必须使用新输出目录。
+
+人工评估使用本地盲评包（至少两个同预算完整运行）：
+
+```bash
+image-edit review export --data-root <data> --manifest <dev.csv> \
+  --run no_mask=<run-a> --run static=<run-b> --output <new-review>
+# 本地打开 new-review/index.html，由真实评审者填写并下载CSV。
+image-edit review score --bundle <new-review> --ratings <ratings.csv> --output <new-summary.json>
+```
+
+评分含编辑成功度、无关内容保留与失败类别/说明。空白为pending，不产生人工结论。

@@ -360,3 +360,10 @@ LoRA 张量，训练含加载/缓存共 72.25s，峰值 reserved 15.04 GiB。
 `core/references.py` 定义预处理名称；runner记录显式选择，evaluation复核配置。
 No-mask默认仍为单PIL/Diffusers顺序，显式training选项才进入受限预处理；双参考
 仍匹配上游cast。未修改训练loss或网络结构。
+
+### 人工评估边界
+
+`evaluation/review.py` 验证完整运行/配对预算后导出匿名任务与图片，私有方法映射与
+公开表单分离；`review_page.py` 只生成离线评分界面。导入复核原运行和图片、映射及
+副本哈希，拒绝任务丢失/重复、非法评分和缺失评审者。未填写项保留pending；人工
+结果不替代原有pixel metrics，也不会自动把模型或像素诊断当作真人评分。
