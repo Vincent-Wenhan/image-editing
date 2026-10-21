@@ -8,6 +8,14 @@ Stage 1 PR #2 已正常合并 main `a03f168`；本地130项测试及 PR CI 通�
 conditioning/datasets/backends/evaluation 内，不提前训练 Predictor 或迁移 Qwen。
 原 Stage 0/1 输出均保留。下文各阶段记录按其标注时间理解。
 
+当前已完成Constant双参考与显式No-mask cast、六组各30例重载、180项离线人工
+评审工具（真实评分pending）、12对Blender图像/角色数据及Oracle GPU接口消费。
+184项本机测试/79.97s、Ruff、pip/CLI及仓库外wheel检查通过；最新可执行代码的
+[GitHub CPU CI](https://github.com/Vincent-Wenhan/image-editing/actions/runs/39600199742)
+通过。实际预算、时间/显存、失败、数据可信域与未完成项见
+[Stage 1补充报告](stage1_review_report.md)、[Stage 2实际报告](stage2_report.md)。
+接口和数据通过不构成方法收益；没有提前训练Role Predictor或Qwen。
+
 ## Stage 1 开发入口
 
 架构分支已通过 [PR #1](https://github.com/Vincent-Wenhan/image-editing/pull/1)

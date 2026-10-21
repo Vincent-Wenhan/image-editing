@@ -222,3 +222,16 @@
 - gallery新增显式show-roles，实际标签重建RGB与valid分列；未启用时旧布局兼容。31项场景/旧画廊/CLI相关测试通过（20.78s）；另两项无预测/含真实控制来源的组合视图回归通过（3.39s）。
 - 本地role_gallery完成六个dev场景/强度的核验视图；目视确认身份全P、旧/新占据T、阴影迁移D、独立ignore边界。该目视核验不是人工模型质量盲评。
 - 原Stage0/1四组共48张历史预测与新30例前12张逐字节相同；render_01/02的24张source/target PNG也逐字节相同，说明本次修复改变有效域而非渲染图像。原结果保留。
+
+## 2026-10-21 本轮完整交付状态
+
+- Stage1 PR #2正常merge main a03f168，分支从该最新main创建；无force push，Stage0/1 worktree和所有历史资产保留。
+- Constant：2步/batch4 worker209.92s、reserved17.09GiB；150步/batch4 worker1153.01s（wall1161.16s），检查150个双参考batch、160张量有限，checkpoint SHA78ad1bd5494ae1a6e5c778835747a1c657fd687d9df0a804318ac64fab834463；无OOM或清理错误。
+- 六组×30dev固定seed/50steps/CFG4完成。Constant/Static/Dilated Target MAE为0.056721/0.060950/0.057524；像素排序不等于成功度，目视摩托车替换样例中Constant未执行编辑而Static/Dilated替换为汽车。
+- No-mask默认和training cast同checkpoint的30例输出平均MAE0.002380；原四组各12图共48图与新运行逐字节相同。并发controller head不能代替所有排队worker源码快照，相关限制写入补充报告，未虚称逐worker完全可追溯。
+- 180项匿名真人评审包及空表导入完成，全部pending；失败候选选择/代理非盲观察独立记录，不计作真人评分或总体失败率。
+- Blender render_01失败资产全留；修复内部轮廓valid后render_02完整通过：4组×3强度、6train/6dev，worker8.37s、总生成/验证12.11s，背景显露max0.007452<0.01；24张RGB与失败轮相同。
+- Oracle真实GPU：128²/4steps，双VAE参考及T=0/10/20各64token；T/D置换改变条件/输出，source/noise不变、重复PNG一致。worker69.85s、reserved15.22GiB；仅无角色adapter的协议检查，不是质量上界。
+- 最终184 passed/79.97s，Ruff check/format、pip check、editable、12CLI及嵌套/模块/薄脚本通过；wheel仓库外导入/自带配置/CLI通过。代码CI success(e5a7c51)，只读核对三个第三方checkout均固定且干净。
+- GPU任务均经实时空闲检测与UUID租约，完成后8卡0MiB/0%，无计算进程。模型、数据、图像、checkpoint、环境、外部仓库仅在忽略目录。
+- 当前未完成：真人评分、Oracle LoRA质量上界、多训练seed/更大scene-group/保留测试集；未实现Role Predictor、软Role模型或Qwen训练。新文字报告分别为stage1_review_report.md与stage2_report.md。

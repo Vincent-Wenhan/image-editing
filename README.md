@@ -1,9 +1,13 @@
 # Image Editing Research
 
 Stage 1 已通过 [PR #2](https://github.com/Vincent-Wenhan/image-editing/pull/2) 正常合并。
-新分支先补全双参考无信息基线、30 例固定验证与人工评估，再实现最小 Blender
-反事实数据及显式 Oracle Role 接口。设计和验收见
-[stage2_design.md](docs/stage2_design.md)；历史结果保留，研究收益尚未验证。
+新分支 `feat/role-data-and-evaluation` 已完成双参考无信息基线、六组各30例固定
+验证、180项离线人工评审包，以及最小Blender反事实数据和显式Oracle Role接口。
+Constant 150步训练、12对真实CPU渲染/标签校验和Oracle GPU协议检查已通过；
+184项测试、Ruff、CLI、editable/wheel检查通过。真人评分仍待填写，未训练角色
+adapter/Predictor或Qwen，也未证明空间方法收益。详见
+[补充评估报告](docs/stage1_review_report.md)、[Stage 2实际报告](docs/stage2_report.md)
+和 [设计](docs/stage2_design.md)。所有历史结果保留，新资产仅存本地outputs。
 
 Stage 0 架构已通过 [PR #1](https://github.com/Vincent-Wenhan/image-editing/pull/1)
 合并。Stage 1 的联合条件、130 项回归、GPU smoke、三组150-step训练及固定12例
@@ -17,7 +21,7 @@ Mask 画廊新增 `annotation_mask` 与 `control_input` 两列，分别展示评
 
 - [方案评审](docs/proposal_review.md)：可行性、贡献边界、标签定义与必要对照。
 - [Stage 0 设计](docs/stage0_design.md)：当前准备工作的范围和验收。
-- [当前验收状态](docs/stage0_report.md)：已验证内容、下载进度入口和待运行实验。
+- [Stage 0验收记录](docs/stage0_report.md)：已完成的训练、重载与历史失败。
 - [原始 roadmap](docs/Image_Editing_Preparation_and_InterEdit_Roadmap.md)：研究输入与长期路线。
 - [架构重构设计与验收](docs/architecture.md)：模块边界、兼容约定与实施步骤。
 - 稳定性收尾与 20/150-step、固定 12 例重载验收已完成；真实结果见 Stage 0 报告。

@@ -1,5 +1,8 @@
 # Stage 1 实际运行记录
 
+本页保留首次12例实验。后续匹配双参考Constant、两种No-mask预处理、六组30例
+评估及人工/失败案例流程见 [补充报告](stage1_review_report.md)；旧表和资产未覆盖。
+
 更新时间：2026-10-21。**工程验收 complete：最小 GPU 验证、三组150-step训练、
 固定12例重载/配对评估和画廊均已完成。尚无优于No-mask的研究结论。**
 架构已通过 [PR #1](https://github.com/Vincent-Wenhan/image-editing/pull/1) 合并到 main；

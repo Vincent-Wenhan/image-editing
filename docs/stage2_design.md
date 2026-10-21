@@ -1,6 +1,8 @@
 # Stage 1 评估补强与 Stage 2 最小反事实数据
 
-状态：设计已记录，实现与真实运行待验收。新分支 `feat/role-data-and-evaluation`
+状态：工程实现、六组30例评估、真实CPU渲染及Oracle GPU协议验收完成；真人评分、
+Oracle质量上界与研究泛化尚未验证。实际结果见 [Stage 1补充报告](stage1_review_report.md)
+与 [Stage 2报告](stage2_report.md)。新分支 `feat/role-data-and-evaluation`
 从 main `a03f168` 创建。[PR #2](https://github.com/Vincent-Wenhan/image-editing/pull/2)
 已于 2026-10-21 11:26 UTC 正常 merge；PR CI、130 项本地测试、Ruff、CLI、
 依赖及历史资产审计通过，无冲突或 force push。Stage 0/1 全部 worktree/输出保留。
@@ -9,7 +11,7 @@
 
 - 新增 `constant_mask`：固定全黑 RGB 第二参考，所有样本相同，无空间信息；
   图序、参考数量、VAE cast、token 数、LoRA 容量与 Mask 一致。
-  全黑图经 VAE 得到非零 latent，不能称作零 latent 或无参考。
+  全黑图仍经 VAE 产生条件 latent，不能当作零 latent 或无参考。
 - 固定 200 train、全部 30 dev、seed42、150 updates/batch4，沿用原配方。
   独立训练 constant，保留旧 No-mask/Static/Dilated/Shuffled checkpoint。
   不改变默认 No-mask；显式 `--reference-preprocessing training` 才用训练器 cast
