@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
+from PIL import Image
 
 from src.cli import build_parser
 from src.core.io import read_rows, write_rows
@@ -105,3 +106,75 @@ def test_invalid_or_tampered_human_ratings_fail(review_bundle, tmp_path, change)
     write_rows(path, rows)
     with pytest.raises(ValueError):
         score_review(review_bundle, path, tmp_path / "bad.json")
+
+
+def test_review_refuses_predictions_with_wrong_actual_geometry(review_bundle, tmp_path):
+    mapping = json.loads((review_bundle / "private/mapping.json").read_text())
+    Image.new("RGB", (16, 16)).save(mapping["tasks"][0]["files"]["prediction"]["path"])
+    with pytest.raises(ValueError, match="shape/mode"):
+        export_review(
+            Path(mapping["data_root"]),
+            Path(mapping["manifest"]),
+            {name: Path(info["path"]) for name, info in mapping["runs"].items()},
+            tmp_path / "wrong_geometry",
+            42,
+        )
+
+
+def test_review_compares_checked_copies_without_erasing_control_provenance(
+    review_bundle, spatial_data, tmp_path
+):
+    from src.conditioning.controls import ControlKind
+    from src.conditioning.static import MaskSpec
+    from src.datasets.control_export import export_controls
+    from src.datasets.snapshot import snapshot_pairs
+
+    copy = tmp_path / "copy"
+    snapshot_pairs(spatial_data, copy)
+    controls = tmp_path / "constant"
+    export_controls(copy, controls, MaskSpec(ControlKind.CONSTANT_MASK))
+    mapping = json.loads((review_bundle / "private/mapping.json").read_text())
+    original_run = Path(next(iter(mapping["runs"].values()))["path"])
+    record = json.loads((original_run / "run.json").read_text())
+    output = tmp_path / "copy_run"
+    args = build_parser().parse_args(
+        [
+            "infer",
+            "--data-root",
+            str(copy),
+            "--manifest",
+            str(copy / "dev/manifest.csv"),
+            "--model",
+            record["config"]["model"],
+            "--output",
+            str(output),
+            "--side",
+            "64",
+            "--limit",
+            "3",
+            "--control",
+            "constant_mask",
+            "--control-root",
+            str(controls),
+        ]
+    )
+
+    class Backend:
+        def __init__(self, *args):
+            pass
+
+        def edit(self, edit, controls, options):
+            return EditOutput(edit.source, 0, 0, 0)
+
+    runner.run(args, backend_factory=Backend)
+    bundle = tmp_path / "copy_review"
+    index = export_review(
+        spatial_data,
+        spatial_data / "dev/manifest.csv",
+        {"original": original_run, "copy": output},
+        bundle,
+        42,
+    )
+    assert index["tasks"] == 6
+    result = score_review(bundle, bundle / "ratings.csv", tmp_path / "copy_pending.json")
+    assert result["pending"] == 6

@@ -401,3 +401,7 @@ Blender严格核对数值版本4.5.3，保留显示字符串“4.5.3 LTS”和bu
 真实渲染发现并集内部轮廓的采样歧义：valid需分别排除source/target每条silhouette，
 不能只处理union外边缘。场景校验与oracle loader同时拒绝failed/running的生成报告；
 只有生成器内部验收允许自己的running状态，不影响默认只读验证。
+
+盲评支持同内容独立数据副本：按各run声明的conditioning.data_root复核控制来源，
+再核对共用展示数据的实际SHA；映射记录验证根，导入沿用同一验证路径。这样无需
+改写旧run.json路径或丢弃来源约束。预测实际RGB/尺寸也必须与记录相符。

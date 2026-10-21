@@ -7,9 +7,11 @@ import shutil
 from pathlib import Path
 
 import numpy as np
+from PIL import Image
 
 from src.core.io import sha256, write_json, write_rows
 from src.core.paths import data_path
+from src.datasets.validation import verify_images
 from src.evaluation.provenance import verify_comparison, verify_run
 from src.evaluation.review_page import FAILURES, FIELDS, page
 
@@ -24,13 +26,24 @@ def export_review(
     records, tasks, reference = {}, [], None
     for method, directory in sorted(runs.items()):
         record = json.loads((directory / "run.json").read_text())
-        rows = verify_run(root, manifest, record)
+        verification_root = Path(record.get("conditioning", {}).get("data_root", root))
+        rows = verify_run(verification_root, manifest, record)
+        for row in rows.values():
+            verify_images(root, row)
         if reference is not None:
             verify_comparison(reference, record)
         reference = record
-        records[method] = dict(path=str(directory.resolve()), sha256=sha256(directory / "run.json"))
+        records[method] = dict(
+            path=str(directory.resolve()),
+            sha256=sha256(directory / "run.json"),
+            verification_root=str(verification_root.resolve()),
+        )
         for result in record["results"]:
             identifier = result["id"]
+            with Image.open(directory / f"{identifier}.png") as image:
+                image.load()
+                if image.size != (result["width"], result["height"]) or image.mode != "RGB":
+                    raise ValueError("Prediction shape/mode differs from its run record")
             task_id = hashlib.sha256(f"{seed}:{method}:{identifier}".encode()).hexdigest()[:20]
             paths = dict(
                 source=data_path(root, rows[identifier]["source_path"]),
@@ -99,7 +112,7 @@ def verify_review(bundle: Path) -> dict:
         run = Path(info["path"]) / "run.json"
         if sha256(run) != info["sha256"]:
             raise ValueError("Reviewed inference record SHA256 changed")
-        verify_run(root, manifest, json.loads(run.read_text()))
+        verify_run(Path(info.get("verification_root", root)), manifest, json.loads(run.read_text()))
     for task in mapping["tasks"]:
         for key, info in task["files"].items():
             copy = bundle / "images" / f"{task['task_id']}_{key}.png"
