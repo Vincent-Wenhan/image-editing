@@ -160,3 +160,9 @@
 - 下载与验收进程见 `outputs/background_jobs.json`；`outputs/stage0/status.json` 记录实际状态。后续自动执行 12 例 Base 推理、20-step debug、150-step LoRA、同配置重载和诊断。资产不完整时保持等待，不占用 GPU。
 - 已清理临时脚本、下载引导 wheels、废弃探测文件和重复的项目前缀环境；只保留命名 Conda 环境。原始用户 kit 压缩包保留在本地且不提交。
 - 本记录描述启动时的真实状态；完整模型推理/训练是否通过，以验收状态和各阶段 report 为准，目前没有研究性能提升结论。
+
+## 2026-10-21 Stage 1 正常合并与后续设计
+
+- PR #2 在 PR CPU CI success 后正常 merge，main `a03f168`；本地130 passed/62.75s、Ruff、CLI、pip check、卫生检查通过，历史78个新增blob无资产，未force push。
+- 从最新main创建 `feat/role-data-and-evaluation` 独立worktree；设计先记录于 `docs/stage2_design.md`。
+- 计划：constant双参考基线、显式No-mask预处理对照、30例固定验证、独立人工评分；随后最小Blender平移/阴影/背景及Oracle接口。尚未实现或声称研究收益；旧实验只读保留。

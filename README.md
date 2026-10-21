@@ -1,5 +1,10 @@
 # Image Editing Research
 
+Stage 1 已通过 [PR #2](https://github.com/Vincent-Wenhan/image-editing/pull/2) 正常合并。
+新分支先补全双参考无信息基线、30 例固定验证与人工评估，再实现最小 Blender
+反事实数据及显式 Oracle Role 接口。设计和验收见
+[stage2_design.md](docs/stage2_design.md)；历史结果保留，研究收益尚未验证。
+
 Stage 0 架构已通过 [PR #1](https://github.com/Vincent-Wenhan/image-editing/pull/1)
 合并。Stage 1 的联合条件、130 项回归、GPU smoke、三组150-step训练及固定12例
 评估已完成。初步像素诊断未显示优于No-mask。见 [设计](docs/stage1_design.md) 和

@@ -1,5 +1,13 @@
 # 工程架构重构
 
+## 当前开发：评估补强与最小反事实数据
+
+Stage 1 PR #2 已正常合并 main `a03f168`；本地130项测试及 PR CI 通过，78个新增
+历史blob资产审计通过（最大24,207 bytes）。新分支 `feat/role-data-and-evaluation`
+保持现有目录结构；设计见 [stage2_design.md](stage2_design.md)。新增职责仍放
+conditioning/datasets/backends/evaluation 内，不提前训练 Predictor 或迁移 Qwen。
+原 Stage 0/1 输出均保留。下文各阶段记录按其标注时间理解。
+
 ## Stage 1 开发入口
 
 架构分支已通过 [PR #1](https://github.com/Vincent-Wenhan/image-editing/pull/1)
