@@ -239,3 +239,11 @@
 ### 渲染采样说明补全（仅文档）
 
 - 明确实际beauty/反事实/空场32 samples，emission-ID occupancy使用min(16,samples)=16；不能把两条路径抗锯齿覆盖视为精确相同。现有轮廓ignore与0.01门禁已覆盖该差异，实验与代码不变。
+# 2026-10-22 角色研究验证设计
+
+已读指定三份报告、架构及相关实现。PR #3 仍为 Draft、远端一致/CI success。
+本轮先设计后实现，详见 `docs/role_validation_design.md`。现有180项真人评分为空，
+不填充；新增3-reviewer导入/配对区间、分组公平性审计、三分割128→512场景，
+再做Oracle/Static/Dilated/Dynamic Binary同数据双seed60步对照。当前均为计划。
+启动GPU任务前重新检测并获取正常UUID租约。历史结果保持只读。
+

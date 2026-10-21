@@ -1,5 +1,9 @@
 # Image Editing Research
 
+当前研究验证计划见 [role_validation_design.md](docs/role_validation_design.md)：补齐
+三位独立评审者统计、Stage 1 分组诊断、三分割程序化场景和同预算 Oracle LoRA 对照。
+计划不代表已运行；真人评分仍 pending，实际结果将在报告中逐项更新。
+
 Stage 1 已通过 [PR #2](https://github.com/Vincent-Wenhan/image-editing/pull/2) 正常合并。
 新分支 `feat/role-data-and-evaluation` 已完成双参考无信息基线、六组各30例固定
 验证、180项离线人工评审包，以及最小Blender反事实数据和显式Oracle Role接口。
