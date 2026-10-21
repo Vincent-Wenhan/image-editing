@@ -288,4 +288,5 @@ python -m src.evaluation.role_metrics --study <new-study> --output <new-diagnost
 
 训练预算唯一配置为 `configs/experiments/role_validation.yaml`；各子任务均由GPU租约
 入口启动，重复目录会失败。先单卡测量，再扩大batch/并行；同一对照不自动调batch。
+准备中的计划只允许已就绪pilot，完整方法×seed矩阵准备齐全后才允许正式比较。
 P区域报告source漂移，T/D报告target误差，分别按scene聚合，不称为编辑成功率。

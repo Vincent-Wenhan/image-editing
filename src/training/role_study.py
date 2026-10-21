@@ -47,7 +47,7 @@ def prepare(data: Path, output: Path, protocol_path: Path) -> dict:
     template_path = output / "template.yaml"
     template_path.write_text(yaml.safe_dump(template, sort_keys=False))
     plan = dict(
-        status="prepared",
+        status="preparing",
         data=str(data.resolve()),
         protocol=protocol,
         protocol_sha256=sha256(protocol_path),
@@ -120,6 +120,8 @@ def prepare(data: Path, output: Path, protocol_path: Path) -> dict:
             )
         )
         write_json(output / "plan.json", plan)
+    plan["status"] = "prepared"
+    write_json(output / "plan.json", plan)
     return plan
 
 
@@ -149,6 +151,11 @@ def train_job(job: dict) -> None:
 def infer_job(job: dict, protocol: dict) -> None:
     directory = Path(job["directory"])
     report = json.loads((directory / "train_report.json").read_text())
+    if (
+        report["config_sha256"] != job["config_sha256"]
+        or sha256(directory / "train.yaml") != job["config_sha256"]
+    ):
+        raise ValueError("Training configuration drifted before matched inference")
     if (
         report["status"] != "complete"
         or sha256(report["checkpoint"]) != report["checkpoint_sha256"]
@@ -195,8 +202,26 @@ def infer_job(job: dict, protocol: dict) -> None:
         execute(argv, directory / f"{split}_execution")
 
 
+def verify_plan(plan: dict, phase: str) -> None:
+    if phase not in {"smoke", "capacity", "train", "infer"}:
+        raise ValueError("Unknown study phase")
+    seeds, methods = plan["protocol"]["train_seeds"], plan["protocol"]["methods"]
+    if not seeds or len(set(seeds)) != len(seeds):
+        raise ValueError("Training seeds must be nonempty and distinct")
+    expected = {("smoke", "oracle_role", seeds[0]), ("capacity", "oracle_role", seeds[0])}
+    expected |= {("train", method, seed) for method in methods for seed in seeds}
+    actual = {(j["phase"], j["method"], j["seed"]) for j in plan["jobs"]}
+    if len(actual) != len(plan["jobs"]) or not actual <= expected:
+        raise ValueError("Study job identities differ from declared protocol")
+    if phase in {"train", "infer"} and (actual != expected or plan["status"] != "prepared"):
+        raise ValueError("Complete every planned configuration before matched study execution")
+    if phase in {"smoke", "capacity"} and (phase, "oracle_role", seeds[0]) not in actual:
+        raise ValueError("Requested pilot configuration is not prepared")
+
+
 def run_phase(output: Path, phase: str, parallel: int) -> dict:
     plan = json.loads((output / "plan.json").read_text())
+    verify_plan(plan, phase)
     if not 1 <= parallel <= plan["protocol"]["max_parallel"]:
         raise ValueError("Parallelism exceeds the predeclared RAM/GPU limit")
     jobs = [

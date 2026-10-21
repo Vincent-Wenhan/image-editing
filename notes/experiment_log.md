@@ -293,3 +293,9 @@ GPU smoke、容量、正式训练和重载尚未执行；下步冻结代码后�
 冻结执行6879c87，512²/batch1/2steps，worker143.7247s，峰值15.0219/15.0371GiB，
 实际双参考校验2次，有限checkpoint SHA7fd99d95c42ffc6a069cb9e98a9bab4c02c59a66f80f9b36afbe4211df947ac6。
 重载/容量/正式研究pending；具体状态见docs/role_validation_report.md。fe0029f双CI success。
+
+## 编排边界检查
+
+补齐preparing/prepared与完整method×seed矩阵门禁，避免提前启动不完整对照；
+重载前再次核对训练配置摘要。新回归验证partial pilot允许、正式比较拒绝、重复身份
+拒绝，Ruff通过。冻结GPU计算代码仍为6879c87；启动正式研究前单独复核全部10项。
