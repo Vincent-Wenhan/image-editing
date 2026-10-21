@@ -8,6 +8,7 @@ from src.core.images import dimensions
 from src.core.io import read_rows, sha256
 from src.core.metadata import config_digest
 from src.core.random import sample_seed
+from src.core.references import reference_preprocessing
 from src.datasets.controls import ControlDataset
 from src.datasets.validation import verify_images
 
@@ -20,6 +21,11 @@ def verify_run(root: Path, manifest: str | Path, record: dict) -> dict[str, dict
     if sha256(manifest) != record.get("manifest_sha256"):
         raise ValueError("Manifest SHA256 differs from the inference run")
     config = record["config"]
+    preprocessing = reference_preprocessing(
+        config.get("control", "none"), config.get("reference_preprocessing", "auto")
+    )
+    if record.get("reference_preprocessing", preprocessing) != preprocessing:
+        raise ValueError("Reference preprocessing differs from inference configuration")
     if "config_sha256" in record and config_digest(config) != record["config_sha256"]:
         raise ValueError("Inference configuration SHA256 changed")
     for key in ("limit", "side", "steps", "seed"):

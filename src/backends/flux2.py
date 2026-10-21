@@ -34,7 +34,11 @@ class Flux2Backend:
         start = time.perf_counter()
         with (
             torch.inference_mode(),
-            joint_preprocessing(self.pipe, enabled=isinstance(images, list)),
+            joint_preprocessing(
+                self.pipe,
+                enabled=isinstance(images, list)
+                or controls.metadata.get("reference_preprocessing") == "training",
+            ),
         ):
             image = self.pipe(
                 image=images,

@@ -23,6 +23,8 @@ def test_all_command_defaults_match_pre_refactor_snapshot():
         if name in {"train-config", "infer"}:
             assert actual.pop("control") == "none"
             assert actual.pop("control_root") is None
+        if name == "infer":
+            assert actual.pop("reference_preprocessing") == "auto"
         assert actual == expected, name
 
 

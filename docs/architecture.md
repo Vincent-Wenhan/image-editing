@@ -353,3 +353,10 @@ reference 编码结果在 CPU。其缓存流程主动卸载 VAE 到 CPU，随后
 LoRA 张量，训练含加载/缓存共 72.25s，峰值 reserved 15.04 GiB。
 同样本 50-step LoRA 重载通过：27.08s，峰值 reserved 16.26 GiB。
 最初 20-step 的失败记录保留，150-step 当时未开始；本轮已补齐 20/150-step 与 12 例重载。
+
+### 匹配参考结构与预处理
+
+`constant_mask` 复用原条件导出/哈希/训练batch边界，输出固定黑图而非零latent。
+`core/references.py` 定义预处理名称；runner记录显式选择，evaluation复核配置。
+No-mask默认仍为单PIL/Diffusers顺序，显式training选项才进入受限预处理；双参考
+仍匹配上游cast。未修改训练loss或网络结构。

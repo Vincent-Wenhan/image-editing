@@ -20,8 +20,8 @@ from src.training.flux2_compat import SUPPORTED_TRAINER_REVISION, configure_flux
 from src.training.spatial import verify_joint_batch, verify_training_controls
 
 
-@pytest.fixture
-def joint_recipe(spatial_data, tmp_path):
+@pytest.fixture(params=[ControlKind.STATIC_MASK, ControlKind.CONSTANT_MASK])
+def joint_recipe(spatial_data, tmp_path, request):
     model = tmp_path / "model"
     model.mkdir()
     (model / "ae.safetensors").touch()
@@ -32,7 +32,7 @@ def joint_recipe(spatial_data, tmp_path):
     template = tmp_path / "template.yaml"
     template.write_text(yaml.safe_dump(recipe))
     root = tmp_path / "controls"
-    export_controls(spatial_data, root, MaskSpec(ControlKind.STATIC_MASK))
+    export_controls(spatial_data, root, MaskSpec(request.param))
     args = build_parser().parse_args(
         [
             "train-config",
@@ -41,7 +41,7 @@ def joint_recipe(spatial_data, tmp_path):
             "--template",
             str(template),
             "--control",
-            "static_mask",
+            str(request.param),
             "--control-root",
             str(root),
         ]
@@ -62,7 +62,7 @@ def test_joint_recipe_preserves_original_objective(joint_recipe, spatial_data):
     # Exercise the actual disk protocol, not just the in-memory recipe.
     reloaded = yaml.safe_load(yaml.safe_dump(joint_recipe))
     assert reloaded == joint_recipe
-    assert verify_training_controls(reloaded)["kind"] == "static_mask"
+    assert verify_training_controls(reloaded) == joint_recipe["meta"]["spatial_control"]
 
 
 @pytest.mark.parametrize(

@@ -173,3 +173,7 @@ GitHub PR 的合并状态单独确认。Stage 0 原始结果继续保留在独�
 `data/`、`models/`、`outputs/`、`external/`、`.venv/` 全部忽略。Git hooks 检查提交信息、代码行数和禁止上传的资产。实验原始日志应留在本地 `outputs/logs/`，一次性文件放 `.tmp/` 并在完成后清理。
 
 所有 GPU 任务使用 `image-edit gpu -- ...`：实时检查占用、利用率和计算进程，再获取 UUID 锁。可用 `--device 2` 指定物理卡，若忙则拒绝；不允许通过直接设置 CUDA 序号绕过检查。锁协调同一用户的本项目任务，共享机器仍需遵循管理员调度。
+
+评估补强新增 `prepare-controls --kind constant_mask`，按 `[source, 全黑RGB]` 提供
+与Mask相同的双参考结构。`infer --reference-preprocessing training` 显式对齐
+单参考的训练器cast顺序，默认 `auto` 保留旧No-mask。新结果必须使用新输出目录。

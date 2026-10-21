@@ -11,6 +11,7 @@ from src.core.spatial import SpatialMap, roles, unit_map
 
 class ControlKind(StrEnum):
     NONE = "none"
+    CONSTANT_MASK = "constant_mask"
     STATIC_MASK = "static_mask"
     DILATED_MASK = "dilated_mask"
     SHUFFLED_MASK = "shuffled_mask"

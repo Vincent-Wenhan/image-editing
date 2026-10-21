@@ -18,6 +18,7 @@ from src.core.io import read_rows, sha256, write_json
 from src.core.metadata import config_digest, config_snapshot, now, versions
 from src.core.paths import data_path
 from src.core.random import sample_seed
+from src.core.references import reference_preprocessing
 from src.core.types import GenerationOptions
 from src.datasets.controls import ControlDataset
 from src.datasets.manifest import load_edit_input
@@ -52,6 +53,11 @@ def run(args, *, backend_factory: Callable[..., EditingBackend] = Flux2Backend) 
     write_json(output / "run.json", run_info)
     try:
         kind = getattr(args, "control", "none")
+        preprocessing = reference_preprocessing(
+            kind, getattr(args, "reference_preprocessing", "auto")
+        )
+        if kind != "none" or preprocessing == "training":
+            run_info["reference_preprocessing"] = preprocessing
         control_root = getattr(args, "control_root", None)
         if (kind == "none") != (control_root is None):
             raise ValueError("Mask inference requires both --control and --control-root")
@@ -76,6 +82,8 @@ def run(args, *, backend_factory: Callable[..., EditingBackend] = Flux2Backend) 
             controls = (
                 condition_data.bundle(row, (width, height)) if condition_data else ControlBundle()
             )
+            if not condition_data and preprocessing == "training":
+                controls = ControlBundle(metadata={"reference_preprocessing": preprocessing})
             controls.require_inference_safe()
             prediction = backend.edit(
                 edit_input,
@@ -125,4 +133,5 @@ def configure(parser) -> None:
     parser.add_argument("--lora")
     parser.add_argument("--control", choices=["none", *MASK_KINDS], default="none")
     parser.add_argument("--control-root", help="Prepared, hashed mask condition directory")
+    parser.add_argument("--reference-preprocessing", choices=["auto", "training"], default="auto")
     parser.set_defaults(func=run)

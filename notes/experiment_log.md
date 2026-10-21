@@ -166,3 +166,8 @@
 - PR #2 在 PR CPU CI success 后正常 merge，main `a03f168`；本地130 passed/62.75s、Ruff、CLI、pip check、卫生检查通过，历史78个新增blob无资产，未force push。
 - 从最新main创建 `feat/role-data-and-evaluation` 独立worktree；设计先记录于 `docs/stage2_design.md`。
 - 计划：constant双参考基线、显式No-mask预处理对照、30例固定验证、独立人工评分；随后最小Blender平移/阴影/背景及Oracle接口。尚未实现或声称研究收益；旧实验只读保留。
+
+### 匹配双参考的无信息条件（已实现，GPU待运行）
+
+- 实现constant_mask及显式No-mask training cast；旧No-mask默认调用与外层记录格式保留。
+- 条件/CLI/编码等24项测试通过（41.94s）；包含constant的训练预算、配方、失败拒绝及旧推理记录30项通过（28.63s）。Ruff通过；没有把CPU检查记为GPU通过。

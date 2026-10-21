@@ -8,7 +8,12 @@ from PIL import Image
 from src.conditioning.controls import ControlKind
 from src.core.spatial import SpatialMap, unit_map
 
-MASK_KINDS = (ControlKind.STATIC_MASK, ControlKind.DILATED_MASK, ControlKind.SHUFFLED_MASK)
+MASK_KINDS = (
+    ControlKind.STATIC_MASK,
+    ControlKind.DILATED_MASK,
+    ControlKind.SHUFFLED_MASK,
+    ControlKind.CONSTANT_MASK,
+)
 
 
 @dataclass(frozen=True)
@@ -20,7 +25,7 @@ class MaskSpec:
     def __post_init__(self) -> None:
         object.__setattr__(self, "kind", ControlKind(self.kind))
         if self.kind not in MASK_KINDS:
-            raise ValueError("Only static, dilated and shuffled masks are implemented")
+            raise ValueError("Unsupported binary reference method")
         if isinstance(self.dilation_radius, bool) or not isinstance(self.dilation_radius, int):
             raise ValueError("Dilation radius must be an integer")
         if not 0 <= self.dilation_radius <= 128:
@@ -45,6 +50,8 @@ def binary_image(mask: SpatialMap) -> Image.Image:
 
 def transform_mask(mask: SpatialMap, spec: MaskSpec) -> Image.Image:
     image = binary_image(mask)
+    if spec.kind == ControlKind.CONSTANT_MASK:
+        return Image.new("L", image.size, 0)
     if spec.kind == ControlKind.DILATED_MASK:
         radius = spec.dilation_radius
         padded = np.pad(np.asarray(image) > 0, radius)
