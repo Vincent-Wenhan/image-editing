@@ -1,6 +1,6 @@
 # Stage 1：静态空间联合条件
 
-状态：联合条件代码、128 项回归及 GPU smoke 已通过；三组初步对照运行中。
+状态：工程验收及三组初步对照已完成，130项回归通过；尚未证明优于No-mask。
 起点为 PR #1 正常合并后的 main `020c370`，
 分支 `feat/static-spatial-control`。保留 Stage 0 目录和全部实验资产。
 
@@ -90,11 +90,13 @@ flowmatch/sigmoid、gradient checkpointing、BF16；三个方法从同一 Base �
 GPU forward。已修复为字符串并补充写出/重读回归，失败日志保留，另用新报告重试。
 
 联合条件导出/校验、双参考配置、实际 batch 边界、推理转发与评估 provenance 已实现。
-128 项完整环境测试（70.97s）、Ruff、依赖/仓库卫生及十个 CLI/薄入口通过。
+130项完整环境测试（111.77s）、Ruff、依赖/仓库卫生及十个CLI/薄入口通过。
 2-step/batch1 训练、真实 VAE/attention tracing、Static/零图/Shuffled/重复采样通过；
 2-step/batch4 容量检查也完成，峰值 reserved17.09 GiB。编码对照先匹配 BF16 权重
 精度，测得数值差异而非字节相等，详细值见 [实际报告](stage1_report.md)。
 三组正式配置通过预算验证：与 Stage 0 No-mask 的完整配方、实际 config/checkpoint
-SHA256、200/30 数据和更新预算一致。当前在三张独立租约卡上运行150 steps/batch4，
-正式重载/评估尚未完成，不能预填结果。
+SHA256、200/30数据和更新预算一致。三组150 steps/batch4、固定12例重载/配对评估
+和两版画廊均已完成；checkpoint与真实数据训练后再次校验。150-step Static的同
+checkpoint Mask消融也通过，常规/独立重载PNG一致。真实结果及局限见报告，不据
+单seed/小样本像素诊断宣称性能提升，不提前进入Role或Qwen开发。
 Stage 0 完整记录仍在原架构 worktree，详见 Stage 0 报告。

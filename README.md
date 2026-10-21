@@ -1,8 +1,9 @@
 # Image Editing Research
 
 Stage 0 架构已通过 [PR #1](https://github.com/Vincent-Wenhan/image-editing/pull/1)
-合并。Stage 1 的双参考条件、128 项回归和最小 GPU 编码/消融验证已完成，三组
-150-step 初步对照运行中。见 [设计](docs/stage1_design.md) 和 [实际报告](docs/stage1_report.md)。
+合并。Stage 1 的联合条件、130 项回归、GPU smoke、三组150-step训练及固定12例
+评估已完成。初步像素诊断未显示优于No-mask。见 [设计](docs/stage1_design.md) 和
+[实际报告](docs/stage1_report.md)。
 
 Mask 画廊新增 `annotation_mask` 与 `control_input` 两列，分别展示评估用原标注和模型
 实际收到的控制图；No-mask 的原四列保持不变。初次画廊保留，新视图另存 `gallery_controls/`。
@@ -66,6 +67,10 @@ image-edit gallery --predictions outputs/base_inference --output outputs/base_ga
 
 ## Stage 1 联合 Mask 条件
 
+本机独立开发目录为 `/home/jiangwenhan/project/image-editing-static-spatial-control`。
+进入该目录后先激活 `image-edit` Conda，再激活 `.venv`，使用此分支的editable安装；
+原 main 和 Stage 0 worktree 各自保留。新环境仍可直接 `pip install -e .`。
+
 复用 No-mask 时，`src.evaluation.budget.verify_training_budget` 校验原报告、配置、
 checkpoint 和真实数据，比较完整训练参数与更新预算；结果保存在每组 `budget.json`。
 
@@ -87,6 +92,10 @@ image-edit gpu -- image-edit infer --control static_mask --control-root outputs/
 训练与推理均按 `[source, mask]` 逐图 VAE 编码和联合 attention；不混合最终 RGB，
 不将 target 当参考图，不使用 mask 加权 loss。缺图、错序、非二值或几何不匹配会失败。
 实际 GPU 验收与对照以 Stage 1 报告为准；条件敏感性不等于编辑质量提升。
+
+三组训练/12例重载/配对评估均已完成，每组最终checkpoint为150 steps、160个有限张量。
+Static/Dilated/Shuffled的target MAE分别0.057758/0.056720/0.074145，复用的No-mask为
+0.055915。预算、耗时、显存、失败、数值差异和下一步限制均在报告中，不据此宣称方法有效。
 
 ## Edit LoRA
 

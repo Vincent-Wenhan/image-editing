@@ -2,6 +2,15 @@
 
 时间以 Asia/Shanghai 为准。每条记录说明配置、输入、产物、实际结果与限制。
 
+## 2026-10-21：Stage 1 初步对照完成
+
+- Static/Dilated/Shuffled均完成150 steps/batch4，worker耗时1234.75/1230.83/1232.95s，峰值reserved均17.09 GiB；每组150次实际双图检查、160个有限张量，header step150/epoch2，无OOM或cleanup/telemetry错误。
+- 三组固定12例/50 steps/CFG4完成，逐图生成合计450.31/456.73/450.22s，峰值reserved均16.39 GiB；完整阶段含初始化分别721.90/728.81/721.61s，不能直接把wall差异归因于算法FLOPs。
+- 复用Stage 0 No-mask，完整配方、实际数据、采样预算与checkpoint SHA均再次通过；未重复生成或覆盖其结果。target MAE：No-mask0.055915、Static0.057758、Dilated0.056720、Shuffled0.074145。
+- Static/Dilated没有改善No-mask的target MAE；Dilated外漂移略低且变化面积略少，Shuffled误差/漂移较大。单seed/12例像素诊断没有方法优越性结论；No-mask原cast顺序保留，也是后续应匹配的数值因素。
+- 150-step Static在同checkpoint/源图/seed/50 steps下做Static/零图/Shuffle/重复：替换mask的输出像素MAE0.029828/0.026414，重复为0；常规推理与独立重载Static PNG相同，证明训练后仍消费条件。
+- 补齐实际控制图画廊后，130项完整回归（111.77s）、Ruff、CLI/依赖检查通过。原数据、三组副本与固定版本外部checkout复核通过，GPU全部释放；详细SHA、失败、耗时、局限见Stage 1报告。
+
 ## 2026-10-21：实际控制图的可视化补齐
 
 - 初次画廊沿用原始标注mask列，可能误导Dilated/Shuffled输入审查；新增实际控制图列，按记录尺寸重建，原No-mask布局不变。

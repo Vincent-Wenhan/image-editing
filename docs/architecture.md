@@ -14,7 +14,9 @@ Stage 1 已实现 `conditioning/static.py` 的纯变换，`datasets/control_expo
 cast 顺序，No-mask 不进入该处理器。runner 只读 source/声明的 mask，评估复核条件
 索引和逐例来源。新增 `prepare-controls`；原九命令保留，`infer/train-config` 默认
 `--control none`。2-step 双参考训练与真实编码/消融已经完成，证据与 BF16 数值差异
-见 [stage1_report.md](stage1_report.md)；三组150-step初步对照运行中。
+见 [stage1_report.md](stage1_report.md)；三组150-step、固定12例重载/配对评估均完成。
+当前完整环境130项测试、Ruff、依赖/CLI检查通过；原数据和三组副本哈希复核通过，
+原Stage 0资产与报告保留，所有GPU已释放。工程通过不等于静态空间方法优于No-mask。
 
 `evaluation/budget.py` 独立核对原 No-mask 报告/config/checkpoint 的实际 SHA256，比较
 完整 train/network/model/sample、数据处理参数和两个 split manifest；只允许路径与
