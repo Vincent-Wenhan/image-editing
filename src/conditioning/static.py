@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 
 import numpy as np
-from PIL import Image, ImageFilter
+from PIL import Image
 
 from src.conditioning.controls import ControlKind
 from src.core.spatial import SpatialMap, unit_map
@@ -46,7 +46,17 @@ def binary_image(mask: SpatialMap) -> Image.Image:
 def transform_mask(mask: SpatialMap, spec: MaskSpec) -> Image.Image:
     image = binary_image(mask)
     if spec.kind == ControlKind.DILATED_MASK:
-        image = image.filter(ImageFilter.MaxFilter(2 * spec.dilation_radius + 1))
+        radius = spec.dilation_radius
+        padded = np.pad(np.asarray(image) > 0, radius)
+        integral = np.pad(padded, ((1, 0), (1, 0))).cumsum(0, dtype=np.int32).cumsum(1)
+        width = 2 * radius + 1
+        counts = (
+            integral[width:, width:]
+            - integral[:-width, width:]
+            - integral[width:, :-width]
+            + integral[:-width, :-width]
+        )
+        image = Image.fromarray((counts > 0).astype(np.uint8) * 255)
     return image
 
 

@@ -72,6 +72,7 @@ checkpoint 和真实数据，比较完整训练参数与更新预算；结果保
 `prepare-controls` 支持 `static_mask`、`dilated_mask`、`shuffled_mask`，生成独立的
 RGB 二值控制图和 SHA256 索引。Shuffle 固定完整 split 的 donor，不跨 train/dev；
 Dilated 默认 16 px 方形核半径。研究运行先复制验证过的数据以隔离训练缓存。
+方形膨胀采用与 PIL MaxFilter 等价的积分图实现，避免大核校验拖慢 GPU 任务预检。
 
 ```bash
 image-edit prepare-controls --kind static_mask --output outputs/controls/static

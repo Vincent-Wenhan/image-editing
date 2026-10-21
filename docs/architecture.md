@@ -20,6 +20,9 @@ cast 顺序，No-mask 不进入该处理器。runner 只读 source/声明的 mas
 完整 train/network/model/sample、数据处理参数和两个 split manifest；只允许路径与
 声明的参考数量差异。其依赖限于 core/datasets，不反向调用训练器。
 
+二值方形膨胀采用积分图窗口求和，与 PIL 的独立回归结果一致；条件导出索引不变。
+这样每次验证已有 Dilated 控制图时无需重复大核排序，避免租约内的 CPU 等待。
+
 ## 合并前检查（2026-10-21）
 
 `origin/main=5c505e5` 是 `eaa30dc` 的祖先，分支没有分叉冲突；工作区干净，

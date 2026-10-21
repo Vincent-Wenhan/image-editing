@@ -26,6 +26,19 @@ def test_dilation_preserves_binary_geometry_without_target_pixels():
         transform_mask(np.full((9, 13), 0.25), MaskSpec(ControlKind.STATIC_MASK))
 
 
+@pytest.mark.parametrize("radius", [1, 2, 16])
+def test_integral_dilation_matches_independent_pillow_reference(radius):
+    from PIL import ImageFilter
+
+    random = np.random.default_rng(42)
+    values = (random.random((64, 80)) > 0.998).astype(np.uint8) * 255
+    values[0, 0] = values[-1, -1] = 255
+    image = Image.fromarray(values)
+    expected = image.filter(ImageFilter.MaxFilter(2 * radius + 1))
+    actual = transform_mask(image, MaskSpec(ControlKind.DILATED_MASK, radius))
+    assert np.array_equal(actual, expected)
+
+
 @pytest.mark.parametrize(
     "kind", [ControlKind.STATIC_MASK, ControlKind.DILATED_MASK, ControlKind.SHUFFLED_MASK]
 )

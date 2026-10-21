@@ -1,7 +1,7 @@
 # Stage 1 实际运行记录
 
 更新时间：2026-10-21。联合条件代码已实现；最小 GPU 训练、编码/消融已完成。
-batch 4 容量检查运行中，三组 150-step 正式初步对照尚未开始。
+batch 4 容量检查已完成，三组 150-step 正式初步对照尚未开始。
 架构已通过 [PR #1](https://github.com/Vincent-Wenhan/image-editing/pull/1) 合并到 main；
 Stage 0 全部结果保留，当前开发位于 `feat/static-spatial-control` 独立 worktree。
 
@@ -43,6 +43,11 @@ BF16 下为 0.007261/0.021445，mask 最大绝对差 0.275391。两套实现的�
 两边打包形状均为 `[1,2048,128]`，参考位置 ID 完全相同，T=10/20 各 1024 tokens。
 
 所有 GPU 任务均先检查 `nvidia-smi`，通过 UUID 租约启动并正常释放。没有真实 OOM。
+
+随后独立 `smoke/capacity_report.json` 完成 2 steps/batch4：192.63s、峰值 reserved
+17.09 GiB，双图检查数为2，checkpoint有限。正式比较保持batch4，不自动放大。
+为避免 Dilated 条件复核占用租约时间，方形膨胀优化为等价积分图：5张真实512²
+mask逐像素相同，CPU单图均值0.583s→0.00883s，独立PIL回归覆盖半径1/2/16与边界。
 
 ## CPU 与待完成项
 

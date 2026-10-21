@@ -28,6 +28,9 @@
 
 ## 数据与条件协议
 
+方形二值膨胀使用 NumPy 积分图的矩形窗口求和，语义与 PIL MaxFilter 完全一致；
+加入随机图/边界/不同半径的 PIL 对照，避免大核逐像素排序拖慢每次条件校验。
+
 1. 固定 MagicBrush revision、200 train /30 dev first-turn，保留 manifest 字节和
    所有 SHA256。新输出目录的文件副本用于隔离缓存，不修改旧实验。
 2. Static 使用反向 alpha 修正后的二值编辑区。Dilated 使用预先固定的 16 px
