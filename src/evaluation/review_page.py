@@ -14,7 +14,7 @@ FAILURES = (
 )
 
 
-def page(tasks: list[dict]) -> str:
+def page(tasks: list[dict], *, image_prefix: str = "images", reviewer: str = "") -> str:
     cards = []
     scores = '<option value=""></option>' + "".join(
         f"<option>{value}</option>" for value in ("0", "1", "2", "NA")
@@ -24,7 +24,7 @@ def page(tasks: list[dict]) -> str:
     )
     for task in tasks:
         pictures = "".join(
-            f'<figure><img src="images/{task["task_id"]}_{key}.png">'
+            f'<figure><img src="{html.escape(image_prefix)}/{task["task_id"]}_{key}.png">'
             f"<figcaption>{key}</figcaption></figure>"
             for key in ("source", "target", "prediction")
         )
@@ -49,6 +49,7 @@ img{width:300px;max-width:100%}h2{font-size:16px}label{display:inline-block;marg
 未评分留空。下载 CSV 后使用 review-score 导入；本页不联网、不上传。</p>
 <label>评审者 <input id="reviewer"></label><button id="export">下载评分 CSV</button>
 """
+        + f'<script>document.querySelector("#reviewer").value={reviewer!r};</script>'
         + "\n".join(cards)
         + r"""
 <script>

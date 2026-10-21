@@ -178,3 +178,79 @@ def test_review_compares_checked_copies_without_erasing_control_provenance(
     assert index["tasks"] == 6
     result = score_review(bundle, bundle / "ratings.csv", tmp_path / "copy_pending.json")
     assert result["pending"] == 6
+
+
+def test_three_reviewer_imports_preserve_bytes_and_pair_independently(review_bundle, tmp_path):
+    from src.evaluation.review_import import export_panels, import_review, merge_reviews
+
+    panels = tmp_path / "panels"
+    export_panels(review_bundle, ["fixture_a", "fixture_b", "fixture_c"], panels, 21)
+    assert not (panels / "private").exists()
+    tasks = json.loads((review_bundle / "private/mapping.json").read_text())["tasks"]
+    methods = sorted({task["method"] for task in tasks})
+    lookup = {task["task_id"]: task for task in tasks}
+    imports = []
+    for reviewer in ("fixture_a", "fixture_b", "fixture_c"):
+        path = panels / reviewer / "ratings.csv"
+        rows = read_rows(path)
+        for row in rows:
+            is_left = lookup[row["task_id"]]["method"] == methods[0]
+            row.update(
+                edit_success="2" if is_left else "1",
+                preservation="2",
+                failure="" if is_left else "missed_edit",
+                comment="" if is_left else "Synthetic unit-test judgement only",
+            )
+        write_rows(path, rows)
+        path.write_text("\ufeff" + path.read_text())
+        directory = tmp_path / f"import_{reviewer}"
+        import_review(review_bundle, path, directory, reviewer, independent=True)
+        assert (directory / "summary.ratings.csv").read_bytes() == path.read_bytes()
+        imports.append(directory)
+    result = merge_reviews(review_bundle, imports, tmp_path / "merged", resamples=100)
+    assert result["status"] == "complete"
+    paired = result["paired"][0]
+    assert paired["edit_success"]["mean_difference"] == 1
+    assert paired["edit_success"]["ci95"] == [1, 1]
+    assert paired["edit_success"]["scenes"] == 3
+    assert paired["edit_success"]["paired_ratings"] == 9
+    assert paired["preservation"]["mean_difference"] == 0
+    assert "missed_edit" in result["by_failure"]
+    pending = merge_reviews(review_bundle, imports[:2], tmp_path / "two", resamples=100)
+    assert pending["status"] == "pending"
+    assert pending["paired"][0]["edit_success"]["ci95"] is None
+    with pytest.raises(ValueError, match="one import version"):
+        merge_reviews(review_bundle, imports + imports[:1], tmp_path / "duplicate")
+    (imports[0] / "summary.ratings.csv").write_bytes(b"changed")
+    with pytest.raises(ValueError, match="SHA256"):
+        merge_reviews(review_bundle, imports, tmp_path / "changed")
+
+
+def test_missing_real_reviewers_remain_pending_and_mixed_ids_rejected(review_bundle, tmp_path):
+    from src.evaluation.review_import import import_review, merge_reviews
+
+    result = merge_reviews(review_bundle, [], tmp_path / "no_humans", resamples=100)
+    assert result["status"] == "pending" and result["missing_complete_reviewers"] == 3
+    assert result["failure_cases"] == []
+    assert all(v["edit_success"]["mean"] is None for v in result["methods"].values())
+    rows = read_rows(review_bundle / "ratings.csv")
+    for row in rows:
+        row["reviewer"] = "fixture"
+    rows[0]["reviewer"] = "another_fixture"
+    path = tmp_path / "mixed.csv"
+    write_rows(path, rows)
+    with pytest.raises(ValueError, match="exactly the declared"):
+        import_review(review_bundle, path, tmp_path / "mixed", "fixture", independent=True)
+
+
+def test_scene_bootstrap_does_not_count_strengths_as_independent_samples():
+    from src.evaluation.review_stats import paired_estimate
+
+    cells = {
+        (scene, reviewer): ([0, 2] * 5 if scene == "s1" else [0])
+        for scene in ("s1", "s2")
+        for reviewer in ("a", "b", "c")
+    }
+    result = paired_estimate(cells, seed=7, resamples=500, inference_ready=True)
+    assert result["mean_difference"] == 0.5
+    assert result["scenes"] == 2 and result["ci95"] == [0, 1]

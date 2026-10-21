@@ -175,6 +175,12 @@ def score_review(bundle: Path, ratings: Path, output: Path) -> dict:
                 full_score_fraction=sum(x == 2 for x in scores) / len(scores) if scores else None,
             )
         summary["methods"][method] = entry
+    raw = output.with_suffix(".ratings.csv")
+    if raw.exists():
+        raise FileExistsError(raw)
+    raw.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(ratings, raw)
+    summary["raw_ratings"] = str(raw.resolve())
     write_json(output, summary)
     return summary
 
@@ -212,6 +218,9 @@ def configure_score(parser) -> None:
 
 
 def configure(parser) -> None:
+    from src.evaluation.review_import import configure as configure_imports
+
     actions = parser.add_subparsers(dest="review_action", required=True)
     configure_export(actions.add_parser("export"))
     configure_score(actions.add_parser("score"))
+    configure_imports(actions)

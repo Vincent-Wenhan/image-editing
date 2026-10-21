@@ -247,3 +247,9 @@
 再做Oracle/Static/Dilated/Dynamic Binary同数据双seed60步对照。当前均为计划。
 启动GPU任务前重新检测并获取正常UUID租约。历史结果保持只读。
 
+## 多评审工具实现
+
+已实现panels/import/merge，按原字节保留评分与SHA，拒绝混合/重复reviewer，
+至少3位完整独立声明前保持pending；paired按scene及reviewer bootstrap，分开两项
+评分，NA显式缺失。12项人工评估回归通过（23.78s），Ruff通过；测试评分仅fixture。
+真实180项仍空白，没有人工均值、区间或失败率。尚未执行本轮GPU实验。

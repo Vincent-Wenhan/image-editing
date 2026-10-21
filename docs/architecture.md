@@ -4,6 +4,10 @@
 职责，新增多评审统计、程序化 scene 配置和显式 Oracle 训练/评估，保持原 loss。
 Dynamic Binary 依赖真值，也属于显式上界；普通推理不能使用它。计划与实际状态分开。
 
+`evaluation/review_import.py` 管理公开评审页、单reviewer不可覆盖原始CSV导入与多版本
+选择；`review_stats.py` 负责配对评分和scene/reviewer交叉重采样。原score仍兼容，
+新增保存原始字节副本。三人不完整时报告pending/null区间；实际真人评分尚未收到。
+
 ## 当前开发：评估补强与最小反事实数据
 
 Stage 1 PR #2 已正常合并 main `a03f168`；本地130项测试及 PR CI 通过，78个新增

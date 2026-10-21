@@ -197,6 +197,22 @@ image-edit review score --bundle <new-review> --ratings <ratings.csv> --output <
 
 评分含编辑成功度、无关内容保留与失败类别/说明。空白为pending，不产生人工结论。
 
+三位评审者分别填写（代号仅为组织占位，不能当作已收到评分）：
+
+```bash
+image-edit review panels --bundle <review> --reviewer rater_a --reviewer rater_b \
+  --reviewer rater_c --output <new-public-panels>
+image-edit review import --bundle <review> --ratings <real-rater-a.csv> \
+  --reviewer rater_a --independent --output <new-import-a>
+# 对其余真实评分分别 import，再合并；每位评审者只能选择一个版本。
+image-edit review merge --bundle <review> --import <import-a> --import <import-b> \
+  --import <import-c> --annotations <task-types.csv> --output <new-analysis>
+```
+
+原始CSV逐字节留存，三位完整独立评审者之前区间为null。按scene/session与reviewer
+交叉bootstrap、固定seed、配对比较两项评分；NA不计零分。失败分类是结果筛选后的
+描述，不作收益推断。工具无法证明真人独立性，须由评审组织者保证。
+
 `image-edit gpu -- python -m src.inference.reference_smoke --data-root <data> --lora <lora> --output <new-smoke>`
 可单独检查单/双参考结构与cast差异；这类smoke不代表编辑质量。
 
