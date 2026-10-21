@@ -2,6 +2,12 @@
 
 时间以 Asia/Shanghai 为准。每条记录说明配置、输入、产物、实际结果与限制。
 
+## 2026-10-21：同预算三组训练启动
+
+- 执行代码 `46c5885`，三组150-step/batch4从同一Base独立开始：Static/GPU2、Dilated/GPU0、Shuffled/GPU1，UUID互异；容量门禁与完整预算校验已通过。
+- 计划和完整配置/哈希在 `outputs/stage1_20261021/comparison/plan.json` 与各组 `budget.json`。固定12例重载/评估尚未完成。
+- 新一轮本机128项测试（70.97s）、Ruff、依赖/仓库卫生、十个CLI和薄入口通过；远端CPU CI已恢复通过。
+
 ## 2026-10-21：Stage 1 编码与 Mask 消融通过
 
 - 发现 33×33 PIL MaxFilter 使每次 Dilated 索引复核耗时较长，改用相同方形窗口的积分图；半径1/2/16及边界的15项条件回归通过。5张真实512² mask逐像素相同，CPU均值0.583s→0.00883s，仅为本次微基准，不代表GPU吞吐。

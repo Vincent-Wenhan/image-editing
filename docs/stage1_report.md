@@ -1,7 +1,7 @@
 # Stage 1 实际运行记录
 
 更新时间：2026-10-21。联合条件代码已实现；最小 GPU 训练、编码/消融已完成。
-batch 4 容量检查已完成，三组 150-step 正式初步对照尚未开始。
+batch 4 容量检查已完成，三组 150-step 正式初步对照运行中，重载/评估尚待完成。
 架构已通过 [PR #1](https://github.com/Vincent-Wenhan/image-editing/pull/1) 合并到 main；
 Stage 0 全部结果保留，当前开发位于 `feat/static-spatial-control` 独立 worktree。
 
@@ -51,10 +51,12 @@ mask逐像素相同，CPU单图均值0.583s→0.00883s，独立PIL回归覆盖�
 
 ## CPU 与待完成项
 
-完整环境当前 **125 passed**，Ruff 通过。此前两次远端 CPU CI 因新增 fake backend
+完整环境当前 **128 passed**（70.97s），Ruff、依赖与十个 CLI/薄入口通过。
+此前两次远端 CPU CI 因新增 fake backend
 测试没有 mock package version 查询，缺 Torch 元数据而失败；已按原 CPU fixture
-方式隔离版本查询，后续远端 checks 需重新确认，不能将本机通过写成远端通过。
+方式隔离版本查询；修复后远端 checks 已通过，完整日志保留在本地输出目录。
 
-三组相同 200/30、150 steps/batch4、seed42、固定 12 dev/50 steps/CFG4 对照尚未
-运行。No-mask 只会在配置、checkpoint、实际数据和预算复核后复用；逐组结果、
+三组相同 200/30、150 steps/batch4、seed42 对照已经启动：Static/GPU2、Dilated/GPU0、
+Shuffled/GPU1，均为不同 UUID 租约。完成后固定12 dev/50 steps/CFG4重载。
+No-mask 的配置、checkpoint、实际数据和预算已复核通过；逐组结果、
 真实耗时、峰值、失败及局限在完成后更新，不预填研究结论。

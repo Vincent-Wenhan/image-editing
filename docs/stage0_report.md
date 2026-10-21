@@ -4,6 +4,9 @@
 
 ## 本轮验收条件
 
+本文保留已完成的 Stage 0 记录；后续 Static/Dilated/Shuffled 联合条件在独立分支
+开发，进展见 [Stage 1 实际报告](stage1_report.md)，不覆盖本文 checkpoint 或指标。
+
 代码位于独立 worktree `/home/jiangwenhan/project/image-editing-architecture`，分支
 `refactor/modular-architecture`，执行代码 commit `26bc4c2`。未改主要目录、网络结构、
 flow loss 或第三方源码。新运行使用：

@@ -1,11 +1,8 @@
 # Image Editing Research
 
 Stage 0 架构已通过 [PR #1](https://github.com/Vincent-Wenhan/image-editing/pull/1)
-合并；Stage 1 在独立分支开发，设计与验收计划见 [Stage 1](docs/stage1_design.md)。
-双参考条件代码与 CPU 回归已完成，GPU smoke/初步对照尚待运行。
-首次 CLI 写配置发现的 YAML 枚举序列化问题已修复，失败预检与后续尝试分别记录。
-2-step 双参考训练和真实编码/Mask 消融已完成，正式对照待运行；真实证据与数值差异见
-[Stage 1 报告](docs/stage1_report.md)。
+合并。Stage 1 的双参考条件、128 项回归和最小 GPU 编码/消融验证已完成，三组
+150-step 初步对照运行中。见 [设计](docs/stage1_design.md) 和 [实际报告](docs/stage1_report.md)。
 
 以 **FLUX.2 Klein Base 4B** 建立可复现编辑与 LoRA 基线，随后研究随编辑强度变化的空间角色预测。方法改进尚未验证。
 
@@ -148,7 +145,7 @@ CLI 从这些配置读取默认值，原有命令行覆盖有效。采样默认�
 `EditInput` 与 `EditSupervision` 独立，推理只读取 source/instruction；`ControlBundle` 标记控制来源，
 普通推理拒绝 oracle。FLUX 已接入 Static/Dilated/Shuffled Mask；Soft/Role/Qwen 仍未实现。
 
-本轮完整环境 97 项 CPU 回归、Ruff 与 CLI 检查通过；20-step /batch 2 和 150-step /
+Stage 0 稳定性收尾的 97 项 CPU 回归、Ruff 与 CLI 检查通过；20-step /batch 2 和 150-step /
 batch 4 均保存了有限 checkpoint，固定 12 例重载和配对校验完成。此前 editable/wheel
 安装及 Base 单例字节一致验证保留。新证据在 `outputs/stage0_stability_20261021/`，
 只用于工程验收，不据像素诊断宣称编辑成功率提升。

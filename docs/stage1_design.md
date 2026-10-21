@@ -1,6 +1,6 @@
 # Stage 1：静态空间联合条件
 
-状态：联合条件代码已实现，CPU 回归通过；GPU smoke 与初步对照尚未运行。
+状态：联合条件代码、128 项回归及 GPU smoke 已通过；三组初步对照运行中。
 起点为 PR #1 正常合并后的 main `020c370`，
 分支 `feat/static-spatial-control`。保留 Stage 0 目录和全部实验资产。
 
@@ -88,12 +88,11 @@ flowmatch/sigmoid、gradient checkpointing、BF16；三个方法从同一 Base �
 GPU forward。已修复为字符串并补充写出/重读回归，失败日志保留，另用新报告重试。
 
 联合条件导出/校验、双参考配置、实际 batch 边界、推理转发与评估 provenance 已实现。
-120 项完整环境测试通过（44.02s），Ruff check/format、CLI 和 smoke 入口帮助通过。
-GPU smoke 和三组初步对照尚待执行，不能将 CPU 测试写成 GPU 验证。
-2-step 双参考训练现已完成，194.61s、峰值 reserved 15.04 GiB，两个 batch 均被检查，
-checkpoint 张量有限；编码/消融仍待运行。VAE FP32 算术对照先把两边权重都量化为
-实际训练使用的 BF16 再转 FP32，避免一边恢复精度、一边已丢失精度导致伪差异。
-三组正式配置已生成且通过预算验证：与 Stage 0 No-mask 的完整训练配方、实际
-config/checkpoint SHA256、200/30 数据和更新预算一致。新增预算/参考资产漂移回归
-后本机 125 项通过；正式 GPU 训练尚待容量检查。
+128 项完整环境测试（70.97s）、Ruff、依赖/仓库卫生及十个 CLI/薄入口通过。
+2-step/batch1 训练、真实 VAE/attention tracing、Static/零图/Shuffled/重复采样通过；
+2-step/batch4 容量检查也完成，峰值 reserved17.09 GiB。编码对照先匹配 BF16 权重
+精度，测得数值差异而非字节相等，详细值见 [实际报告](stage1_report.md)。
+三组正式配置通过预算验证：与 Stage 0 No-mask 的完整配方、实际 config/checkpoint
+SHA256、200/30 数据和更新预算一致。当前在三张独立租约卡上运行150 steps/batch4，
+正式重载/评估尚未完成，不能预填结果。
 Stage 0 完整记录仍在原架构 worktree，详见 Stage 0 报告。
