@@ -81,6 +81,9 @@ flowmatch/sigmoid、gradient checkpointing、BF16；三个方法从同一 Base �
 
 ## 当前状态
 
+第一次 CLI 配置写出遇到 StrEnum/YAML 序列化错误，训练在缺配置预检退出，未执行
+GPU forward。已修复为字符串并补充写出/重读回归，失败日志保留，另用新报告重试。
+
 联合条件导出/校验、双参考配置、实际 batch 边界、推理转发与评估 provenance 已实现。
 120 项完整环境测试通过（44.02s），Ruff check/format、CLI 和 smoke 入口帮助通过。
 GPU smoke 和三组初步对照尚待执行，不能将 CPU 测试写成 GPU 验证。

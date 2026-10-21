@@ -105,6 +105,6 @@ class ControlDataset:
             root=str(self.root),
             data_root=str(self.data_root),
             index_sha256=self.digest,
-            kind=self.spec.kind,
+            kind=self.spec.kind.value,
             order=["source", "mask"],
         )

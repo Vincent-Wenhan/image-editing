@@ -59,6 +59,10 @@ def test_joint_recipe_preserves_original_objective(joint_recipe, spatial_data):
     assert paths[1].endswith("controls/train/mask_rgb")
     assert all("target" not in path for path in paths)
     assert verify_training_controls(joint_recipe)["order"] == ["source", "mask"]
+    # Exercise the actual disk protocol, not just the in-memory recipe.
+    reloaded = yaml.safe_load(yaml.safe_dump(joint_recipe))
+    assert reloaded == joint_recipe
+    assert verify_training_controls(reloaded)["kind"] == "static_mask"
 
 
 @pytest.mark.parametrize(
