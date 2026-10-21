@@ -19,6 +19,7 @@ from src.infra.process import command
 from src.training.checkpoints import validate_checkpoint
 from src.training.flux2_compat import configure_flux2_trainer
 from src.training.lifecycle import attempt, gpu_statistics, release_job
+from src.training.spatial import verify_training_controls
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,9 @@ def load_runtime(root: Path, lock: dict, revision: str):
     configure_flux2_trainer(
         Flux2Klein4BModel, root / lock["models"]["training_text"]["path"], revision=revision
     )
-    return SimpleNamespace(torch=torch, set_seed=set_seed, get_job=get_job)
+    return SimpleNamespace(
+        torch=torch, set_seed=set_seed, get_job=get_job, model_type=Flux2Klein4BModel
+    )
 
 
 def run_training(
@@ -69,7 +72,11 @@ def run_training(
         result.update(config_sha256=sha256(config), packages=versions())
         if memory_plan:
             result["memory_plan"] = json.loads(memory_plan.read_text())
-        configuration = load_yaml(config)["config"]
+        full_config = load_yaml(config)
+        conditioning = verify_training_controls(full_config)
+        if conditioning:
+            result["conditioning"] = conditioning
+        configuration = full_config["config"]
         settings = configuration["process"][0]
         result.update(batch_size=settings["train"]["batch_size"], steps=settings["train"]["steps"])
         for key, value in {
@@ -81,6 +88,9 @@ def run_training(
         }.items():
             os.environ[key] = value
         runtime = runtime_loader(root, lock, revision)
+        if conditioning:
+            runtime.model_type._image_edit_joint_controls = True
+            runtime.model_type._image_edit_joint_batches = 0
         runtime.set_seed(
             settings["train"].get("seed", ProjectSettings.load().process["train"]["seed"])
         )
@@ -88,6 +98,10 @@ def run_training(
         write_json(report, result)
         job = runtime.get_job(str(config))
         job.run()
+        if conditioning:
+            result["joint_control_batches"] = runtime.model_type._image_edit_joint_batches
+            if result["joint_control_batches"] < result["steps"]:
+                raise RuntimeError("Training did not verify joint controls for every update")
         checkpoint = Path(settings["training_folder"]) / configuration["name"]
         checkpoint /= f"{configuration['name']}.safetensors"
         result.update(validate_checkpoint(checkpoint))
@@ -100,6 +114,10 @@ def run_training(
         )
         raise
     finally:
+        if runtime is not None and getattr(runtime, "model_type", None) is not None:
+            if getattr(runtime.model_type, "_image_edit_joint_controls", False):
+                result["joint_control_batches"] = runtime.model_type._image_edit_joint_batches
+                runtime.model_type._image_edit_joint_controls = False
         telemetry_errors, cleanup_errors = {}, {}
         torch = runtime.torch if runtime else sys.modules.get("torch")
         if runtime is None and torch is not None:

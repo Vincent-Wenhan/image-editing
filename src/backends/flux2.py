@@ -3,7 +3,9 @@
 import time
 from pathlib import Path
 
-from src.conditioning.controls import ControlBundle, ControlKind
+from src.backends.flux2_conditions import reference_images
+from src.backends.flux2_encoding import joint_preprocessing
+from src.conditioning.controls import ControlBundle
 from src.core.types import EditInput, EditOutput, GenerationOptions
 from src.infra.gpu import require_lease
 
@@ -24,22 +26,18 @@ class Flux2Backend:
     def edit(
         self, edit_input: EditInput, controls: ControlBundle, options: GenerationOptions
     ) -> EditOutput:
-        controls.require_inference_safe()
-        controls.validate_geometry(edit_input.source.size)
-        if (
-            controls.kind != ControlKind.NONE
-            or edit_input.mask is not None
-            or edit_input.strength is not None
-        ):
-            raise NotImplementedError("Stage 0 FLUX.2 supports source/instruction editing only")
+        images = reference_images(edit_input, controls, options)
         import torch
 
         generator = torch.Generator("cuda").manual_seed(options.seed)
         torch.cuda.synchronize()
         start = time.perf_counter()
-        with torch.inference_mode():
+        with (
+            torch.inference_mode(),
+            joint_preprocessing(self.pipe, enabled=isinstance(images, list)),
+        ):
             image = self.pipe(
-                image=edit_input.source,
+                image=images,
                 prompt=edit_input.instruction,
                 width=options.width,
                 height=options.height,

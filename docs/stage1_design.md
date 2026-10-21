@@ -1,6 +1,7 @@
 # Stage 1：静态空间联合条件
 
-状态：设计，尚未实现或运行。起点为 PR #1 正常合并后的 main `020c370`，
+状态：联合条件代码已实现，CPU 回归通过；GPU smoke 与初步对照尚未运行。
+起点为 PR #1 正常合并后的 main `020c370`，
 分支 `feat/static-spatial-control`。保留 Stage 0 目录和全部实验资产。
 
 ## 范围与依据
@@ -20,6 +21,10 @@
 
 上游会跳过缺失控制文件；非 full-size 路径会 bicubic resize。因此本项目必须在上游
 前检查完整配对、实际哈希、顺序和尺寸，在调用边界验证两张参考。第三方源码不修改。
+
+进一步核对发现 ai-toolkit 先将 [0,1] RGB cast 为 BF16 再归一化，Diffusers 默认先
+归一化再 cast，两者会有量化差异。双参考推理采用限定作用域的原始参考预处理，
+与训练 cast 顺序一致；结束/异常时恢复处理器。No-mask 保留原 Diffusers 路径。
 
 ## 数据与条件协议
 
@@ -76,5 +81,7 @@ flowmatch/sigmoid、gradient checkpointing、BF16；三个方法从同一 Base �
 
 ## 当前状态
 
-架构 PR #1 已合并；本分支从最新 main 创建。本文仅设计，代码、CPU 回归、GPU smoke
-和三组初步对照均待执行。Stage 0 完整记录仍在原架构 worktree，详见 Stage 0 报告。
+联合条件导出/校验、双参考配置、实际 batch 边界、推理转发与评估 provenance 已实现。
+120 项完整环境测试通过（44.02s），Ruff check/format、CLI 和 smoke 入口帮助通过。
+GPU smoke 和三组初步对照尚待执行，不能将 CPU 测试写成 GPU 验证。
+Stage 0 完整记录仍在原架构 worktree，详见 Stage 0 报告。

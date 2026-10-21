@@ -8,6 +8,13 @@
 `feat/static-spatial-control` 从该 main 创建；目录职责不变，新设计和实际状态见
 [stage1_design.md](stage1_design.md)。下文保留重构过程记录。
 
+Stage 1 已实现 `conditioning/static.py` 的纯变换，`datasets/control_export.py`、
+`controls.py`、`snapshot.py` 的不可覆盖导出/副本与来源验证；`training/spatial.py`
+在配置/worker 和实际 batch 三个边界检查双图。FLUX adapter 的双参考预处理匹配上游
+cast 顺序，No-mask 不进入该处理器。runner 只读 source/声明的 mask，评估复核条件
+索引和逐例来源。新增 `prepare-controls`；原九命令保留，`infer/train-config` 默认
+`--control none`。GPU 验证仍待执行，不能据 CPU 测试判断空间条件质量。
+
 ## 合并前检查（2026-10-21）
 
 `origin/main=5c505e5` 是 `eaa30dc` 的祖先，分支没有分叉冲突；工作区干净，

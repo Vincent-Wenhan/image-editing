@@ -2,7 +2,7 @@
 
 Stage 0 架构已通过 [PR #1](https://github.com/Vincent-Wenhan/image-editing/pull/1)
 合并；Stage 1 在独立分支开发，设计与验收计划见 [Stage 1](docs/stage1_design.md)。
-目前该阶段只有设计，实际实现/实验状态会同步更新。
+双参考条件代码与 CPU 回归已完成，GPU smoke/初步对照尚待运行。
 
 以 **FLUX.2 Klein Base 4B** 建立可复现编辑与 LoRA 基线，随后研究随编辑强度变化的空间角色预测。方法改进尚未验证。
 
@@ -59,7 +59,27 @@ image-edit gallery --predictions outputs/base_inference --output outputs/base_ga
 
 评估会复核 manifest 与 source/target/mask 的真实 SHA256、尺寸、样本顺序和种子。
 新记录带配置摘要；配对比较可加 `--reference-run outputs/base_inference` 强制采样预算一致。
-输入、监督、硬标签与软角色概率场的数值/几何约束见架构文档，当前未实现空间控制。
+输入、监督、硬标签与软角色概率场的约束见架构文档；Stage 0 默认仍无空间条件。
+
+## Stage 1 联合 Mask 条件
+
+`prepare-controls` 支持 `static_mask`、`dilated_mask`、`shuffled_mask`，生成独立的
+RGB 二值控制图和 SHA256 索引。Shuffle 固定完整 split 的 donor，不跨 train/dev；
+Dilated 默认 16 px 方形核半径。研究运行先复制验证过的数据以隔离训练缓存。
+
+```bash
+image-edit prepare-controls --kind static_mask --output outputs/controls/static
+image-edit train-config --control static_mask --control-root outputs/controls/static \
+  --name static_debug --steps 2 --output outputs/configs/static_debug.yaml
+image-edit gpu -- python -m src.training outputs/configs/static_debug.yaml \
+  --report outputs/static_debug_report.json
+image-edit gpu -- image-edit infer --control static_mask --control-root outputs/controls/static \
+  --lora outputs/lora/static_debug/static_debug.safetensors --output outputs/static_inference
+```
+
+训练与推理均按 `[source, mask]` 逐图 VAE 编码和联合 attention；不混合最终 RGB，
+不将 target 当参考图，不使用 mask 加权 loss。缺图、错序、非二值或几何不匹配会失败。
+实际 GPU 验收与对照以 Stage 1 报告为准；目前只有 CPU 验证，不宣称条件质量提升。
 
 ## Edit LoRA
 
@@ -119,7 +139,7 @@ CLI 从这些配置读取默认值，原有命令行覆盖有效。采样默认�
 从仓库根执行默认命令；在其他目录使用已安装的 CLI 时，显式传入数据、模型和模板路径。
 
 `EditInput` 与 `EditSupervision` 独立，推理只读取 source/instruction；`ControlBundle` 标记控制来源，
-普通推理拒绝 oracle。当前后端仍只实现 Stage 0，无空间控制；Mask/Role/Qwen 的扩展位置已预留为接口。
+普通推理拒绝 oracle。FLUX 已接入 Static/Dilated/Shuffled Mask；Soft/Role/Qwen 仍未实现。
 
 本轮完整环境 97 项 CPU 回归、Ruff 与 CLI 检查通过；20-step /batch 2 和 150-step /
 batch 4 均保存了有限 checkpoint，固定 12 例重载和配对校验完成。此前 editable/wheel

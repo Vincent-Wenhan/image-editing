@@ -1,4 +1,4 @@
-"""Control data only: no spatial-control or role-prediction algorithm is implemented."""
+"""Named spatial conditions; inference inputs remain separate from supervision."""
 
 import math
 from collections.abc import Mapping
@@ -13,6 +13,7 @@ class ControlKind(StrEnum):
     NONE = "none"
     STATIC_MASK = "static_mask"
     DILATED_MASK = "dilated_mask"
+    SHUFFLED_MASK = "shuffled_mask"
     SOFT_MASK = "soft_mask"
     ORACLE_ROLE = "oracle_role"
     PREDICTED_ROLE = "predicted_role"

@@ -41,7 +41,9 @@ def test_oracle_and_metadata_cannot_silently_enter_inference():
         ControlBundle(maps={"mask": Image.new("L", (2, 2))})
 
 
-@pytest.mark.parametrize("kind", [kind for kind in ControlKind if kind != ControlKind.NONE])
+@pytest.mark.parametrize(
+    "kind", [ControlKind.SOFT_MASK, ControlKind.ORACLE_ROLE, ControlKind.PREDICTED_ROLE]
+)
 def test_unimplemented_conditions_are_rejected(kind):
     # No model loading or CUDA import is needed to check the protocol boundary.
     backend = object.__new__(Flux2Backend)

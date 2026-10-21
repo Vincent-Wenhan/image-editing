@@ -2,6 +2,13 @@
 
 时间以 Asia/Shanghai 为准。每条记录说明配置、输入、产物、实际结果与限制。
 
+## 2026-10-21：Stage 1 联合条件实现与 CPU 回归
+
+- 已实现 Static/Dilated/Shuffled 的纯二值变换和独立控制索引，SHA256、split 内 donor、图序与几何在配置、worker、推理、评估边界复核。
+- 训练器调用边界强制每例双图、RGB [0,1]、mask 二值且与 target latent 几何一致；No-mask 保留原调用，flow loss/网络不变，第三方源码未改。
+- 发现训练器先 cast BF16 再归一化，Diffusers 顺序相反；双参考推理限定作用域对齐训练顺序，结束/异常恢复，原 No-mask 处理器不变。
+- 最终 120 项完整环境测试通过（44.02s），含实际 adapter 转发、target 读取拒绝、像素 cast、异常恢复与 snapshot 缓存隔离；Ruff/CLI/可复用 smoke 入口帮助通过。GPU smoke 与同预算对照尚未执行。
+
 ## 2026-10-21：PR 合并与 Stage 1 设计
 
 - PR #1 在两组 GitHub checks 通过后正常 merge 到 `020c370`，保留原提交，无 force push。CI 为 95 passed/2 skipped，本机完整环境 97 passed。

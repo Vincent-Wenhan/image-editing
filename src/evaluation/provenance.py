@@ -8,6 +8,7 @@ from src.core.images import dimensions
 from src.core.io import read_rows, sha256
 from src.core.metadata import config_digest
 from src.core.random import sample_seed
+from src.datasets.controls import ControlDataset
 from src.datasets.validation import verify_images
 
 COMPARISON_KEYS = ("side", "steps", "guidance", "seed")
@@ -36,6 +37,13 @@ def verify_run(root: Path, manifest: str | Path, record: dict) -> dict[str, dict
         raise ValueError("Invalid/duplicate manifest sample IDs")
     for row in rows:
         verify_images(root, row)
+    condition_data = None
+    if config.get("control", "none") != "none":
+        condition_data = ControlDataset(Path(config["control_root"]), root, config["control"])
+        if record.get("conditioning") != condition_data.metadata():
+            raise ValueError("Inference control index SHA256 or method changed")
+    elif record.get("conditioning"):
+        raise ValueError("No-mask run contains undeclared conditions")
     selected = rows[: config["limit"]]
     if [item["id"] for item in record["results"]] != [row["id"] for row in selected]:
         raise ValueError("Inference sample selection differs from configured manifest subset")
@@ -49,6 +57,10 @@ def verify_run(root: Path, manifest: str | Path, record: dict) -> dict[str, dict
             config["seed"], row["id"]
         ):
             raise ValueError(f"Inference prompt/seed differs from configuration: {row['id']}")
+        if condition_data and item.get("conditioning") != dict(
+            condition_data.bundle(row, expected_size).metadata
+        ):
+            raise ValueError("Inference mask provenance differs from prepared controls")
     return dict(zip(identifiers, rows, strict=True))
 
 
