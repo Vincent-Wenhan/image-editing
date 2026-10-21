@@ -264,6 +264,9 @@ Blender可选依赖固定为bpy4.5.3、Cython3.3.0、zstandard0.25.0；沿用原
 处理抗锯齿差异。角色标签的可信范围以valid和Stage 2报告为准。
 
 scene sweep支持物体初始位置、几何/颜色、点光位置/能量、背景棋盘和强度变化。
+物理采样范围从 `configs/datasets/blender_variations.yaml` 读取，可用 `scene expand
+--variations <yaml>` 选择；强度、相机与反事实策略仍在场景template中。默认范围
+复现本轮v1物理参数，既有渲染/训练不重跑、不修改。
 新test split按完整scene group保留；旧train/dev格式仍可读。Oracle/Dynamic Binary
 用 `prepare-controls --kind oracle_role|dynamic_binary` 编译，前者one-hot角色，后者
 valid内T∪D。二者都是依赖真值的上界，导出先做完整反事实校验，推理加载不读target。

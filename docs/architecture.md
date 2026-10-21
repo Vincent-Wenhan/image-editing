@@ -14,6 +14,10 @@ argv、源码摘要、版本、时间和原始失败。`evaluation/role_metrics.
 T/D除prediction→target误差外，另报identity source→target误差；它是诊断参考，
 不作为一个训练过的No-mask模型，也不计入人工成功率。
 
+scene sweep v2将采样范围读取自独立variations YAML，展开配置保留完整范围快照；
+固定split顺序消除字典插入顺序影响。默认20个物理组与已运行v1完全一致，原v1
+数据/源码指纹保留；新配置能力不改变冻结GPU实验的数据。
+
 `evaluation/fairness.py` 对已完成训练的实际report/config/checkpoint/条件索引及
 各split manifest核验等预算；复核原图与预测后重算metrics，再按显式任务注释汇总。
 任务描述与人工结果分开；失败分类依赖真实评分，空表保持pending。

@@ -41,3 +41,29 @@ def test_explicit_default_overrides_do_not_evade_physical_group_identity():
         checker_scale=12,
     )
     assert scene_group(config, scene) == scene_group(config, explicit)
+
+
+def test_configured_ranges_preserve_v1_example_and_allow_controlled_variation():
+    template = load_yaml(CONFIG_ROOT / "datasets/blender_translation.yaml")
+    counts = dict(train=12, dev=4, test=4)
+    original = expand_scenes(template, counts, seed=20261022, resolution=512)
+    first = original["scenes"][0]
+    assert first["object_width"] == 0.54281
+    assert first["source_xy"] == [-0.84299, -0.13418]
+    assert first["light_position"] == [-2.50817, -3.85347, 5.31341]
+    assert first["color"] == [0.05153, 0.16501, 0.23197]
+    reversed_counts = dict(test=4, dev=4, train=12)
+    assert (
+        expand_scenes(template, reversed_counts, seed=20261022, resolution=512)["scenes"]
+        == original["scenes"]
+    )
+    variations = load_yaml(CONFIG_ROOT / "datasets/blender_variations.yaml")
+    variations["shapes"] = ["cylinder"]
+    variations["ranges"]["light_energy"] = [900, 900]
+    custom = expand_scenes(template, counts, seed=20261022, resolution=128, variations=variations)
+    assert all(s["light_energy"] == 900 and s["shape"] == "cylinder" for s in custom["scenes"])
+    variations["ranges"]["object_width"] = [1, 0.5]
+    with pytest.raises(ValueError, match="range"):
+        expand_scenes(template, counts, seed=1, resolution=128, variations=variations)
+    with pytest.raises(ValueError, match="schema"):
+        expand_scenes(template, counts, seed=1, resolution=128, variations={})

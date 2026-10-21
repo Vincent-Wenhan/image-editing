@@ -1,5 +1,8 @@
 # 角色条件研究验证计划（2026-10-22）
 
+配置收尾补充：将scene sweep的物理采样范围独立保存为YAML，支持CLI选择；默认
+范围必须复现本轮v1已经冻结的物理参数，不重新渲染、不改动现有数据或GPU任务。
+
 本轮在 `feat/role-data-and-evaluation` 收尾研究工具并运行有界上界实验，不调整主要
 目录，不训练 Role Predictor，不迁移 Qwen。历史 Stage 0/1/2 输出只读保留。
 已阅读 Stage 1 补充报告、Stage 2 报告、proposal、架构与相关实现/测试。
