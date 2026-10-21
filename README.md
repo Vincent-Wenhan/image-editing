@@ -230,3 +230,6 @@ Blender可选依赖固定为bpy4.5.3、Cython3.3.0、zstandard0.25.0；沿用原
 `image-edit gallery --data-root <scenes> --manifest <scenes/dev/manifest.csv> --output <new-gallery> --show-roles`
 会先校验场景，再展示RGB角色真值与独立有效域；T红、D绿、P蓝、ignore黑。
 不加该选项时，原有No-mask/Mask画廊布局保持兼容。
+
+当前场景beauty/反事实为32次采样、occupancy为16次；轮廓ignore与背景误差校验
+处理抗锯齿差异。角色标签的可信范围以valid和Stage 2报告为准。

@@ -235,3 +235,7 @@
 - 最终184 passed/79.97s，Ruff check/format、pip check、editable、12CLI及嵌套/模块/薄脚本通过；wheel仓库外导入/自带配置/CLI通过。代码CI success(e5a7c51)，只读核对三个第三方checkout均固定且干净。
 - GPU任务均经实时空闲检测与UUID租约，完成后8卡0MiB/0%，无计算进程。模型、数据、图像、checkpoint、环境、外部仓库仅在忽略目录。
 - 当前未完成：真人评分、Oracle LoRA质量上界、多训练seed/更大scene-group/保留测试集；未实现Role Predictor、软Role模型或Qwen训练。新文字报告分别为stage1_review_report.md与stage2_report.md。
+
+### 渲染采样说明补全（仅文档）
+
+- 明确实际beauty/反事实/空场32 samples，emission-ID occupancy使用min(16,samples)=16；不能把两条路径抗锯齿覆盖视为精确相同。现有轮廓ignore与0.01门禁已覆盖该差异，实验与代码不变。

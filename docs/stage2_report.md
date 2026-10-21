@@ -8,8 +8,10 @@ GPU条件消费已验证。未训练Oracle LoRA或Role Predictor，未迁移Qwen
 ## 生成器与数据
 
 新输出根 `outputs/stage2_translation_20261021/`，原Stage 0/1全部保留。
-固定官方bpy4.5.3 LTS/build `67807e1800cc`，Cycles CPU、128²、32 samples、seed17、
-8 threads；禁自适应采样/降噪、无环境光和间接/反射影响，纯Diffuse、点光源硬阴影。
+固定官方bpy4.5.3 LTS/build `67807e1800cc`，Cycles CPU、128²、seed17、8 threads。
+beauty/阴影反事实/空场为32 samples，occupancy ID为16 samples；两者的抗锯齿
+覆盖并非逐像素等同，分别排除旧/新轮廓并保留背景误差门禁。禁自适应采样/降噪、
+无环境光和间接/反射影响，纯Diffuse、点光源硬阴影。
 全部参数在 `configs/datasets/blender_translation.yaml`，生成时保存配置与源码SHA。
 
 4个程序化场景（cube/cylinder各两例），每场景强度0/0.5/1，共12对；train/dev各

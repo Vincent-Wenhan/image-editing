@@ -81,3 +81,7 @@ Oracle 显式作为上界：监督 loader 独立读取 target/roles/valid；普�
 复用现有gallery入口增加显式show-roles选项；验证完整场景后展示source/target/
 source-mask、T/D/P RGB和valid，不改变旧布局。角色图必须由实际标签/有效域生成，
 用于本地核验，不能当作模型预测或研究质量结论。
+
+当前beauty/反事实/空场采样32次，occupancy ID使用min(16, samples)=16次；
+覆盖抗锯齿有差异，不能把其边缘当精确像素真值。valid分别排除两个轮廓，且继续
+以预设0.01线性误差核验显露背景；实际范围和失败见Stage 2报告。
