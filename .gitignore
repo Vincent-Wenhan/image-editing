@@ -1,7 +1,7 @@
 # Local assets and third-party source
 /data
 /models
-/outputs/
+/outputs
 /external
 /.venv*/
 /.cache/

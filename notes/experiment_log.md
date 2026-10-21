@@ -280,3 +280,10 @@ GPU smoke、容量、正式训练和重载尚未执行；下步冻结代码后�
 
 冻结前全量检查：199 passed/88.62s，Ruff check/format通过；新增上界runner、配方
 漂移、角色指标与scene聚合均覆盖。512数据副本/控制图/配置正在CPU准备，不占GPU。
+
+## CPU CI 环境修复
+
+`6879c87`的GitHub最小CPU环境暴露测试隔离遗漏：上界runner的模拟backend测试未
+模拟packages元数据，因CI不安装torch而失败（190 passed/7 skipped/2 failed）。
+补齐fixture版本stub，生产执行代码不变；本机真实GPU smoke已在冻结worktree启动，
+不会修改其源码或中断任务。outputs忽略规则同时覆盖独立worktree中的本地资产链接。

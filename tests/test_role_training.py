@@ -172,6 +172,7 @@ def test_upper_bound_runner_records_and_verifies_but_requires_permission(
     from src.inference import runner
 
     monkeypatch.setattr(runner, "require_lease", lambda: None)
+    monkeypatch.setattr(runner, "versions", lambda: {"test": "cpu-fixture"})
     model = tmp_path / "model"
     model.mkdir()
     (model / "download.json").write_text('{"revision":"fixture"}')
