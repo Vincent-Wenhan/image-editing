@@ -14,6 +14,7 @@ from types import SimpleNamespace
 from src.core.config import ProjectSettings, load_yaml
 from src.core.io import sha256, write_json
 from src.core.metadata import now, versions
+from src.infra.experiment import source_snapshot
 from src.infra.gpu import require_lease
 from src.infra.process import command
 from src.training.checkpoints import validate_checkpoint
@@ -69,7 +70,9 @@ def run_training(
             raise ValueError("ai-toolkit revision does not match assets.lock.json")
         if Path.cwd().resolve() != trainer.resolve():
             raise RuntimeError("Worker cwd must be the locked ai-toolkit root")
-        result.update(config_sha256=sha256(config), packages=versions())
+        result.update(
+            config_sha256=sha256(config), packages=versions(), source=source_snapshot(root)
+        )
         if memory_plan:
             result["memory_plan"] = json.loads(memory_plan.read_text())
         full_config = load_yaml(config)
@@ -91,6 +94,7 @@ def run_training(
         if conditioning:
             runtime.model_type._image_edit_joint_controls = True
             runtime.model_type._image_edit_joint_batches = 0
+            runtime.model_type._image_edit_condition_kind = conditioning["kind"]
         runtime.set_seed(
             settings["train"].get("seed", ProjectSettings.load().process["train"]["seed"])
         )
@@ -118,6 +122,7 @@ def run_training(
             if getattr(runtime.model_type, "_image_edit_joint_controls", False):
                 result["joint_control_batches"] = runtime.model_type._image_edit_joint_batches
                 runtime.model_type._image_edit_joint_controls = False
+                runtime.model_type._image_edit_condition_kind = "static_mask"
         telemetry_errors, cleanup_errors = {}, {}
         torch = runtime.torch if runtime else sys.modules.get("torch")
         if runtime is None and torch is not None:

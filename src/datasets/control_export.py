@@ -14,7 +14,7 @@ from src.conditioning.static import MASK_KINDS, MaskSpec, mask_rgb, transform_ma
 from src.core.config import ProjectSettings, load_yaml
 from src.core.io import read_rows, sha256, write_json
 from src.core.paths import CONFIG_ROOT, data_path
-from src.datasets.validation import validate
+from src.datasets.validation import dataset_splits, validate
 
 
 def donors(rows: list[dict], spec: MaskSpec) -> dict[str, dict]:
@@ -43,7 +43,7 @@ def export_controls(data_root: Path, output: Path, spec: MaskSpec) -> Path:
     output.mkdir(parents=True)
     index = dict(schema_version=1, spec=asdict(spec), order=["source", "mask"], splits={})
     try:
-        for split in ("train", "dev"):
+        for split in dataset_splits(data_root):
             manifest = data_root / split / "manifest.csv"
             rows = read_rows(manifest)
             mapping = donors(rows, spec)
@@ -74,6 +74,11 @@ def export_controls(data_root: Path, output: Path, spec: MaskSpec) -> Path:
 
 
 def run(args: argparse.Namespace) -> None:
+    from src.datasets.role_controls import ORACLE_KINDS, export_role_controls
+
+    if args.kind in ORACLE_KINDS:
+        print(export_role_controls(Path(args.data_root), Path(args.output), args.kind))
+        return
     spec = MaskSpec(
         ControlKind(args.kind),
         args.dilation_radius if args.kind == ControlKind.DILATED_MASK else 0,
@@ -83,10 +88,12 @@ def run(args: argparse.Namespace) -> None:
 
 
 def configure(parser: argparse.ArgumentParser) -> None:
+    from src.datasets.role_controls import ORACLE_KINDS
+
     defaults = load_yaml(CONFIG_ROOT / "experiments/stage1.yaml")["controls"]
     parser.add_argument("--data-root", default=ProjectSettings.load().dataset["root"])
     parser.add_argument("--output", required=True)
-    parser.add_argument("--kind", choices=MASK_KINDS, required=True)
+    parser.add_argument("--kind", choices=[*MASK_KINDS, *ORACLE_KINDS], required=True)
     parser.add_argument("--dilation-radius", type=int, default=defaults["dilation_radius"])
     parser.add_argument("--shuffle-seed", type=int, default=defaults["shuffle_seed"])
     parser.set_defaults(func=run)

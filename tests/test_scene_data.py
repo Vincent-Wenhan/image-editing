@@ -1,0 +1,301 @@
+"""Synthetic evidence fixtures verify causal labels; these are not Blender renders."""
+
+import copy
+import json
+
+import numpy as np
+import pytest
+from PIL import Image
+
+from src.conditioning.role_truth import derive_roles
+from src.core.config import load_yaml
+from src.core.io import read_rows, sha256, write_json, write_rows
+from src.core.paths import CONFIG_ROOT
+from src.datasets.scene import generate
+from src.datasets.scene_config import validate_scene_config
+from src.datasets.scene_pairs import compile_pairs
+from src.datasets.scene_validation import validate_scene_dataset
+from tests.conftest import evidence
+
+
+def rehash_manifest(root, rows, split="dev"):
+    write_rows(root / split / "manifest.csv", rows)
+    dataset = json.loads((root / "dataset.json").read_text())
+    dataset["manifests"][split] = sha256(root / split / "manifest.csv")
+    write_json(root / "dataset.json", dataset)
+
+
+def test_roles_use_shadow_intervention_and_keep_uncertain_changes_invalid():
+    policy = load_yaml(CONFIG_ROOT / "datasets/blender_translation.yaml")["roles"]
+    values = evidence([0.7, 0.1, 0.1])
+    labels, valid = derive_roles(values, 1, policy)
+    assert labels[18, 18] == labels[18, 42] == 0
+    assert labels[43, 15] == labels[43, 43] == 1
+    assert labels[55, 55] == 2
+    # An albedo change in both shadow-on/off is not a shadow consequence label.
+    values["target"][55, 55] += 0.1
+    values["target_no_shadow"][55, 55] += 0.1
+    labels, valid = derive_roles(values, 1, policy)
+    assert labels[55, 55] == 255 and valid[55, 55] == 0
+    values["target"][52, 52] -= 0.01
+    labels, valid = derive_roles(values, 1, policy)
+    assert labels[52, 52] == 255
+    identity, _ = derive_roles(evidence([0.7, 0.1, 0.1], 0), 0, policy)
+    assert (identity == 2).all()
+    with pytest.raises(ValueError, match="identity"):
+        derive_roles(values, 0, policy)
+
+
+def test_scene_pairing_strength_roles_and_background_validate(scene_data):
+    result = validate_scene_dataset(scene_data)
+    assert result["train"] == result["dev"] == 2
+    assert result["scene_groups"] == 2 and result["scene_group_overlap"] == 0
+    moved = [row for row in result["samples"] if row["strength"]]
+    assert all(row["exposed_pixels"] > 0 and row["background_max_error"] == 0 for row in moved)
+    assert all(row["role_pixels"][role] > 0 for row in moved for role in ("T", "D", "P"))
+    with pytest.raises(FileExistsError):
+        compile_pairs(scene_data, json.loads((scene_data / "dataset.json").read_text())["config"])
+
+
+def test_overlapping_silhouettes_exclude_internal_boundaries():
+    policy = load_yaml(CONFIG_ROOT / "datasets/blender_translation.yaml")["roles"]
+    values = evidence([0.7, 0.1, 0.1])
+    values["source_occupancy"][10:26, 10:36] = 1
+    values["target_occupancy"][:] = 0
+    values["target_occupancy"][10:26, 25:50] = 1
+    labels, valid = derive_roles(values, 1, policy)
+    # x=24/25 is inside the union but borders the new object's silhouette.
+    assert valid[18, 24] == valid[18, 25] == 0
+    assert labels[18, 24] == labels[18, 25] == 255
+    assert valid[18, 18] == 255
+
+
+@pytest.mark.parametrize("status", ["running", "failed"])
+def test_partial_or_failed_generation_cannot_be_validated_or_used_as_oracle(scene_data, status):
+    from src.datasets.scene_manifest import load_oracle_condition
+
+    write_json(scene_data / "generation.json", dict(status=status))
+    with pytest.raises(ValueError, match="incomplete or failed"):
+        validate_scene_dataset(scene_data)
+    row = read_rows(scene_data / "dev/manifest.csv")[1]
+    with pytest.raises(ValueError, match="failed or incomplete"):
+        load_oracle_condition(scene_data, row)
+
+
+@pytest.mark.parametrize(
+    "change", ["label", "valid", "strength", "source", "mask", "raw", "config"]
+)
+def test_scene_validation_rejects_semantic_and_byte_changes(scene_data, change):
+    rows = read_rows(scene_data / "dev/manifest.csv")
+    row = rows[1]
+    if change in {"label", "valid", "source", "mask"}:
+        key = "role" if change == "label" else change
+        mode, color = ("RGB", "black") if key == "source" else ("L", 2)
+        path = scene_data / row[f"{key}_path"]
+        Image.new(mode, (64, 64), color).save(path)
+        row[f"{key}_sha256"] = sha256(path)
+        rehash_manifest(scene_data, rows)
+    elif change == "strength":
+        row["displacement"] = "1000"
+        rehash_manifest(scene_data, rows)
+    elif change == "raw":
+        next((scene_data / "raw").glob("*/*.exr")).write_bytes(b"changed")
+    else:
+        path = scene_data / "scene_config.yaml"
+        path.write_text(path.read_text() + "\n")
+    with pytest.raises(ValueError):
+        validate_scene_dataset(scene_data)
+
+
+def test_background_completion_is_checked_separately_from_role_recomputation(scene_data):
+    rows = read_rows(scene_data / "dev/manifest.csv")
+    row = rows[1]
+    path = scene_data / row["evidence_path"]
+    with np.load(path) as file:
+        arrays = dict(file)
+    arrays["background"][:] = 0
+    np.savez_compressed(path, **arrays)
+    row["evidence_sha256"] = sha256(path)
+    raw_path = scene_data / "raw/index.json"
+    raw = json.loads(raw_path.read_text())
+    raw["groups"][1]["entries"][1]["sha256"] = sha256(path)
+    write_json(raw_path, raw)
+    dataset_path = scene_data / "dataset.json"
+    dataset = json.loads(dataset_path.read_text())
+    dataset["raw_index_sha256"] = sha256(raw_path)
+    write_json(dataset_path, dataset)
+    rehash_manifest(scene_data, rows)
+    with pytest.raises(ValueError, match="background completion"):
+        validate_scene_dataset(scene_data)
+
+
+@pytest.mark.parametrize("change", ["split", "duplicate_scene", "strength", "geometry", "device"])
+def test_invalid_scene_configuration_fails_before_rendering(change):
+    config = copy.deepcopy(load_yaml(CONFIG_ROOT / "datasets/blender_translation.yaml"))
+    if change == "split":
+        for scene in config["scenes"]:
+            scene["split"] = "train"
+    elif change == "duplicate_scene":
+        scene = config["scenes"][0].copy()
+        scene.update(id="duplicate_dev", split="dev")
+        config["scenes"][2] = scene
+    elif change == "strength":
+        config["strengths"] = [0, float("nan")]
+    elif change == "geometry":
+        config["renderer"]["resolution"] = 65
+    else:
+        config["renderer"]["device"] = "CUDA"
+    with pytest.raises(ValueError):
+        validate_scene_config(config)
+
+
+def test_renderer_failure_preserves_report_and_original_exception(tmp_path, monkeypatch):
+    import os
+    import subprocess
+
+    error = subprocess.CalledProcessError(17, ["renderer"])
+
+    def fail(*args, **kwargs):
+        assert kwargs["env"]["CUDA_VISIBLE_DEVICES"] == ""
+        assert str(libraries) in kwargs["env"]["LD_LIBRARY_PATH"]
+        raise error
+
+    monkeypatch.setattr("src.datasets.scene.subprocess.run", fail)
+    output = tmp_path / "failed"
+    libraries = tmp_path / "libraries"
+    libraries.mkdir()
+    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "parent-task-is-unchanged")
+    with pytest.raises(subprocess.CalledProcessError) as raised:
+        generate(
+            CONFIG_ROOT / "datasets/blender_translation.yaml",
+            output,
+            runtime_library_path=libraries,
+        )
+    assert raised.value is error
+    assert os.environ["CUDA_VISIBLE_DEVICES"] == "parent-task-is-unchanged"
+    report = json.loads((output / "generation.json").read_text())
+    assert report["status"] == "failed" and "CalledProcessError" in report["traceback"]
+    with pytest.raises(FileExistsError):
+        generate(CONFIG_ROOT / "datasets/blender_translation.yaml", output)
+
+
+def test_blender_lts_display_suffix_does_not_bypass_or_break_numeric_pin(tmp_path, monkeypatch):
+    import sys
+    from types import SimpleNamespace
+
+    from src.datasets.blender_render import run
+
+    app = SimpleNamespace(version=(4, 5, 3), version_string="4.5.3 LTS")
+    monkeypatch.setitem(sys.modules, "bpy", SimpleNamespace(app=app))
+    with pytest.raises(FileExistsError):
+        run(CONFIG_ROOT / "datasets/blender_translation.yaml", tmp_path)
+    app.version = (4, 5, 2)
+    with pytest.raises(ValueError, match="pinned"):
+        run(CONFIG_ROOT / "datasets/blender_translation.yaml", tmp_path)
+
+
+def test_oracle_loading_never_reads_target_or_counterfactual_rgb(scene_data, monkeypatch):
+    from src.datasets.manifest import load_edit_input
+    from src.datasets.scene_manifest import load_oracle_condition, load_role_supervision
+
+    row = read_rows(scene_data / "dev/manifest.csv")[1]
+    supervision = load_role_supervision(scene_data, row)
+    assert supervision.target.mode == "RGB" and supervision.role_labels.mode == "L"
+    for path in (scene_data / "dev/target").glob("*.png"):
+        path.unlink()
+    for path in (scene_data / "raw").glob("*/*.npz"):
+        path.unlink()
+    original = Image.open
+
+    def safe_open(path, *args, **kwargs):
+        if "/target/" in str(path):
+            raise AssertionError("Target read during oracle conditioning")
+        return original(path, *args, **kwargs)
+
+    monkeypatch.setattr(Image, "open", safe_open)
+    edit = load_edit_input(scene_data, row)
+    control = load_oracle_condition(scene_data, row)
+    assert not hasattr(edit, "role_labels") and not hasattr(edit, "target")
+    assert control.kind == "oracle_role" and control.metadata["sample_id"] == row["id"]
+    with pytest.raises(ValueError, match="ordinary inference"):
+        control.require_inference_safe()
+
+
+@pytest.mark.parametrize("with_predictions", [False, True])
+def test_role_gallery_displays_actual_ground_truth_with_separate_valid_region(
+    scene_data, tmp_path, monkeypatch, with_predictions
+):
+    from src.cli import main
+    from src.conditioning.controls import ControlKind
+    from src.conditioning.oracle import role_rgb
+    from src.conditioning.static import MaskSpec
+    from src.core.types import EditOutput
+    from src.datasets.control_export import export_controls
+    from src.inference import runner
+
+    output = tmp_path / "role_gallery"
+    extra = []
+    if with_predictions:
+        monkeypatch.setattr(runner, "require_lease", lambda: None)
+        monkeypatch.setattr(runner, "versions", lambda: {"test": "cpu"})
+        model = tmp_path / "model"
+        model.mkdir()
+        (model / "download.json").write_text('{"revision":"fixed"}')
+        controls = tmp_path / "controls"
+        export_controls(scene_data, controls, MaskSpec(ControlKind.STATIC_MASK))
+        from src.cli import build_parser
+
+        class Backend:
+            def __init__(self, *args):
+                pass
+
+            def edit(self, edit, controls, options):
+                return EditOutput(edit.source, 0, 0, 0)
+
+        predictions = tmp_path / "predictions"
+        args = build_parser().parse_args(
+            [
+                "infer",
+                "--data-root",
+                str(scene_data),
+                "--manifest",
+                str(scene_data / "dev/manifest.csv"),
+                "--model",
+                str(model),
+                "--side",
+                "64",
+                "--output",
+                str(predictions),
+                "--control",
+                "static_mask",
+                "--control-root",
+                str(controls),
+            ]
+        )
+        runner.run(args, backend_factory=Backend)
+        extra = ["--predictions", str(predictions)]
+    main(
+        [
+            "gallery",
+            "--data-root",
+            str(scene_data),
+            "--manifest",
+            str(scene_data / "dev/manifest.csv"),
+            "--output",
+            str(output),
+            "--show-roles",
+        ]
+        + extra
+    )
+    assert "T=red D=green P=blue ignore=black" in (output / "index.html").read_text()
+    assert "valid_region" in (output / "index.html").read_text()
+    with Image.open(output / "contact_00.jpg") as image:
+        assert image.width == (7 if with_predictions else 5) * 224
+    if with_predictions:
+        assert "annotation_mask" in (output / "index.html").read_text()
+    row = read_rows(scene_data / "dev/manifest.csv")[1]
+    with (
+        Image.open(scene_data / row["role_path"]) as truth,
+        Image.open(output / "role_truth" / f"{row['id']}.png") as displayed,
+    ):
+        assert np.array_equal(displayed, role_rgb(truth))

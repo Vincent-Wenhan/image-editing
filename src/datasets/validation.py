@@ -1,5 +1,6 @@
 """Fail closed on missing, corrupt, mismatched or leaking paired-edit samples."""
 
+from itertools import combinations
 from pathlib import Path
 
 from PIL import Image
@@ -46,20 +47,26 @@ def scan(root: Path, split: str) -> tuple[list[dict], set[str], set[str], list[f
 
 def validate(root: str | Path) -> dict:
     root = Path(root)
-    train, tr_sessions, tr_sources, tr_coverage = scan(root, "train")
-    dev, dv_sessions, dv_sources, dv_coverage = scan(root, "dev")
-    if tr_sessions & dv_sessions or tr_sources & dv_sources:
-        raise ValueError("Train/dev leakage: overlapping sessions or identical source images")
+    splits = {split: scan(root, split) for split in dataset_splits(root)}
+    for left, right in combinations(splits, 2):
+        a, b = splits[left], splits[right]
+        if a[1] & b[1] or a[2] & b[2]:
+            raise ValueError(
+                f"{left}/{right} leakage: overlapping sessions or identical source images"
+            )
     return {
-        "train": len(train),
-        "dev": len(dev),
+        **{split: len(value[0]) for split, value in splits.items()},
         "session_overlap": 0,
         "source_overlap": 0,
         "mask_edit_fraction": {
-            "train_mean": sum(tr_coverage) / len(tr_coverage),
-            "dev_mean": sum(dv_coverage) / len(dv_coverage),
+            f"{split}_mean": sum(value[3]) / len(value[3]) for split, value in splits.items()
         },
     }
+
+
+def dataset_splits(root: Path) -> tuple[str, ...]:
+    """Legacy pairs remain train/dev; a declared test directory must also validate."""
+    return ("train", "dev", "test") if (root / "test").exists() else ("train", "dev")
 
 
 def run(args):

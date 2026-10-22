@@ -13,7 +13,7 @@ from src.cli import COMMANDS, build_parser
 def test_all_command_defaults_match_pre_refactor_snapshot():
     legacy = json.loads((Path(__file__).parent / "fixtures/legacy_cli_defaults.json").read_text())
     parser = build_parser()
-    assert set(COMMANDS) == set(legacy) | {"prepare-controls"}
+    assert set(COMMANDS) == set(legacy) | {"prepare-controls", "review", "scene"}
     for name, expected in legacy.items():
         actual = vars(parser.parse_args([name]))
         actual.pop("func")
@@ -23,6 +23,11 @@ def test_all_command_defaults_match_pre_refactor_snapshot():
         if name in {"train-config", "infer"}:
             assert actual.pop("control") == "none"
             assert actual.pop("control_root") is None
+        if name == "infer":
+            assert actual.pop("allow_oracle") is False
+            assert actual.pop("reference_preprocessing") == "auto"
+        if name == "gallery":
+            assert actual.pop("show_roles") is False
         assert actual == expected, name
 
 

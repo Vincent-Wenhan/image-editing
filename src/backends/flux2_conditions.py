@@ -18,6 +18,12 @@ def reference_images(
     if controls.kind == ControlKind.NONE:
         if edit_input.mask is not None:
             raise ValueError("Compile the input mask into an explicit ControlBundle")
+        if controls.metadata.get("reference_preprocessing") == "training":
+            validate_reference_size(edit_input.source.size)
+            if edit_input.source.size != (options.width, options.height):
+                raise ValueError(
+                    "Training preprocessing requires matching source/output dimensions"
+                )
         return edit_input.source
     if controls.kind not in MASK_KINDS:
         raise NotImplementedError(f"FLUX.2 does not implement {controls.kind}")

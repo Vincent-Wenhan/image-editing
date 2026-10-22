@@ -1,5 +1,25 @@
 # Image Editing Research
 
+已完成研究轮次正式名称：**Causal Role Data and Oracle Feasibility Study**。
+PR #3 的源码、资产、统计与结论复核见 [合并审计](docs/causal_role_feasibility_audit.md)。
+彩色 Oracle Role 的负面结果及全部历史资产保留；后续失败分析独立开展。
+
+2026-10-22：已完成三评审者导入/配对统计工具、Stage 1公平性分组审计、20个独立
+train/dev/test场景组的128→512渲染，以及四方法×双seed的60-step LoRA与192张
+固定评估。202项测试、Ruff、CLI、wheel检查通过；真实评分仍pending。
+**当前彩色Oracle Role编码No-Go**：两seed的T误差明显高于Dynamic Binary，且有
+控制图外观复制/重复物体/身份破坏。暂缓Role Predictor。完整数字、区间、checkpoint
+和限制见 [实际报告](docs/role_validation_report.md)，预定预算见
+[研究设计](docs/role_validation_design.md)。
+
+Stage 1 已通过 [PR #2](https://github.com/Vincent-Wenhan/image-editing/pull/2) 正常合并。
+2026-10-21的历史里程碑：本分支完成双参考无信息基线、六组各30例固定
+验证、180项离线人工评审包，以及最小Blender反事实数据和显式Oracle Role接口。
+Constant 150步训练、12对真实CPU渲染/标签校验和Oracle GPU协议检查已通过；
+当时184项测试、Ruff、CLI、editable/wheel检查通过，尚未训练角色adapter。详见
+[补充评估报告](docs/stage1_review_report.md)、[Stage 2实际报告](docs/stage2_report.md)
+和 [设计](docs/stage2_design.md)。所有历史结果保留，新资产仅存本地outputs。
+
 Stage 0 架构已通过 [PR #1](https://github.com/Vincent-Wenhan/image-editing/pull/1)
 合并。Stage 1 的联合条件、130 项回归、GPU smoke、三组150-step训练及固定12例
 评估已完成。初步像素诊断未显示优于No-mask。见 [设计](docs/stage1_design.md) 和
@@ -12,7 +32,7 @@ Mask 画廊新增 `annotation_mask` 与 `control_input` 两列，分别展示评
 
 - [方案评审](docs/proposal_review.md)：可行性、贡献边界、标签定义与必要对照。
 - [Stage 0 设计](docs/stage0_design.md)：当前准备工作的范围和验收。
-- [当前验收状态](docs/stage0_report.md)：已验证内容、下载进度入口和待运行实验。
+- [Stage 0验收记录](docs/stage0_report.md)：已完成的训练、重载与历史失败。
 - [原始 roadmap](docs/Image_Editing_Preparation_and_InterEdit_Roadmap.md)：研究输入与长期路线。
 - [架构重构设计与验收](docs/architecture.md)：模块边界、兼容约定与实施步骤。
 - 稳定性收尾与 20/150-step、固定 12 例重载验收已完成；真实结果见 Stage 0 报告。
@@ -168,3 +188,118 @@ GitHub PR 的合并状态单独确认。Stage 0 原始结果继续保留在独�
 `data/`、`models/`、`outputs/`、`external/`、`.venv/` 全部忽略。Git hooks 检查提交信息、代码行数和禁止上传的资产。实验原始日志应留在本地 `outputs/logs/`，一次性文件放 `.tmp/` 并在完成后清理。
 
 所有 GPU 任务使用 `image-edit gpu -- ...`：实时检查占用、利用率和计算进程，再获取 UUID 锁。可用 `--device 2` 指定物理卡，若忙则拒绝；不允许通过直接设置 CUDA 序号绕过检查。锁协调同一用户的本项目任务，共享机器仍需遵循管理员调度。
+
+评估补强新增 `prepare-controls --kind constant_mask`，按 `[source, 全黑RGB]` 提供
+与Mask相同的双参考结构。`infer --reference-preprocessing training` 显式对齐
+单参考的训练器cast顺序，默认 `auto` 保留旧No-mask。新结果必须使用新输出目录。
+
+人工评估使用本地盲评包（至少两个同预算完整运行）：
+
+```bash
+image-edit review export --data-root <data> --manifest <dev.csv> \
+  --run no_mask=<run-a> --run static=<run-b> --output <new-review>
+# 本地打开 new-review/index.html，由真实评审者填写并下载CSV。
+image-edit review score --bundle <new-review> --ratings <ratings.csv> --output <new-summary.json>
+```
+
+评分含编辑成功度、无关内容保留与失败类别/说明。空白为pending，不产生人工结论。
+
+三位评审者分别填写（代号仅为组织占位，不能当作已收到评分）：
+
+```bash
+image-edit review panels --bundle <review> --reviewer rater_a --reviewer rater_b \
+  --reviewer rater_c --output <new-public-panels>
+image-edit review import --bundle <review> --ratings <real-rater-a.csv> \
+  --reviewer rater_a --independent --output <new-import-a>
+# 对其余真实评分分别 import，再合并；每位评审者只能选择一个版本。
+image-edit review merge --bundle <review> --import <import-a> --import <import-b> \
+  --import <import-c> --annotations <task-types.csv> --output <new-analysis>
+```
+
+原始CSV逐字节留存，三位完整独立评审者之前区间为null。按scene/session与reviewer
+交叉bootstrap、固定seed、配对比较两项评分；NA不计零分。失败分类是结果筛选后的
+描述，不作收益推断。工具无法证明真人独立性，须由评审组织者保证。
+
+`review audit` 接受同名 `--run METHOD=PATH` 和 `--training METHOD=REPORT`、共同
+`--data-root/--manifest`、`--annotations` 与新 `--output`，检查实际训练预算/资产，
+并从真实图片重算按任务分组的像素诊断。固定30例任务描述在
+`configs/experiments/stage1_task_groups.csv`；它不是成功/失败评分。
+
+`image-edit gpu -- python -m src.inference.reference_smoke --data-root <data> --lora <lora> --output <new-smoke>`
+可单独检查单/双参考结构与cast差异；这类smoke不代表编辑质量。
+
+最小Blender数据（Python 3.11，可选安装 `pip install -e '.[blender]'`）：
+
+```bash
+image-edit scene generate --config configs/datasets/blender_translation.yaml --output <new-scene-data>
+image-edit scene validate --root <new-scene-data>
+# 固定抽样seed后显式展开；同seed/组数可先128，再512验证。
+image-edit scene expand --seed 20261022 --train-groups 12 --dev-groups 4 --test-groups 4 \
+  --resolution 512 --output <new-scenes.yaml>
+image-edit scene generate --config <new-scenes.yaml> --output <new-expanded-data>
+```
+
+默认使用固定4.5.3的Cycles CPU，生成多强度平移、阴影开关反事实、空背景及对象占据
+证据；只读校验从证据重算T/D/P并验证哈希、split、位移与背景补全。配置和原始证据
+均留本地输出。当前范围是直接光硬阴影，不代表真实场景或复杂间接光的真值。
+
+Oracle仅走显式实验接口：`src.datasets.scene_manifest.load_oracle_condition` 加载labels/valid，
+`Flux2Backend.edit_oracle(..., allow_oracle=True)` 按 `[source, role_RGB]` 编码。
+T/D/P为RGB单位向量，ignore为黑；普通 `edit`/`infer` 仍拒绝Oracle。
+`image-edit gpu -- python -m src.inference.oracle_smoke --data-root <scenes> --output <new-smoke>`
+验证真实条件消费与T/D置换敏感性；没有角色训练adapter时不能作为质量上界结果。
+
+无系统写权限且导入bpy缺少X/GL库时，运行 `python -m src.infra.blender_runtime`。
+该入口按固定URL/SHA256提取本地运行库；随后给 `scene generate` 添加
+`--runtime-library-path .cache/blender/runtime/usr/lib/x86_64-linux-gnu`。
+只影响渲染子进程，不修改系统库或其他任务的环境。
+
+有效域分别排除旧、新物体轮廓（含占据并集内部的重叠边界）；生成失败或未完成的数据
+不能通过常规验证，也不能加载为Oracle。失败目录保留，修复后使用新的输出目录。
+
+盲评可以比较经过校验的独立数据副本；每个运行仍核对自身的控制来源，公开source/target
+另按共同manifest验证。导出同时检查prediction的实际尺寸与RGB模式。
+
+Blender可选依赖固定为bpy4.5.3、Cython3.3.0、zstandard0.25.0；沿用原命名Conda环境
+的数值依赖锁。完整本机安装快照另存实验输出，不将环境目录上传。
+
+`image-edit gallery --data-root <scenes> --manifest <scenes/dev/manifest.csv> --output <new-gallery> --show-roles`
+会先校验场景，再展示RGB角色真值与独立有效域；T红、D绿、P蓝、ignore黑。
+不加该选项时，原有No-mask/Mask画廊布局保持兼容。
+
+当前场景beauty/反事实为32次采样、occupancy为16次；轮廓ignore与背景误差校验
+处理抗锯齿差异。角色标签的可信范围以valid和Stage 2报告为准。
+
+scene sweep支持物体初始位置、几何/颜色、点光位置/能量、背景棋盘和强度变化。
+物理采样范围从 `configs/datasets/blender_variations.yaml` 读取，`scene expand` 可用
+`--variations <yaml>` 选择；强度、相机与反事实策略仍在场景template中。默认范围
+复现本轮v1物理参数，既有渲染/训练不重跑、不修改。
+新test split按完整scene group保留；旧train/dev格式仍可读。Oracle/Dynamic Binary
+用 `prepare-controls --kind oracle_role|dynamic_binary` 编译，前者one-hot角色，后者
+valid内T∪D。二者都是依赖真值的上界，导出先做完整反事实校验，推理加载不读target。
+
+Oracle LoRA 使用原训练入口，指定 `train-config --data-root <scenes> --control oracle_role
+--control-root <roles>`；Static/Dilated/Dynamic Binary分别指定其kind。重载上界使用
+`infer --data-root <scenes> --manifest <scenes>/dev/manifest.csv --control oracle_role
+--control-root <roles> --allow-oracle --lora <checkpoint> --output <new-run>`。
+训练端检查one-hot角色通道与实际batch，沿用固定ai-toolkit的flow-matching目标。
+
+有界四组研究入口（激活Conda后，在冻结的已安装worktree中运行）：
+
+```bash
+python -m src.training.role_study prepare --data <verified-512-scenes> --output <new-study>
+python -m src.training.role_study run --output <new-study> --phase smoke
+image-edit gpu -- python -m src.inference.oracle_smoke --data-root <new-study>/smoke_oracle_role_42/data \
+  --lora <smoke-checkpoint> --output <new-study>/oracle_reload_smoke
+python -m src.training.role_study run --output <new-study> --phase capacity
+python -m src.training.role_study run --output <new-study> --phase train --parallel 4
+python -m src.training.role_study run --output <new-study> --phase infer --parallel 4
+python -m src.evaluation.role_metrics --study <new-study> --output <new-diagnostics>
+```
+
+训练预算唯一配置为 `configs/experiments/role_validation.yaml`；各子任务均由GPU租约
+入口启动，重复目录会失败。先单卡测量，再扩大batch/并行；同一对照不自动调batch。
+准备中的计划只允许已就绪pilot，完整方法×seed矩阵准备齐全后才允许正式比较。
+P区域报告source漂移，T/D报告target误差，分别按scene聚合，不称为编辑成功率。
+评估绑定实际训练checkpoint摘要，并检查预测RGB与原尺寸；错误产物不能靠resize通过。
+同时报告不编辑source的T/D误差参考，防止把少编辑误读成方法收益。

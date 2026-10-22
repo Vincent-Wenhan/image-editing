@@ -16,6 +16,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.12"]
+blender = ["bpy==4.5.3", "Cython==3.3.0", "zstandard==0.25.0"]
 
 [project.scripts]
 image-edit = "src.cli:main"
@@ -26,9 +27,9 @@ include = ["src", "src.*"]
 namespaces = false
 
 [tool.setuptools.data-files]
-"share/image-editing/configs" = ["configs/assets.lock.json", "configs/flux2_edit_lora.yaml"]
+"share/image-editing/configs" = ["configs/assets.lock.json", "configs/flux2_edit_lora.yaml", "configs/blender-runtime-linux.lock.json"]
 "share/image-editing/configs/datasets" = ["configs/datasets/*.yaml"]
-"share/image-editing/configs/experiments" = ["configs/experiments/*.yaml"]
+"share/image-editing/configs/experiments" = ["configs/experiments/*.yaml", "configs/experiments/*.csv"]
 
 [tool.ruff]
 line-length = 100

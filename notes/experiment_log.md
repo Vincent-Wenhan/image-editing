@@ -160,3 +160,194 @@
 - 下载与验收进程见 `outputs/background_jobs.json`；`outputs/stage0/status.json` 记录实际状态。后续自动执行 12 例 Base 推理、20-step debug、150-step LoRA、同配置重载和诊断。资产不完整时保持等待，不占用 GPU。
 - 已清理临时脚本、下载引导 wheels、废弃探测文件和重复的项目前缀环境；只保留命名 Conda 环境。原始用户 kit 压缩包保留在本地且不提交。
 - 本记录描述启动时的真实状态；完整模型推理/训练是否通过，以验收状态和各阶段 report 为准，目前没有研究性能提升结论。
+
+## 2026-10-21 Stage 1 正常合并与后续设计
+
+- PR #2 在 PR CPU CI success 后正常 merge，main `a03f168`；本地130 passed/62.75s、Ruff、CLI、pip check、卫生检查通过，历史78个新增blob无资产，未force push。
+- 从最新main创建 `feat/role-data-and-evaluation` 独立worktree；设计先记录于 `docs/stage2_design.md`。
+- 计划：constant双参考基线、显式No-mask预处理对照、30例固定验证、独立人工评分；随后最小Blender平移/阴影/背景及Oracle接口。尚未实现或声称研究收益；旧实验只读保留。
+
+### 匹配双参考的无信息条件（已实现，GPU待运行）
+
+- 实现constant_mask及显式No-mask training cast；旧No-mask默认调用与外层记录格式保留。
+- 条件/CLI/编码等24项测试通过（41.94s）；包含constant的训练预算、配方、失败拒绝及旧推理记录30项通过（28.63s）。Ruff通过；没有把CPU检查记为GPU通过。
+
+### 人工评估工具（已实现，真实评分待填写）
+
+- 离线盲评导出/CSV导入实现成功度与无关内容保留0/1/2、失败类别及说明、reviewer；方法映射独立保存，实际图像/运行哈希复核，BOM兼容。
+- 9项评估/CLI测试通过（23.56s），包括pending、匿名页面、评分往返、重复/缺项/越界/缺评审者/改图拒绝。测试评分仅为fixture，不是研究人工结果。
+- constant的2-step/batch4真实训练已通过实时空闲检测和UUID租约启动，结果尚待完成。
+
+### 显式预处理与参考数量的最小追踪（已实现，GPU待运行）
+
+- reference_smoke追踪同一模型的legacy单参考、training cast单参考、constant双参考和重复采样；核对真实VAE/attention数量、T位置、source/noise摘要、全黑输入归一化、重复PNG及像素差异。仅验证协议，不作质量评价。
+
+### Stage 2 数据实现与CPU验收（真实渲染待运行）
+
+- 实现显式Cycles CPU场景、normal/no-shadow/occupancy/background线性证据、多个物理位移、兼容普通pair的manifest和独立T/D/P/valid标签。
+- 从占据与shadow-ray反事实重算角色，阈值间隙/边界/无法解释变化ignore；验证背景显露、源图一致、数据哈希和场景组split。
+- 18项CPU/CLI测试通过（18.23s）；fixture不当作真实Blender证据。正式软件安装与真实渲染尚待完成，首次软件入口403/慢链路续传日志保留。
+
+### Oracle 数据与模型接口（已实现，GPU待运行）
+
+- 独立监督与oracle loader，role RGB=one-hot T/D/P、ignore=黑；普通infer/edit继续拒绝，显式edit_oracle检查用途/哈希/几何/图序，不接收target。
+- 32项场景/接口/旧推理回归通过（20.29s），另13项编码/后端/共享hook清理通过（15.14s）。删除target/反事实后可加载条件；仅CPU测试，真实角色GPU消费待运行。
+- 共用生成流程和诊断hook，无loss/网络修改；未训练Role Predictor、Oracle adapter或Qwen。
+
+### Blender本地运行库与版本探测
+
+- wheelSHA验证、Cython/zstandard安装完成，首次bpy导入因缺libXrender失败；新输出保存安装日志。固定9个Ubuntu包版本/SHA本地提取，仅CPU渲染子进程追加库路径，父进程/CUDA任务不改动。
+- 真实bpy4.5.3 LTS/build67807e1800cc导入与场景构建通过；版本严格按4.5.3数值tuple核验。20项相关测试通过（15.26s），真实多强度渲染待执行。
+- Constant150步训练已complete：1153.01s，峰值reserved17.09GiB，固定30例重载正在运行。No-mask两种预处理及Static的30例推理完成，另两组Mask尚在运行。
+
+### 首次真实场景渲染失败与边界修复
+
+- render_01四场景×三强度完整渲染，worker8.22s。背景显露门禁拒绝train_cylinder_b/s001：两像素[55,47]、[64,47]误差0.013770 >0.01，均紧邻新轮廓。
+- 原valid只排除union外边缘，漏掉重叠内轮廓。改为分别排除旧/新silhouette，误差阈值不变；补充重叠边界及failed/running数据拒绝回归，失败全部资产保留。
+- 此前完整工程检查177 passed/71.82s，Ruff/pip/安装/嵌套CLI全部通过；本次边界修复另测后将用新目录真实重跑，不将失败写成通过。
+
+### 独立数据副本的盲评兼容修复
+
+- Constant为隔离缓存使用独立200/30副本；盲评现在分别验证各run自己的控制根和公共展示数据，而不改旧记录/降低哈希约束。另检查实际prediction尺寸/模式。
+- 9项盲评回归通过（12.48s），包括constant副本与原数据比较、完整pending导入及预测尺寸伪报拒绝。
+- render_02在分别排除新旧轮廓后真实通过：12对、四场景、6train/6dev，生成/验证12.11s，背景显露最大误差0.007452 <0.01，原render_01失败保留。
+
+### 可选渲染依赖固定
+
+- 将已实际安装的Cython3.3.0与zstandard0.25.0加入blender extra，bpy仍固定4.5.3；不改变模型依赖和原Conda环境。
+- pip check通过，软件wheel与9个本地运行库实际SHA均已验证，CPU渲染与角色GPU接口已运行。
+
+### 场景角色核验视图
+
+- gallery新增显式show-roles，实际标签重建RGB与valid分列；未启用时旧布局兼容。31项场景/旧画廊/CLI相关测试通过（20.78s）；另两项无预测/含真实控制来源的组合视图回归通过（3.39s）。
+- 本地role_gallery完成六个dev场景/强度的核验视图；目视确认身份全P、旧/新占据T、阴影迁移D、独立ignore边界。该目视核验不是人工模型质量盲评。
+- 原Stage0/1四组共48张历史预测与新30例前12张逐字节相同；render_01/02的24张source/target PNG也逐字节相同，说明本次修复改变有效域而非渲染图像。原结果保留。
+
+## 2026-10-21 本轮完整交付状态
+
+- Stage1 PR #2正常merge main a03f168，分支从该最新main创建；无force push，Stage0/1 worktree和所有历史资产保留。
+- Constant：2步/batch4 worker209.92s、reserved17.09GiB；150步/batch4 worker1153.01s（wall1161.16s），检查150个双参考batch、160张量有限，checkpoint SHA78ad1bd5494ae1a6e5c778835747a1c657fd687d9df0a804318ac64fab834463；无OOM或清理错误。
+- 六组×30dev固定seed/50steps/CFG4完成。Constant/Static/Dilated Target MAE为0.056721/0.060950/0.057524；像素排序不等于成功度，目视摩托车替换样例中Constant未执行编辑而Static/Dilated替换为汽车。
+- No-mask默认和training cast同checkpoint的30例输出平均MAE0.002380；原四组各12图共48图与新运行逐字节相同。并发controller head不能代替所有排队worker源码快照，相关限制写入补充报告，未虚称逐worker完全可追溯。
+- 180项匿名真人评审包及空表导入完成，全部pending；失败候选选择/代理非盲观察独立记录，不计作真人评分或总体失败率。
+- Blender render_01失败资产全留；修复内部轮廓valid后render_02完整通过：4组×3强度、6train/6dev，worker8.37s、总生成/验证12.11s，背景显露max0.007452<0.01；24张RGB与失败轮相同。
+- Oracle真实GPU：128²/4steps，双VAE参考及T=0/10/20各64token；T/D置换改变条件/输出，source/noise不变、重复PNG一致。worker69.85s、reserved15.22GiB；仅无角色adapter的协议检查，不是质量上界。
+- 最终184 passed/79.97s，Ruff check/format、pip check、editable、12CLI及嵌套/模块/薄脚本通过；wheel仓库外导入/自带配置/CLI通过。代码CI success(e5a7c51)，只读核对三个第三方checkout均固定且干净。
+- GPU任务均经实时空闲检测与UUID租约，完成后8卡0MiB/0%，无计算进程。模型、数据、图像、checkpoint、环境、外部仓库仅在忽略目录。
+- 当前未完成：真人评分、Oracle LoRA质量上界、多训练seed/更大scene-group/保留测试集；未实现Role Predictor、软Role模型或Qwen训练。新文字报告分别为stage1_review_report.md与stage2_report.md。
+
+### 渲染采样说明补全（仅文档）
+
+- 明确实际beauty/反事实/空场32 samples，emission-ID occupancy使用min(16,samples)=16；不能把两条路径抗锯齿覆盖视为精确相同。现有轮廓ignore与0.01门禁已覆盖该差异，实验与代码不变。
+# 2026-10-22 角色研究验证设计
+
+已读指定三份报告、架构及相关实现。PR #3 仍为 Draft、远端一致/CI success。
+本轮先设计后实现，详见 `docs/role_validation_design.md`。现有180项真人评分为空，
+不填充；新增3-reviewer导入/配对区间、分组公平性审计、三分割128→512场景，
+再做Oracle/Static/Dilated/Dynamic Binary同数据双seed60步对照。当前均为计划。
+启动GPU任务前重新检测并获取正常UUID租约。历史结果保持只读。
+
+## 多评审工具实现
+
+已实现panels/import/merge，按原字节保留评分与SHA，拒绝混合/重复reviewer，
+至少3位完整独立声明前保持pending；paired按scene及reviewer bootstrap，分开两项
+评分，NA显式缺失。12项人工评估回归通过（23.78s），Ruff通过；测试评分仅fixture。
+真实180项仍空白，没有人工均值、区间或失败率。尚未执行本轮GPU实验。
+
+## 场景变化与上界条件数据
+
+已实现固定seed展开、scene级初始位置/光源/背景变化、可选test分割、完整snapshot，
+以及独立Oracle/Dynamic Binary条件索引。58项相关回归通过（51.03s），128²真实
+CPU渲染20组/60对通过，36/12/12分割，48.44s，背景误差max0.006304<0.01。
+512²相同物理组正在验证；角色训练与GPU结果另记，当前不宣称上界质量。
+
+## Stage 1 实际公平性与分组复核
+
+Constant/Static/Dilated三组实际训练report/config/checkpoint/控制索引/manifest及
+完整配方一致性审计通过。30例指令分为6类（只描述任务，不给成功分），实际图片
+重算的诊断与旧metrics逐项一致。输出 `role_validation_20261022/stage1/audit.json`。
+三份独立顺序的180项评审页面已导出；真实reviewer输入为0，合并结果pending3位。
+28项协议/人工/worker回归通过（34.25s），未将fixture或代理观察作为真人评分。
+
+## Oracle训练通路与512数据验收
+
+已实现Oracle/Dynamic Binary训练/显式上界推理、实际one-hot batch校验，以及同预算
+四组双seed编排和T/D/P分区诊断；保留原flowmatch/sigmoid、网络和loss。CPU测试证明
+补丁前后loss/梯度一致，普通推理拒绝真值条件，标签消费不读target/反事实RGB。
+第一轮全套193 passed/145.15s；新增协议28 passed/34.25s、分区指标2 passed。
+512²真实CPU生成/重算60对，473.42s，背景误差max0.007431<0.01，未放宽阈值。
+GPU smoke、容量、正式训练和重载尚未执行；下步冻结代码后启动，结果单独记录。
+
+冻结前全量检查：199 passed/88.62s，Ruff check/format通过；新增上界runner、配方
+漂移、角色指标与scene聚合均覆盖。512数据副本/控制图/配置正在CPU准备，不占GPU。
+
+## CPU CI 环境修复
+
+`6879c87`的GitHub最小CPU环境暴露测试隔离遗漏：上界runner的模拟backend测试未
+模拟packages元数据，因CI不安装torch而失败（190 passed/7 skipped/2 failed）。
+补齐fixture版本stub，生产执行代码不变；本机真实GPU smoke已在冻结worktree启动，
+不会修改其源码或中断任务。outputs忽略规则同时覆盖独立worktree中的本地资产链接。
+
+## Oracle 最小 GPU 训练完成
+
+冻结执行6879c87，512²/batch1/2steps，worker143.7247s，峰值15.0219/15.0371GiB，
+实际双参考校验2次，有限checkpoint SHA7fd99d95c42ffc6a069cb9e98a9bab4c02c59a66f80f9b36afbe4211df947ac6。
+重载/容量/正式研究pending；具体状态见docs/role_validation_report.md。fe0029f双CI success。
+
+## 编排边界检查
+
+补齐preparing/prepared与完整method×seed矩阵门禁，避免提前启动不完整对照；
+重载前再次核对训练配置摘要。新回归验证partial pilot允许、正式比较拒绝、重复身份
+拒绝，Ruff通过。冻结GPU计算代码仍为6879c87；启动正式研究前单独复核全部10项。
+
+## 容量、重载与评估证据绑定
+
+Oracle重载smoke通过：512²真实两VAE输入，T0/10/20各1024tokens，T/D置换改变
+control/output但source/noise不变，重复PNG精确一致；worker71.007s，reserved16.3945GiB。
+batch4单卡2步通过：158.4285s，峰值15.0219/17.0859GiB，checkpoint SHA
+24a92347ed1efc3b18b8c1c2fd294d0c861aee4429a69bebe6fc2fc8b004a390。
+完整10项配置已复核，四方法双seed60步在四卡租约下运行，首轮GPU利用率100%、
+约17GiB/卡，主机RAM仍有余量。固定batch4，不作运行中预算调整。
+补充评估的run-LoRA/训练checkpoint摘要绑定与实际RGB/尺寸门禁；23项相关回归
+通过（34.86s）。此前完整200 passed/92.45s，正式训练与质量结果尚未完成。
+
+## 分区identity参考与最终CPU检查
+
+新增T/D内“不编辑source”的误差参考，避免全图identity MAE掩盖编辑区失败；
+保持原T/D/P指标、模型与训练预算不变。201项全套通过（111.49s），Ruff/CLI/依赖
+及99项wheel文件的仓库外导入/配置检查通过。当前seed42四组各60步已完成并复核
+checkpoint实际SHA/160个有限张量，seed43运行中；质量与真人结果仍pending。
+
+## 场景采样范围配置收尾
+
+将物体/光源/背景采样范围独立为YAML，CLI支持--variations，消除Python默认范围。
+默认新展开20个scene物理参数与已冻结v1逐项完全相同，不重新渲染；增加固定范围、
+无效边界、split字典顺序回归。正式四方法双seed训练均已完成，全部预算验证通过，
+固定dev/test重载运行中。源码冻结6879c87与当前新采样器版本分别记录，未修改旧数据。
+
+## 最终双seed对照、真实负面结果与交付
+
+四方法各seed42/43的60updates/batch4训练全部完成，worker570.32–607.25s，
+峰值15.0219/17.0859GiB；八个checkpoint均160个有限张量，实际SHA与完整预算
+验证通过。16个dev/test重载共192图，20steps/CFG4/ID-stable seed42，全部完成，
+峰值reserved16.3945GiB；全程GPU正常UUID租约，末次8卡0MiB/0%、无计算进程。
+执行源码统一冻结6879c87，CPU最终统计878c911，analysis_execution_01耗时64.63s。
+
+Oracle dev T误差seed42/43为0.361112/0.301835，Dynamic Binary为0.090875/0.094458；
+test对应Oracle0.304732/0.274173、Dynamic Binary0.088098/0.081103。场景bootstrap
+区间、全部T/D/P曲线与identity参考均保留在analysis_01。预定门槛两seed均失败，
+当前RGB Oracle路线No-Go：有控制图外观复制、重复物体、身份破坏；不进入Predictor
+或Qwen。结论限定本编码、12训练组/60步预算，不以像素MAE冒充人工成功率。
+
+Stage1三人各180项、角色dev三人各96项评审包已就绪；实际真人0位、评分0条，
+均pending/null区间，代理非盲观察独立存放。完整202 passed/86.83s，Ruff/CLI/pip
+及仓库外100项wheel/可配置scene展开通过。所有旧资产保留，临时脚本/环境完成后
+清理；Git仅代码/配置/文字报告。详见docs/role_validation_report.md。
+# 2026-10-22 UTC：PR #3 合并审计
+
+本轮正式归档为 Causal Role Data and Oracle Feasibility Study；原彩色角色负面结果不改。
+重新校验两分辨率反事实数据、10个 checkpoint、192张预测和全部配对统计，最大
+浮点差2.78e-17；32份来源记录逐文件与 Git 对象一致。Ruff、202项测试/99.26s、
+22个CLI入口及历史资产/第三方卫生通过。真实评分仍0条、pending。新审计记录在
+role-data worktree 的 outputs/merge_audit_20261022；两次审计调用退出也保留日志。
+详见 docs/causal_role_feasibility_audit.md。尚须最新归档提交CI通过后正常合并PR。

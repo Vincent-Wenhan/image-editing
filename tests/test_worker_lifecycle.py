@@ -26,6 +26,7 @@ def worker_case(tmp_path, monkeypatch):
     monkeypatch.setattr(worker, "require_lease", lambda: None)
     monkeypatch.setattr(worker, "command", lambda _: "fixed")
     monkeypatch.setattr(worker, "versions", lambda: {"test": "cpu"})
+    monkeypatch.setattr(worker, "source_snapshot", lambda _: {"fixture": True})
     monkeypatch.setattr(worker, "validate_checkpoint", lambda _: {"checkpoint_finite": True})
     events = []
 

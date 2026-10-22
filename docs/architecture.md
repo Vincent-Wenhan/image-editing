@@ -1,5 +1,66 @@
 # 工程架构重构
 
+PR #3 归档为 **Causal Role Data and Oracle Feasibility Study**，合并审计见
+[causal_role_feasibility_audit.md](causal_role_feasibility_audit.md)。后续 Role Conditioning
+Failure Analysis 使用独立分支、全新 Dev 与封存 Test，不复用旧 Test 做模型选择。
+
+2026-10-22收尾：202项测试及Ruff/CLI/wheel通过；20组128→512反事实场景、
+四方法双seed60步训练和192张固定重载评估已完成，数据/条件/adapter/源码来源通过。
+当前彩色Oracle Role编码未通过研究门槛，结论No-Go；真实三人评分仍pending。
+最新验收与限制见 [实际报告](role_validation_report.md)。下文保留此前Stage 0/1
+设计与实验过程，其中历史“当前”状态以其阶段日期理解。
+
+`training/spatial.py` 区分binary与hard one-hot batch，固定版本设备补丁只增加验证，
+不改上游forward/loss。`role_study.py`生成独立缓存数据副本、同预算四方法双seed配置，
+按smoke→重载消费验证→batch容量→训练→固定评估执行；`infra/experiment.py`记录
+argv、源码摘要、版本、时间和原始失败。`evaluation/role_metrics.py`分别量化T/D编辑
+误差与P漂移，按scene等权和场景bootstrap；两seed逐项报告，不把场景区间当训练方差。
+
+研究编排校验完整phase/method/seed矩阵，preparing计划不能启动正式比较；重载前
+再核对实际train.yaml与完成报告摘要，拒绝训练后配置漂移。该门禁不改变模型计算。
+
+公平性/角色评估将run的LoRA SHA与对应训练报告checkpoint绑定，拒绝错adapter；
+角色指标读取前检查实际prediction RGB/尺寸，禁止通过隐式resize掩盖产物变化。
+T/D除prediction→target误差外，另报identity source→target误差；它是诊断参考，
+不作为一个训练过的No-mask模型，也不计入人工成功率。
+
+scene sweep v2将采样范围读取自独立variations YAML，展开配置保留完整范围快照；
+固定split顺序消除字典插入顺序影响。默认20个物理组与已运行v1完全一致，原v1
+数据/源码指纹保留；新配置能力不改变冻结GPU实验的数据。
+
+`evaluation/fairness.py` 对已完成训练的实际report/config/checkpoint/条件索引及
+各split manifest核验等预算；复核原图与预测后重算metrics，再按显式任务注释汇总。
+任务描述与人工结果分开；失败分类依赖真实评分，空表保持pending。
+
+2026-10-22 开发范围见 [角色研究验证计划](role_validation_design.md)。沿用现有模块
+职责，新增多评审统计、程序化 scene 配置和显式 Oracle 训练/评估，保持原 loss。
+Dynamic Binary 依赖真值，也属于显式上界；普通推理不能使用它。计划与实际状态分开。
+
+`evaluation/review_import.py` 管理公开评审页、单reviewer不可覆盖原始CSV导入与多版本
+选择；`review_stats.py` 负责配对评分和scene/reviewer交叉重采样。原score仍兼容，
+新增保存原始字节副本。三人不完整时报告pending/null区间；实际真人评分尚未收到。
+
+`datasets/scene_sweep.py` 将固定抽样seed展开为显式物理配置；可选scene级位置、光源
+和背景覆盖保留旧默认/旧group SHA。配对验证、条件导出与snapshot均覆盖可选test，
+所有split两两查漏。`role_controls.py`只为验证过的合成数据导出Oracle/Dynamic
+Binary索引，消费端分离target并复核实际角色编码，普通推理权限继续收紧。
+
+## 当前开发：评估补强与最小反事实数据
+
+Stage 1 PR #2 已正常合并 main `a03f168`；本地130项测试及 PR CI 通过，78个新增
+历史blob资产审计通过（最大24,207 bytes）。新分支 `feat/role-data-and-evaluation`
+保持现有目录结构；设计见 [stage2_design.md](stage2_design.md)。新增职责仍放
+conditioning/datasets/backends/evaluation 内，不提前训练 Predictor 或迁移 Qwen。
+原 Stage 0/1 输出均保留。下文各阶段记录按其标注时间理解。
+
+当前已完成Constant双参考与显式No-mask cast、六组各30例重载、180项离线人工
+评审工具（真实评分pending）、12对Blender图像/角色数据及Oracle GPU接口消费。
+184项本机测试/79.97s、Ruff、pip/CLI及仓库外wheel检查通过；最新可执行代码的
+[GitHub CPU CI](https://github.com/Vincent-Wenhan/image-editing/actions/runs/39600199742)
+通过。实际预算、时间/显存、失败、数据可信域与未完成项见
+[Stage 1补充报告](stage1_review_report.md)、[Stage 2实际报告](stage2_report.md)。
+接口和数据通过不构成方法收益；没有提前训练Role Predictor或Qwen。
+
 ## Stage 1 开发入口
 
 架构分支已通过 [PR #1](https://github.com/Vincent-Wenhan/image-editing/pull/1)
@@ -345,3 +406,59 @@ reference 编码结果在 CPU。其缓存流程主动卸载 VAE 到 CPU，随后
 LoRA 张量，训练含加载/缓存共 72.25s，峰值 reserved 15.04 GiB。
 同样本 50-step LoRA 重载通过：27.08s，峰值 reserved 16.26 GiB。
 最初 20-step 的失败记录保留，150-step 当时未开始；本轮已补齐 20/150-step 与 12 例重载。
+
+### 匹配参考结构与预处理
+
+`constant_mask` 复用原条件导出/哈希/训练batch边界，输出固定黑图而非零latent。
+`core/references.py` 定义预处理名称；runner记录显式选择，evaluation复核配置。
+No-mask默认仍为单PIL/Diffusers顺序，显式training选项才进入受限预处理；双参考
+仍匹配上游cast。未修改训练loss或网络结构。
+
+### 人工评估边界
+
+`evaluation/review.py` 验证完整运行/配对预算后导出匿名任务与图片，私有方法映射与
+公开表单分离；`review_page.py` 只生成离线评分界面。导入复核原运行和图片、映射及
+副本哈希，拒绝任务丢失/重复、非法评分和缺失评审者。未填写项保留pending；人工
+结果不替代原有pixel metrics，也不会自动把模型或像素诊断当作真人评分。
+
+`inference/reference_smoke.py` 为匹配结构的独立GPU协议门禁，复用同一个常驻模型，
+记录legacy/training单参考与constant双参考的真实编码/token和重复采样；不改变训练。
+
+### 最小场景数据管线
+
+- `datasets/scene.py`：CPU生成/只读校验入口、独立renderer进程、失败/耗时报告。
+- `scene_config.py`：显式物理参数与按物理场景分组的split约束。
+- `blender_scene.py` / `blender_render.py`：可选bpy，仅实际渲染进程导入；纯漫反射、点光源、关闭间接影响；保存正常/关闭shadow-ray/对象占据/空场线性证据和EXR。
+- `scene_pairs.py`：标准source/target/mask manifest与独立roles/valid监督；RGB显示变换与线性标签计算分开。
+- `conditioning/role_truth.py`：占据T、隔离阴影干预D、可信P及ignore边界。
+- `scene_validation.py`：实际SHA、配对/scene-group/强度、标签重算和背景显露复核；不依赖Blender或GPU。
+
+角色标签不进入普通输入加载；MagicBrush验证与所有旧路径保持原职责。
+
+### 显式 Oracle 数据/模型接口
+
+`datasets/scene_manifest.py` 分别加载 target/roles/valid 的监督和仅source/labels/valid的
+oracle条件；后者核对canonical manifest和实际标签/source哈希，不打开target或反事实RGB。
+`conditioning/oracle.py` 不接收target，按有效域编译硬标签为T/D/P，ignore为黑RGB。
+`backends/flux2_oracle.py` 要求明确upper-bound用途、encoding、哈希、几何及
+`allow_oracle=True`；`Flux2Backend.edit_oracle`复用生成流程，普通edit仍拒绝Oracle。
+标量strength额外输入明确拒绝；当前物理强度写在数据指令与监督元数据，未开发预测器。
+共享 `reference_trace.py` 的作用域hooks供预处理/Oracle smoke验证真实编码和attention，
+异常也移除hook。角色条件本轮只接推理，训练CLI仍不接受Oracle，不修改网络或loss。
+
+`infra/blender_runtime.py` 使用固定Ubuntu包锁将可选动态库提取到忽略目录，支持
+已有完整缓存的哈希验证；scene仅在CPU渲染子进程追加LD_LIBRARY_PATH并隐藏CUDA。
+Blender严格核对数值版本4.5.3，保留显示字符串“4.5.3 LTS”和build hash作元数据。
+不把LTS显示后缀当版本漂移，也不放宽成任意4.5版本。
+
+真实渲染发现并集内部轮廓的采样歧义：valid需分别排除source/target每条silhouette，
+不能只处理union外边缘。场景校验与oracle loader同时拒绝failed/running的生成报告；
+只有生成器内部验收允许自己的running状态，不影响默认只读验证。
+
+盲评支持同内容独立数据副本：按各run声明的conditioning.data_root复核控制来源，
+再核对共用展示数据的实际SHA；映射记录验证根，导入沿用同一验证路径。这样无需
+改写旧run.json路径或丢弃来源约束。预测实际RGB/尺寸也必须与记录相符。
+
+`evaluation/gallery.py --show-roles` 复用现有画廊入口，先验证场景再从真实监督生成
+T/D/P RGB和valid两列。可与实际Mask控制图/预测共同展示，原标注、valid和control
+分别命名，避免视图列错配。默认不增加列，旧No-mask/Mask布局与测试保留。

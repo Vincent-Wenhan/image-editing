@@ -5,16 +5,17 @@ from pathlib import Path
 from src.conditioning.controls import ControlKind
 from src.conditioning.static import validate_reference_size
 from src.datasets.controls import ControlDataset
+from src.datasets.role_controls import RoleControlDataset, load_controls
 from src.datasets.validation import validate
 
 
 def attach_controls(config: dict, data_root: Path, control_root: Path, kind: str) -> None:
-    controls = ControlDataset(control_root, data_root, kind)
+    controls = load_controls(control_root, data_root, kind)
     dataset = config["config"]["process"][0]["datasets"][0]
     dataset.update(
         control_path=[
             str((data_root / "train/reference").resolve()),
-            str((control_root / "train/mask_rgb").resolve()),
+            str((control_root / "train" / controls.folder).resolve()),
         ],
         full_size_control_images=True,
     )
@@ -23,7 +24,7 @@ def attach_controls(config: dict, data_root: Path, control_root: Path, kind: str
 
 
 def verify_training_controls(
-    config: dict, *, controls: ControlDataset | None = None
+    config: dict, *, controls: ControlDataset | RoleControlDataset | None = None
 ) -> dict | None:
     process = config["config"]["process"][0]
     metadata = config.get("meta", {}).get("spatial_control")
@@ -36,19 +37,19 @@ def verify_training_controls(
         return None
     if controls is None:
         validate(Path(metadata["data_root"]))
-        controls = ControlDataset(
+        controls = load_controls(
             Path(metadata["root"]), Path(metadata["data_root"]), metadata["kind"]
         )
     if metadata != controls.metadata():
         raise ValueError("Training control index SHA256 or configuration changed")
-    if controls.spec.kind == ControlKind.NONE or len(process["datasets"]) != 1:
+    if controls.kind == ControlKind.NONE or len(process["datasets"]) != 1:
         raise ValueError("Joint conditioning requires exactly one paired dataset")
     dataset = process["datasets"][0]
     if process["model"]["arch"] != "flux2_klein_4b":
         raise ValueError("Joint mask training currently supports FLUX.2 Klein Base 4B only")
     expected = [
         str(controls.data_root / "train/reference"),
-        str(controls.root / "train/mask_rgb"),
+        str(controls.root / "train" / controls.folder),
     ]
     if dataset["control_path"] != expected:
         raise ValueError("Training image order must be [source, mask]")
@@ -87,7 +88,7 @@ def verify_training_controls(
     return controls.metadata()
 
 
-def verify_joint_batch(batch, latent) -> None:
+def verify_joint_batch(batch, latent, *, kind: str = "static_mask") -> None:
     """Inspect actual upstream tensors before encoding, not just recipe declarations."""
     samples = getattr(batch, "control_tensor_list", None)
     if samples is None or len(samples) != latent.shape[0]:
@@ -104,5 +105,8 @@ def verify_joint_batch(batch, latent) -> None:
             if not image.isfinite().all() or image.min() < 0 or image.max() > 1:
                 raise ValueError("Raw controls must be finite RGB in [0,1]")
         mask = images[1]
-        if not ((mask == 0) | (mask == 1)).all() or not (mask == mask[:1]).all():
+        if kind == ControlKind.ORACLE_ROLE:
+            if not ((mask == 0) | (mask == 1)).all() or not (mask.sum(dim=0) <= 1).all():
+                raise ValueError("Role reference must be one-hot T/D/P RGB or black ignore")
+        elif not ((mask == 0) | (mask == 1)).all() or not (mask == mask[:1]).all():
             raise ValueError("Second reference must be a three-channel binary mask")

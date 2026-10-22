@@ -11,11 +11,13 @@ from src.core.spatial import SpatialMap, roles, unit_map
 
 class ControlKind(StrEnum):
     NONE = "none"
+    CONSTANT_MASK = "constant_mask"
     STATIC_MASK = "static_mask"
     DILATED_MASK = "dilated_mask"
     SHUFFLED_MASK = "shuffled_mask"
     SOFT_MASK = "soft_mask"
     ORACLE_ROLE = "oracle_role"
+    DYNAMIC_BINARY = "dynamic_binary"
     PREDICTED_ROLE = "predicted_role"
 
 
@@ -54,7 +56,7 @@ class ControlBundle:
         object.__setattr__(self, "metadata", MappingProxyType(dict(self.metadata)))
 
     def require_inference_safe(self) -> None:
-        if self.kind == ControlKind.ORACLE_ROLE:
+        if self.kind in {ControlKind.ORACLE_ROLE, ControlKind.DYNAMIC_BINARY}:
             raise ValueError("Oracle role labels are supervision; ordinary inference rejects them")
 
     def validate_geometry(self, size: tuple[int, int]) -> None:

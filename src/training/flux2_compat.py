@@ -33,7 +33,11 @@ def configure_flux2_trainer(model_type: type, text_encoder: Path, *, revision: s
         **kwargs,
     ):
         if getattr(type(self), "_image_edit_joint_controls", False):
-            verify_joint_batch(batch, latent_model_input)
+            verify_joint_batch(
+                batch,
+                latent_model_input,
+                kind=getattr(type(self), "_image_edit_condition_kind", "static_mask"),
+            )
             type(self)._image_edit_joint_batches += 1
         has_reference = batch is not None and (
             getattr(batch, "control_tensor_list", None) is not None

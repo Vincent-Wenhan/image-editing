@@ -7,13 +7,19 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageOps
 
+from src.conditioning.oracle import role_rgb
 from src.core.config import ProjectSettings
 from src.core.io import read_rows
 from src.datasets.controls import ControlDataset
+from src.datasets.scene_manifest import load_role_supervision
+from src.datasets.scene_validation import validate_scene_dataset
 
 
 def run(args):
     root = Path(args.data_root)
+    show_roles = getattr(args, "show_roles", False)
+    if show_roles:
+        validate_scene_dataset(root)
     output = Path(args.output)
     output.mkdir(parents=True, exist_ok=True)
     rows = read_rows(args.manifest)[: args.limit]
@@ -33,18 +39,30 @@ def run(args):
     cards = []
     for page, start in enumerate(range(0, len(rows), 6)):
         subset = rows[start : start + 6]
-        columns = 3 + int(predictions is not None) + int(controls is not None)
+        columns = 3 + int(predictions is not None) + int(controls is not None) + 2 * show_roles
         sheet = Image.new("RGB", (224 * columns, len(subset) * 260), "white")
         draw = ImageDraw.Draw(sheet)
         for index, row in enumerate(subset):
             pairs = [(key, root / row[f"{key}_path"]) for key in ("source", "target", "mask")]
+            if show_roles:
+                supervision = load_role_supervision(root, row)
+                directory = output / "role_truth"
+                directory.mkdir(exist_ok=True)
+                path = directory / f"{row['id']}.png"
+                role_rgb(supervision.role_labels).save(path)
+                pairs.extend(
+                    [
+                        ("T=red D=green P=blue ignore=black", path),
+                        ("valid_region", root / row["valid_path"]),
+                    ]
+                )
             if controls:
                 item = results[row["id"]]
                 bundle = controls.bundle(row, (item["width"], item["height"]))
                 path = output / "control_inputs" / f"{row['id']}.png"
                 path.parent.mkdir(exist_ok=True)
                 bundle.maps["mask"].convert("RGB").save(path)
-                pairs[-1] = ("annotation_mask", pairs[-1][1])
+                pairs[2] = ("annotation_mask", pairs[2][1])
                 pairs.append(("control_input", path))
             if predictions:
                 pairs.append(("prediction", predictions / f"{row['id']}.png"))
@@ -82,4 +100,7 @@ def configure(parser):
     parser.add_argument("--predictions")
     parser.add_argument("--output", default="outputs/data_gallery")
     parser.add_argument("--limit", type=int, default=settings.dataset["dev"])
+    parser.add_argument(
+        "--show-roles", action="store_true", help="Validate and display synthetic T/D/P"
+    )
     parser.set_defaults(func=run)
