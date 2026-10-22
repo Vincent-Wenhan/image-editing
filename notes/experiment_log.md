@@ -414,3 +414,29 @@ PR #4完成最新CI/214项本机回归/26CLI及实际资产/指标复核后，�
 设计先行：独立类别/坐标特征、T=0零初始化残差、四组同容量/1024特征tokens/
 双seed211/223各20updates，先单卡接口/反向/重载门禁再小试验。不改变flow loss，
 不训练Predictor/Qwen，旧结果和真人评分包保留。所有新实验目前均计划，尚未运行。
+## 2026-10-22 Role Feature Conditioning 实现准备（Asia/Shanghai）
+
+- PR #4正常合并为main b73492f，复核214 tests/26 CLI及actual SHA/历史No-Go；
+  证据保留role-failure worktree outputs/pr4_merge_audit_20261022，不改旧资产。
+- feat/role-feature-conditioning按role_feature_design先记设计。新增独立5通道特征、
+  零初始化噪声token残差、成对checkpoint、extra-optimizer训练与Dev-only推理接口。
+  不改external、loss、No-mask/Mask入口或历史数据。新结果仅outputs/role_feature_20261022。
+- 已完成首轮8项特征/训练CPU测试（45.88s），原worker/兼容/安装19项通过（97.68s）。
+  后续完整测试、真实GPU smoke、容量及双seed四组20-step尚未运行，研究结论pending。
+- 真人评分仍0条/pending；新Test仅完整性校验，不产生模型输出。
+
+## 2026-10-22 Role Feature Conditioning CPU验收与GPU资源门禁
+
+- 新实现完整回归230 passed/272.27s、Ruff check/format和pip check通过；小尺寸
+  真实Diffusers Transformer完成CPU前反向/gradient checkpointing/有限梯度/置换/
+  零条件与成对权重重载，不把它称为4B GPU验证。全部CLI另存cli_checks.json。
+- 真实模型/数据/版本/两个人工包审计通过，21个Base文件和training VAE对固定
+  Hub内容摘要一致（78.53s），三个external tracked clean，未重新下载或覆盖资产。
+- 四方法×两个seed的20-step/batch4配置及两次2-step校准数据副本已准备；所有
+  训练、GPU probes、checkpoint、96张Dev预测和编辑质量均未运行/pending。
+- 17:13起8卡均存在计算进程；17:22:13 UUID租约预检真实失败：No idle, unlocked
+  GPU available; no task was started。记录保留新根lease_preflight_01/及SMI快照。
+  这不是训练失败/OOM，未中断他人，也未启动绕过租约的任务。
+- 结论Hold/No-Go扩大训练，不宣称方法已被支持或否定。下一步仅在空闲卡先执行
+  2-step及真实4B feature_smoke，再容量与有界对照；Test和真人评分继续封存/pending。
+  详细实现、SHA、门槛和风险见docs/role_feature_report.md。

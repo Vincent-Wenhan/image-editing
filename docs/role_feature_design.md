@@ -66,6 +66,9 @@ Dev固定12例、20steps/CFG4/ID seed42，逐seed、逐场景统计T target误�
 checkpoint重载测试。最后测batch4容量，记录实际时间/峰值，最多四卡并行。所有
 GPU通过实时空闲检查与UUID租约。失败保留原traceback，用新目录重试，不放宽门禁。
 
+正式比较还校验每个update的实际样本ID、noisy latent SHA与timestep轨迹，以及初始
+特征权重SHA、可训练参数数、单source/特征token数；仅配方相同不足以证明公平。
+
 工程门槛通过后才运行上述有界20-step。研究继续的必要条件：Full在两个seed的
 非零Dev T/D均优于Constant和Binary，P不恶化，身份误差无实质恶化（预定容差1e-4），
 并对Old/New展示额外收益；固定案例无明显重复/错误位置退化。四场景CI仅是固定

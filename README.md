@@ -2,10 +2,12 @@
 
 当前分支 `feat/role-feature-conditioning` 从正常合并PR #4的main `b73492f`创建。
 独立于Image VAE的角色特征最小试验设计见 [预注册](docs/role_feature_design.md)。
-四组容量/token/预算匹配；先CPU与真实GPU接口门禁，再有界20-step。尚未运行的
-计划不得写成已验证收益；旧负面结果、全部资产与真人pending状态保留，Test封存。
+独立特征与四组匹配配置已实现，230项CPU测试通过；8张GPU均被占用，UUID租约
+预检失败，真实4B smoke/20-step/Dev质量结果全部pending。当前Hold、不扩大训练；
+详见 [验收报告](docs/role_feature_report.md)。旧负面结果、全部资产与真人pending
+状态保留，Test封存。
 
-当前研究分支：**Role Conditioning Failure Analysis**，从已合并 PR #3 的 main
+以下为已完成的 **Role Conditioning Failure Analysis**，从已合并 PR #3 的 main
 `a647522` 开始。[预注册设计](docs/role_failure_analysis_design.md)规定新 Dev 和封存
 Test、旧 checkpoint 干预、真人评审准备及最小 Geometry 上界；尚未运行的新实验
 不能引用前轮结果充当验证。
@@ -19,7 +21,27 @@ Geometry/Dynamic Binary训练及48张新Dev预测。彩色复制/重复物体再
 
 最小V2接口已实现 `oracle_geometry`：同双参考，P/ignore黑，旧独占64、新独占192、
 重叠128、依赖255的三通道灰度；仅显式oracle，不是预测器。原loss/网络不变，
-独立特征编码仍是设计备选。真人使用步骤见 [评审指南](docs/human_review_guide.md)。
+独立特征的当前实现与验收见下节。真人使用步骤见 [评审指南](docs/human_review_guide.md)。
+
+独立特征入口（显式Oracle、固定尺寸、仅Dev）：
+
+```bash
+python -m src.training.feature_study prepare --data-root <verified-scenes> \
+  --cohort <sealed-cohort.json> --output <new-study>
+python -m src.training.feature_study run smoke --study <new-study>
+image-edit gpu -- python -m src.inference.feature_smoke --data-root <verified-scenes> \
+  --cohort <sealed-cohort.json> --lora <smoke-lora> --encoder <paired-features> \
+  --output <new-study>/gpu_smoke
+# GPU门禁成功后才允许 capacity → train → infer，不启用自动batch扩大。
+python -m src.training.feature_study run capacity --study <new-study>
+python -m src.training.feature_study run train --study <new-study>
+python -m src.training.feature_study run infer --study <new-study>
+python -m src.evaluation.feature_analysis --study <new-study> --output <new-summary>
+```
+
+RoleFeatures为5×H×W浮点单位图；16像素面积池化、类别/坐标编码、零初始化残差。
+编码器独立于Image VAE，成对权重绑定LoRA SHA，缺失或错配明确报错。
+当前只支持新目录单卡独立训练与最终重载，不支持中断续训或多卡DDP。
 
 ```bash
 # 先生成并封存新的三分割数据，再准备最小匹配实验。

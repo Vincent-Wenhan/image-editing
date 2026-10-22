@@ -5,6 +5,31 @@ conditioning定义非RGB特征契约/编码，datasets只加载占据和角色�
 FLUX的受控残差；training复用固定trainer的额外参数hook及现有worker/租约；
 inference/evaluation复用run记录/分区统计并增加成对checkpoint验证。不开新框架，
 不改变默认No-mask/Mask，不训练Predictor或迁移Qwen。
+本轮230项CPU回归通过；真实4B GPU与质量对照因8卡占用pending，不能声称GPU
+或方法收益已验证。实际状态见 [特征验收报告](role_feature_report.md)。
+
+当前实现：`conditioning/features.py`定义不可变old/new/D/P/valid单位图及schema，
+`feature_encoder.py`懒加载FP32小编码器；`datasets/features.py`只读取NPZ占据和
+role/valid，Constant不暴露valid边界。`backends/feature_fusion.py`按实际(T,H,W,L)
+ID注入噪声token，source/文本不变；`feature_checkpoint.py`绑定LoRA实际SHA、base
+revision、mode和配置。`flux2_features.py`独立显式上界入口只编码source RGB。
+
+`training/feature_config.py`锁定未增强几何/单参考/原flowmatch目标，
+`feature_adapter.py`使用固定trainer原有extra-params hook，不修改external或loss；
+worker成功保存FP32特征权重，异常仍保留原traceback/遥测并撤销所有hook。
+`feature_study.py`固定四方法/独立seed/预算，先smoke、真实重载探针、实测batch容量，
+然后有界训练/Dev推理。只支持fresh start；禁止单独恢复LoRA而漏掉编码器状态。
+
+`inference/feature_runner.py`保存原run格式加role_features字段；
+`evaluation/feature_provenance.py`重算actual encoder/LoRA/field SHA与封存Dev，
+缺失metadata不得降级No-mask。`feature_smoke.py`真实检查零初始化Base、禁用Mask、
+训练后零条件、角色/位置置换、空间ID、source-only VAE、反向有限梯度和PNG重载。
+CPU测试不等于GPU验收，真实结果单独记入新报告。
+
+`evaluation/feature_fairness.py`核验四组实际update样本/噪声/timestep轨迹、相同初始
+encoder SHA、参数/token/预算和实际paired weights；`feature_analysis.py`复用原分区
+指标与场景bootstrap，分列身份、旧位残留/新位误差代理。自动像素门槛只给必要条件，
+不生成真人结果，也不能单凭这些代理宣布语义成功。
 
 新研究沿用现有目录职责，见 [失败分析设计](role_failure_analysis_design.md)。
 几何编码/占据读取、后端显式上界、研究编排和诊断分别留在 conditioning/datasets、
@@ -20,7 +45,7 @@ role_study复用现有训练编排，只新增Dev-only最小协议。`inference/
 
 本轮工程/真实GPU验收与研究决策见 [失败分析实际报告](role_failure_analysis_report.md)：
 固定旧adapter干预120次、同预算双seed灰度pilot训练/48例Dev评估完成。当前灰度
-编码未通过T改善门槛，停在小试验；独立角色特征层未实现，真实评分pending。
+编码未通过T改善门槛，停在小试验；当时独立角色特征层尚未实现，真实评分pending。
 新Test仍封存，不能把完整性校验写成模型测试结果。
 
 PR #3 归档为 **Causal Role Data and Oracle Feasibility Study**，合并审计见
