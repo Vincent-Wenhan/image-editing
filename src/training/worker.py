@@ -103,13 +103,12 @@ def run_training(
             runtime.model_type._image_edit_joint_controls = True
             runtime.model_type._image_edit_joint_batches = 0
             runtime.model_type._image_edit_condition_kind = conditioning["kind"]
-        runtime.set_seed(
-            settings["train"].get("seed", ProjectSettings.load().process["train"]["seed"])
-        )
+        seed = settings["train"].get("seed", ProjectSettings.load().process["train"]["seed"])
+        runtime.set_seed(seed)
         if feature_metadata:
             from src.training.feature_adapter import install_features
 
-            features = install_features(runtime.model_type, feature_metadata, revision)
+            features = install_features(runtime.model_type, feature_metadata, revision, seed=seed)
             result["role_features"] = feature_metadata
         runtime.torch.cuda.reset_peak_memory_stats()
         write_json(report, result)

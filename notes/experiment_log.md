@@ -451,3 +451,23 @@ PR #4完成最新CI/214项本机回归/26CLI及实际资产/指标复核后，�
 - 17:51:50复查每卡约498MiB但仍有8个计算进程，第二次冻结源码UUID预检失败，
   记录lease_preflight_02。未启动任何模型任务，不将低util误认作可用GPU。
 - 研究判断仍Hold，不扩大训练；2-step/4B smoke/容量/8组20-step/96 Dev全部pending。
+
+## 2026-10-23 Role Feature GPU验收续跑：计划与启动
+
+- 用户通知GPU已空闲，实时8卡0MiB/0%、无计算进程；正常UUID租约已启动单卡
+  2-step/batch1。代码冻结73ba397，原数据/seed211/223与20updates预算保持不变。
+- 沿用未产生训练产物的准备任务，新会话日志另放outputs/role_feature_20261023。
+  先真实4B接口/梯度/置换/零条件/重载，再batch4容量，过门禁后四组双seed与Dev。
+- 此条仅记录启动，训练/质量结论尚未产生。资源/数据/模型版本哈希同步复核；
+  历史结果、人工包全部保留，真人pending，Test封存，无Predictor或Qwen。
+
+### 首轮真实GPU暴露的seed兼容错误
+
+- 冻结73ba397的smoke_full_role_211在初始化extra-params时AttributeError：固定
+  上游TrainConfig没有seed属性。0个batch/0次融合，无更新/无checkpoint；109.39s，
+  peak allocated14.852/reserved14.869GiB，非OOM，cleanup/telemetry无错误，GPU已释放。
+- 失败报告和原始trace保留outputs/role_feature_20261022/study/smoke_full_role_211。
+  修复计划：worker从已校验YAML读取一次seed，set_seed和encoder显式共用该值；
+  不再从上游对象猜字段。补无seed对象/RNG/独立seed回归，再冻结并换新目录重试。
+- 修复后相关CPU回归13 passed/23.60s及Ruff通过；同seed初始化一致、211/223不同，
+  不消耗原训练RNG。新报告增加实际encoder initial_seed并在公平性审计中核对。

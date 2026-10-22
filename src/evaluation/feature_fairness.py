@@ -36,6 +36,7 @@ def audit_seed(jobs: list[dict]) -> dict:
             or sha256(checkpoint["path"]) != checkpoint["sha256"]
             or meta["mode"] != job["method"]
             or process["train"]["seed"] != job["seed"]
+            or stats["initial_seed"] != job["seed"]
             or report["steps"] != process["train"]["steps"]
             or report["batch_size"] != process["train"]["batch_size"]
             or stats["fusion_calls"] != report["steps"]

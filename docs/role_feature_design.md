@@ -80,3 +80,18 @@ GPU通过实时空闲检查与UUID租约。失败保留原traceback，用新目�
 
 实现收尾：73ba397已冻结执行代码，CPU与CI验收见[实际报告](role_feature_report.md)。
 GPU因无空闲UUID租约仍pending，四组预算及上述研究门槛未改变；PR #5保留draft。
+
+## 2026-10-23继续执行
+
+用户确认GPU空闲后，实时查询8卡0MiB/0%、无计算进程。沿用冻结73ba397与原准备
+目录，先执行尚未启动的2-step/batch1，再真实4B feature_smoke、2-step/batch4容量，
+最后四方法×两seed×20updates及固定12 Dev。没有增加数据或训练预算。
+新会话资源/验证/失败日志放outputs/role_feature_20261023；原准备目录中的空白任务
+产物位置首次使用，已有资源失败日志、历史模型/数据/结果不覆盖。若发现兼容问题，
+保留失败目录，在新目录重试，先写修复原因与回归要求，再修改并冻结新的执行提交。
+真人缺失仍pending，Test只校验完整性；不开发Predictor、Qwen或新方法。
+
+首轮GPU在extra-params初始化失败：固定上游TrainConfig没有seed属性（0个batch）。
+兼容修复只将worker已经读取并用于set_seed的YAML seed显式传给本项目适配器，
+不改上游配置类、loss或网络。回归必须使用没有seed属性的上游形状fixture，验证
+211/223分别初始化、同seed一致、CPU RNG恢复及原失败清理；重试必须新目录。

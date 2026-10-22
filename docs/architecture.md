@@ -9,6 +9,8 @@ inference/evaluation复用run记录/分区统计并增加成对checkpoint验证�
 或方法收益已验证。实际状态见 [特征验收报告](role_feature_report.md)。
 执行代码冻结在独立role-feature-run worktree的73ba397；文档收尾不改变执行源码。
 远端CPU CI通过215项、明确跳过15项，本机230项全部执行；43项CLI检查通过。
+2026-10-23 GPU续跑发现固定上游TrainConfig无seed属性；worker应从原YAML读取
+一次seed并显式传给encoder适配器，与全局set_seed一致，不扩展上游配置类。
 
 当前实现：`conditioning/features.py`定义不可变old/new/D/P/valid单位图及schema，
 `feature_encoder.py`懒加载FP32小编码器；`datasets/features.py`只读取NPZ占据和

@@ -65,7 +65,11 @@ def test_extra_optimizer_and_forward_keep_flow_target_and_gradients(scene_data, 
     model = Model()
     baseline = copy.deepcopy(model)
     state = install_features(
-        Model, metadata_fixture(scene_data), SUPPORTED_TRAINER_REVISION, trainer_type=Trainer
+        Model,
+        metadata_fixture(scene_data),
+        SUPPORTED_TRAINER_REVISION,
+        seed=211,
+        trainer_type=Trainer,
     )
     try:
         with pytest.raises(RuntimeError, match="already installed"):
@@ -73,10 +77,12 @@ def test_extra_optimizer_and_forward_keep_flow_target_and_gradients(scene_data, 
                 Model,
                 metadata_fixture(scene_data),
                 SUPPORTED_TRAINER_REVISION,
+                seed=211,
                 trainer_type=Trainer,
             )
         trainer = Trainer()
-        trainer.train_config = SimpleNamespace(seed=211)
+        # The pinned real TrainConfig discards unknown seed kwargs.
+        trainer.train_config = SimpleNamespace()
         trainer.device_torch = "cpu"
         rng = torch.random.get_rng_state()
         params = trainer.hook_add_extra_train_params(
@@ -85,6 +91,7 @@ def test_extra_optimizer_and_forward_keep_flow_target_and_gradients(scene_data, 
         assert len(params) == 2 and params[1]["lr"] == 1e-3
         assert len(params[0]["params"]) == 2
         assert torch.equal(rng, torch.random.get_rng_state())
+        assert state.stats["initial_seed"] == 211
         optimizer = torch.optim.AdamW(params)
         row = read_rows(scene_data / "train/manifest.csv")[1]
         batch = SimpleNamespace(
@@ -129,7 +136,26 @@ def test_extra_optimizer_and_forward_keep_flow_target_and_gradients(scene_data, 
     assert Trainer.hook_add_extra_train_params is extra
     assert not model.transformer._forward_pre_hooks
     with pytest.raises(ValueError, match="pinned"):
-        install_features(Model, metadata_fixture(scene_data), "wrong", trainer_type=Trainer)
+        install_features(
+            Model, metadata_fixture(scene_data), "wrong", seed=211, trainer_type=Trainer
+        )
+
+
+def test_explicit_seed_reproducibility_without_upstream_seed_attribute(scene_data):
+    torch = pytest.importorskip("torch")
+    from src.training.feature_adapter import FeatureTraining
+
+    signatures = []
+    for seed in (211, 211, 223):
+        state = FeatureTraining(metadata_fixture(scene_data), seed)
+        rng = torch.random.get_rng_state()
+        state.initialize(SimpleNamespace(device_torch="cpu", train_config=SimpleNamespace()), [])
+        signatures.append(state.stats["initial_sha256"])
+        assert torch.equal(rng, torch.random.get_rng_state())
+        state.close()
+    assert signatures[0] == signatures[1] and signatures[0] != signatures[2]
+    with pytest.raises(ValueError, match="explicit"):
+        FeatureTraining(metadata_fixture(scene_data), None)
 
 
 def test_feature_config_rejects_loss_or_geometry_changes(scene_data, tmp_path, monkeypatch):

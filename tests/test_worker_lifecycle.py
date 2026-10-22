@@ -188,7 +188,12 @@ def test_feature_failure_keeps_exception_stats_and_releases_hooks(
     state = SimpleNamespace(
         stats=dict(batches=1, gradients={"fixture": {"finite": True}}), close=close
     )
-    monkeypatch.setattr(feature_adapter, "install_features", lambda *args: state)
+
+    def install(*args, seed):
+        assert seed == 42
+        return state
+
+    monkeypatch.setattr(feature_adapter, "install_features", install)
     case.runtime.model_type = type("ModelFixture", (), {})
     case.job.run = fail
     with pytest.raises(RuntimeError) as captured:

@@ -14,10 +14,13 @@ from src.training.flux2_compat import SUPPORTED_TRAINER_REVISION
 
 
 class FeatureTraining:
-    def __init__(self, metadata: dict):
+    def __init__(self, metadata: dict, seed: int):
         import torch
 
+        if type(seed) is not int or not 0 <= seed < 2**32:
+            raise ValueError("Feature training needs an explicit nonnegative 32-bit seed")
         self.metadata = metadata
+        self.seed = seed
         self.root = Path(metadata["data_root"])
         self.tokens = {
             row["id"]: torch.from_numpy(load_features(self.root, row, metadata["mode"]).tokens())
@@ -25,7 +28,9 @@ class FeatureTraining:
         }
         self.encoder = None
         self.handles, self.restore = [], []
-        self.stats = dict(batches=0, fusion_calls=0, gradients={}, input_trace=[])
+        self.stats = dict(
+            batches=0, fusion_calls=0, gradients={}, input_trace=[], initial_seed=seed
+        )
 
     def initialize(self, process, params):
         import torch
@@ -35,7 +40,7 @@ class FeatureTraining:
         params = [dict(group, params=list(group["params"])) for group in params]
         # Do not change the pretrained LoRA/data-loader random stream.
         with torch.random.fork_rng(devices=[]):
-            torch.random.default_generator.manual_seed(process.train_config.seed)
+            torch.random.default_generator.manual_seed(self.seed)
             self.encoder = build_encoder(EncoderConfig(**self.metadata["encoder"]))
         self.stats["initial_sha256"] = hashlib.sha256(
             b"".join(
@@ -128,7 +133,7 @@ class FeatureTraining:
         self.handles.clear()
 
 
-def install_features(model_type, metadata: dict, revision: str, *, trainer_type=None):
+def install_features(model_type, metadata: dict, revision: str, *, seed: int, trainer_type=None):
     if revision != SUPPORTED_TRAINER_REVISION:
         raise ValueError("Feature adapter requires the pinned ai-toolkit version")
     if getattr(model_type.get_noise_prediction, "_image_edit_feature_adapter", False):
@@ -137,7 +142,7 @@ def install_features(model_type, metadata: dict, revision: str, *, trainer_type=
         from extensions_built_in.sd_trainer.DiffusionTrainer import DiffusionTrainer
 
         trainer_type = DiffusionTrainer
-    state = FeatureTraining(metadata)
+    state = FeatureTraining(metadata, seed)
     extra = trainer_type.hook_add_extra_train_params
     noise = model_type.get_noise_prediction
 

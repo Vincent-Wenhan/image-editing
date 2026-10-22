@@ -8,6 +8,9 @@
 状态保留，Test封存。43项CLI及远端CPU CI通过（215 passed/15 skipped，未装Torch）；
 [PR #5](https://github.com/Vincent-Wenhan/image-editing/pull/5)保留draft等待GPU验证。
 
+2026-10-23已恢复GPU验收。首轮暴露固定上游TrainConfig不保留seed的兼容问题，
+已修复为从已校验YAML显式传入，13项相关回归通过；原失败记录保留，预算和封存Test不变。
+
 以下为已完成的 **Role Conditioning Failure Analysis**，从已合并 PR #3 的 main
 `a647522` 开始。[预注册设计](docs/role_failure_analysis_design.md)规定新 Dev 和封存
 Test、旧 checkpoint 干预、真人评审准备及最小 Geometry 上界；尚未运行的新实验
