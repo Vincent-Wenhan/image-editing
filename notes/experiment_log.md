@@ -440,3 +440,14 @@ PR #4完成最新CI/214项本机回归/26CLI及实际资产/指标复核后，�
 - 结论Hold/No-Go扩大训练，不宣称方法已被支持或否定。下一步仅在空闲卡先执行
   2-step及真实4B feature_smoke，再容量与有界对照；Test和真人评分继续封存/pending。
   详细实现、SHA、门槛和风险见docs/role_feature_report.md。
+
+## 2026-10-22 Role Feature Conditioning 提交与执行冻结
+
+- 31f0896设计、73ba397实现正常push；PR #5为draft。实现push CI 39758090688
+  通过215 tests/15 skipped（13.40s，CI无Torch）；本机230项均实际执行。43项CLI
+  帮助及checkout外导入通过。所有新增Git对象资产审计通过，代码均低于500行。
+- image-editing-role-feature-run固定73ba397，独立editable环境就绪；114个source/
+  config文件实际SHA逐一匹配Git对象。保留此前租约失败，不覆盖结果。
+- 17:51:50复查每卡约498MiB但仍有8个计算进程，第二次冻结源码UUID预检失败，
+  记录lease_preflight_02。未启动任何模型任务，不将低util误认作可用GPU。
+- 研究判断仍Hold，不扩大训练；2-step/4B smoke/容量/8组20-step/96 Dev全部pending。

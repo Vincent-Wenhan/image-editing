@@ -44,10 +44,15 @@ ai-toolkit与数据管线，不改external、flowmatch/sigmoid目标和现有No-
 
 ## 已运行的CPU检查
 
-完整本机回归 **230 passed / 272.27s**，Ruff check/format通过，pip check无缺失依赖。
+完整本机回归 **230 passed / 272.27s**，Ruff check/format及43项CLI帮助通过，
+pip check无缺失依赖。
 安装后的包可在checkout外导入，全部模块和CLI帮助不初始化Torch/CUDA。
 完整日志在新worktree `outputs/role_feature_20261022/pytest_final.log`；CLI记录
-在cli_checks.json，依赖检查在pip_check.log。
+在cli_checks_extended.json（首轮cli_checks.json保留），依赖检查在pip_check.log。
+
+[实现提交的push CI](https://github.com/Vincent-Wenhan/image-editing/actions/runs/39758090688)
+通过：215 passed、15 skipped / 13.40s。CI没有Torch，15项明确跳过；本机230项
+全部实际执行。远端绿灯不等于4B GPU验收，完整日志保留ci_implementation.log。
 
 测试覆盖原全部功能、新字段/哈希/防target读取、矩形网格面积池化、真实位置ID
 gather与source不变、零初始化及训练后全零、两步有限梯度、角色/空间置换、成对
@@ -107,6 +112,8 @@ encoder lr1e-3；所有方法相同13,312 encoder参数与1024特征tokens，预
 util并不等于空闲。17:22:13通过正式 `image-edit gpu -- ...` 做UUID租约预检，返回：
 `No idle, unlocked GPU available; no task was started`。原始stdout/traceback与执行
 provenance保留lease_preflight_01/，实时快照保留gpu_availability_*.json。
+17:51:50再次查询时每卡约498MiB，但8卡均有新的计算进程，仍不空闲；冻结执行
+worktree的第二次正常租约预检也失败，完整记录另存lease_preflight_02/。
 没有中断他人任务、没有在占用卡上加载模型；这是**资源预检失败，不是训练失败或OOM**。
 
 因此2-step/batch1原生训练、4B真实前反向/有限梯度/置换/空间/零条件/成对PNG重载、
@@ -114,6 +121,12 @@ batch4容量、8组20-step及96张Dev评估**全部pending**。没有新的GPU�
 checkpoint或编辑效果可报告，不能引用旧RGB/灰度结果作为特征方案验证。
 
 ## 继续条件与风险
+
+代码分阶段正常提交推送：31f0896预注册、73ba397实现；
+[PR #5](https://github.com/Vincent-Wenhan/image-editing/pull/5)保留draft。
+独立执行worktree `image-editing-role-feature-run` 已冻结73ba397并安装独立editable
+环境，与开发分支source/config的114个文件SHA一致。source_and_asset_audit.json
+将源码逐文件对照Git对象并审计新增提交，未包含禁传资产或超过500行的代码。
 
 代码已提供门禁入口（README），不留后台无人监督训练。先获得实时空闲卡与UUID
 租约，在冻结执行worktree完成2-step及feature_smoke；成功后才测batch4并最多四卡

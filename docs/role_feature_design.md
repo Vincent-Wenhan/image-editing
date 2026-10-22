@@ -77,3 +77,6 @@ GPU通过实时空闲检查与UUID租约。失败保留原traceback，用新目�
 
 最终执行Ruff/Pytest/全部CLI、真实GPU smoke、版本/文件SHA及提交资产审计；
 记录已实现/已运行/负面/剩余风险。新实验必须有冻结代码、配置、数据与GPU provenance。
+
+实现收尾：73ba397已冻结执行代码，CPU与CI验收见[实际报告](role_feature_report.md)。
+GPU因无空闲UUID租约仍pending，四组预算及上述研究门槛未改变；PR #5保留draft。

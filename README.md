@@ -5,7 +5,8 @@
 独立特征与四组匹配配置已实现，230项CPU测试通过；8张GPU均被占用，UUID租约
 预检失败，真实4B smoke/20-step/Dev质量结果全部pending。当前Hold、不扩大训练；
 详见 [验收报告](docs/role_feature_report.md)。旧负面结果、全部资产与真人pending
-状态保留，Test封存。
+状态保留，Test封存。43项CLI及远端CPU CI通过（215 passed/15 skipped，未装Torch）；
+[PR #5](https://github.com/Vincent-Wenhan/image-editing/pull/5)保留draft等待GPU验证。
 
 以下为已完成的 **Role Conditioning Failure Analysis**，从已合并 PR #3 的 main
 `a647522` 开始。[预注册设计](docs/role_failure_analysis_design.md)规定新 Dev 和封存

@@ -7,6 +7,8 @@ inference/evaluation复用run记录/分区统计并增加成对checkpoint验证�
 不改变默认No-mask/Mask，不训练Predictor或迁移Qwen。
 本轮230项CPU回归通过；真实4B GPU与质量对照因8卡占用pending，不能声称GPU
 或方法收益已验证。实际状态见 [特征验收报告](role_feature_report.md)。
+执行代码冻结在独立role-feature-run worktree的73ba397；文档收尾不改变执行源码。
+远端CPU CI通过215项、明确跳过15项，本机230项全部执行；43项CLI检查通过。
 
 当前实现：`conditioning/features.py`定义不可变old/new/D/P/valid单位图及schema，
 `feature_encoder.py`懒加载FP32小编码器；`datasets/features.py`只读取NPZ占据和
