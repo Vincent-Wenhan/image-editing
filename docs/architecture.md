@@ -12,6 +12,11 @@ role_study复用现有训练编排，只新增Dev-only最小协议。`inference/
 明确区分原协议重载与分布外干预，`evaluation/role_failures.py` 分离位置/颜色代理量。
 新增真人失败类别向后兼容原CSV字段和旧评分；无原始真人结果时不填充任何数值。
 
+本轮工程/真实GPU验收与研究决策见 [失败分析实际报告](role_failure_analysis_report.md)：
+固定旧adapter干预120次、同预算双seed灰度pilot训练/48例Dev评估完成。当前灰度
+编码未通过T改善门槛，停在小试验；独立角色特征层未实现，真实评分pending。
+新Test仍封存，不能把完整性校验写成模型测试结果。
+
 PR #3 归档为 **Causal Role Data and Oracle Feasibility Study**，合并审计见
 [causal_role_feasibility_audit.md](causal_role_feasibility_audit.md)。后续 Role Conditioning
 Failure Analysis 使用独立分支、全新 Dev 与封存 Test，不复用旧 Test 做模型选择。

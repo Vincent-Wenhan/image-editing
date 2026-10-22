@@ -32,3 +32,14 @@ image-edit review merge --bundle <bundle> --import <import-a> \
 本轮分成两个独立包：旧60-step checkpoint 的新Dev诊断比较，及新20-step matched
 Geometry/Dynamic Binary比较。不同预算不混成“公平方法收益”。干预图不混入正式
 方法评分。seed分列，场景是统计单位，失败分组只作描述；完整真人结果另行报告。
+
+本轮实际目录（在role-failure worktree的 `outputs/role_failure_20261022/` 下）：
+
+|包|公开入口|私有导入基准|
+|---|---|---|
+|旧60-step、48任务/人|`human_existing_01/panels/rater_a/index.html`，b/c同理|`human_existing_01/bundle/`|
+|新20-step、48任务/人|`human_pilot_01/panels/rater_a/index.html`，b/c同理|`human_pilot_01/bundle/`|
+
+两包均已生成三套空白表，实际评分0条。将上面命令的bundle替换为对应私有基准，
+annotations使用同包的tasks.csv。原始真实CSV可放该实验根的新 `human_imports/`
+子目录，每次导入/修订/汇总使用新名字；尚未收到CSV时不要执行填分或假导入。

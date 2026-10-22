@@ -379,3 +379,22 @@ batch4容量完成180.64s，peak15.0219/17.0859GiB。重载worker89.66s、完整
 旧新互换改变control/output，source/noise保持，重复PNG一致。正式4组20-step及旧
 checkpoint诊断仍待完成。新分支pushCI和合并mainCI成功，仓库外wheel/新配置通过。
 补充独立特征encoder的后续网格、零残差、容量对照与checkpoint契约，仅设计未实现。
+
+## Failure Analysis：有界实验完成及当前灰度No-Go
+
+四旧adapter各12个新Dev baseline+6例×3干预/重复共120次真实生成完成：循环RGB
+使生成色跟随变化，T区响应seed42/43为0.694801/0.537963；Dynamic Binary有重复
+物体、旧区残留和目标位置问题。四个新身份场景未复现历史大蓝块，原失败仍保留。
+
+新Geometry/Dynamic Binary各seed101/103、20updates/batch4完成，worker305.55–
+314.84s，peak15.0219/17.0859GiB，160有限LoRA张量、20次真实batch门禁及等预算
+校验通过。48张固定新Dev重载完成，wall302.88–307.87s，peak reserved16.3945GiB。
+Geometry T均值0.142595/0.143994，高于Binary0.083764/0.082599；D/P有改善，T区间
+跨零，不声称总体显著退化。但两seed预注册T改善门槛均失败，当前灰度编码No-Go，
+不增加数据/步数，不进入Predictor。固定样本仍重复并出现暗色外观复制。
+
+所有新GPU/统计执行冻结a07ba92，数据actual SHA/adapter/预算与完整provenance留在
+outputs/role_failure_20261022；新Test无模型运行，保持封存。旧60-step和新20-step
+各一个三人盲评包，每人48项，全部0真实评分/pending/null区间。214本机测试、26
+CLI、Ruff、pip/wheel通过，CPU CI206 passed/8 skipped；GPU另有实际记录。
+详细checkpoint SHA、时间/显存、区间、负面观察及风险见docs/role_failure_analysis_report.md。

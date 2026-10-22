@@ -44,6 +44,8 @@ patch网格池化为 `[B,N,C]` 空间特征，valid单独门控，不把ignore�
 训练和采样共享完全相同的编码、网格和权重。这样角色不再经过自然图像RGB重建
 空间；是否减少复制只是待验证假设。初始残差为零、注入强度有界，先验证零输入
 复现已有路径、角色置换/旧新交换的条件敏感性和有限梯度，再做小规模训练。
+old/new是可重叠的占据概率，不强制其和为1；若采用互斥分类，可改为old-only/
+new-only/overlap/D/P，valid仍单独保存。原T/D/P软场的归一化契约不因此改变。
 
 独立encoder增加参数，必须与同容量的constant-feature、binary-feature对照保持
 token数/LoRA/优化预算一致；encoder与LoRA共同保存，记录其独立SHA和编码版本，
