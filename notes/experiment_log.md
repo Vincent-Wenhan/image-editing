@@ -351,4 +351,3 @@ Stage1三人各180项、角色dev三人各96项评审包已就绪；实际真人
 22个CLI入口及历史资产/第三方卫生通过。真实评分仍0条、pending。新审计记录在
 role-data worktree 的 outputs/merge_audit_20261022；两次审计调用退出也保留日志。
 详见 docs/causal_role_feasibility_audit.md。尚须最新归档提交CI通过后正常合并PR。
-
