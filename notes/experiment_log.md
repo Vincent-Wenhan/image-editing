@@ -351,3 +351,10 @@ Stage1三人各180项、角色dev三人各96项评审包已就绪；实际真人
 22个CLI入口及历史资产/第三方卫生通过。真实评分仍0条、pending。新审计记录在
 role-data worktree 的 outputs/merge_audit_20261022；两次审计调用退出也保留日志。
 详见 docs/causal_role_feasibility_audit.md。尚须最新归档提交CI通过后正常合并PR。
+
+## 2026-10-22 UTC：Failure Analysis 预注册
+
+PR #3 在 d7b6414 最新 push/PR CI 成功后正常 merge 为 a647522，未 force push。
+新分支 feat/role-conditioning-failure-analysis 从最新 main 创建。设计先行，计划
+新seed场景和封存Test、旧Oracle/Dynamic Binary固定干预、三人盲评准备，以及
+Geometry与Dynamic Binary同20-step/双独立seed小试验；均尚未运行。全部资产保留。

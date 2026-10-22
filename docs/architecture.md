@@ -1,5 +1,9 @@
 # 工程架构重构
 
+新研究沿用现有目录职责，见 [失败分析设计](role_failure_analysis_design.md)。
+几何编码/占据读取、后端显式上界、研究编排和诊断分别留在 conditioning/datasets、
+backends、training/inference、evaluation；不引入新目录层或修改第三方。
+
 PR #3 归档为 **Causal Role Data and Oracle Feasibility Study**，合并审计见
 [causal_role_feasibility_audit.md](causal_role_feasibility_audit.md)。后续 Role Conditioning
 Failure Analysis 使用独立分支、全新 Dev 与封存 Test，不复用旧 Test 做模型选择。

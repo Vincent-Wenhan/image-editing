@@ -1,5 +1,10 @@
 # Image Editing Research
 
+当前研究分支：**Role Conditioning Failure Analysis**，从已合并 PR #3 的 main
+`a647522` 开始。[预注册设计](docs/role_failure_analysis_design.md)规定新 Dev 和封存
+Test、旧 checkpoint 干预、真人评审准备及最小 Geometry 上界；尚未运行的新实验
+不能引用前轮结果充当验证。
+
 已完成研究轮次正式名称：**Causal Role Data and Oracle Feasibility Study**。
 PR #3 的源码、资产、统计与结论复核见 [合并审计](docs/causal_role_feasibility_audit.md)。
 彩色 Oracle Role 的负面结果及全部历史资产保留；后续失败分析独立开展。
