@@ -503,3 +503,26 @@ PR #4完成最新CI/214项本机回归/26CLI及实际资产/指标复核后，�
 - 修复回归5 passed/0.14s；新增真实region_metrics→aggregate→gate链，验证
   source=target仍可能有预测身份破坏、1e-4容差与T/D/P门槛。完整232 passed/149.59s，
   Ruff check/format通过。两seed各48任务/人的三人空白包已生成，0真实评分。
+
+### 真实GPU与匹配Dev研究收尾
+
+- b256692冻结的8组原生训练均完整20updates/batch4，每组80次样本曝光；
+  encoder13,312/总参数23,114,752、1024 feature/source/noise tokens，两个seed
+  独立，同seed四方法的初始化/20步样本ID/噪声SHA/timestep完全匹配。
+- 96张512² Dev预测全部完成，8组进程246.76–262.67s，12例采样各129.94–132.34s；
+  peak allocated15.594/reserved16.262GiB。全部单source、非零融合与实际PNG SHA
+  已核验，No-mask/Mask禁用兼容、零初始化/全零/有限梯度/位置置换/重载真实通过。
+- ad9d5c9评估源码冻结，analysis_02完成/173.22s；analysis_01字段失败原样保留。
+  seed211 Full T/D/P/身份=.083218/.265628/.019441/.022798，Constant为
+  .083134/.266279/.019464/.022340；seed223 Full=.085822/.269701/.016218/.018667，
+  Constant=.085740/.269247/.016167/.018757。身份是s=0的预测MAE，非数据自身差异。
+- 两seed都未满足预注册的完整门槛，当前注入/20-update预算No-Go扩大；多数场景
+  CI跨0，不推断所有独立角色特征无效。旧/新独占区域代理与重复物体分开报告。
+- 八张完整非盲联系图/SHA和agent_observations保留inspection_02：错位、形变、
+  seed211额外阴影及003_s002主体截断；未确认清晰双物体主体，不能用阴影充当重复。
+  身份未见旧大色板但仍有预测误差。代理观察不作真人评分或编辑成功率。
+- human_feature_01按211/223分别导出两个48任务/人的三人空白包，0真实评分；旧包
+  全保留，指南同步。Test没有推理、画廊或选型，旧模型/数据/实验均未覆盖或重下载。
+- 232 passed/149.59s、Ruff/43CLI/pip检查通过；ad9d5c9的push/PR CI
+  39834629455/39834619043均success。详细表格、全部checkpoint SHA、原失败、版本
+  和证据索引在docs/role_feature_report.md。只正常提交推送，不force push。

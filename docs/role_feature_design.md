@@ -108,3 +108,8 @@ identity_mae，identity_target_mae表示source与target的距离，也不能当�
 T/D/P门槛不变；测试必须接入真实region_metrics/aggregate输出，覆盖预测破坏身份
 而source=target误差仍为0的情况。保留analysis_01失败，用新评估目录和源码快照
 重算；不重训、不重新生成预测、不改原始指标或实验预算。
+
+最终执行：GPU源码b256692、评估修复ad9d5c9；232项本机测试通过，8组20-step及
+96张Dev完成。原始预注册门槛在两个seed均未通过，当前注入/预算No-Go扩大训练。
+T/D/P/身份结果、场景区间、实际时间/显存/checkpoint和限制见实际报告；没有事后
+修改预算、容差或门槛。两seed各48任务/人的三人空白包就绪，真实评分仍0条。

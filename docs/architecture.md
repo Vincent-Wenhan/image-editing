@@ -8,12 +8,16 @@ inference/evaluation复用run记录/分区统计并增加成对checkpoint验证�
 2026-10-23已完成232项CPU回归、43项CLI、真实4B前反向/置换/零条件/重载、
 batch4容量及四方法×双seed×20updates训练；固定Dev的质量门槛与研究结论见
 [特征验收报告](role_feature_report.md)。GPU接口消费成功不等于编辑质量改善。
+96张Dev重载预测与哈希评估已完成，两seed研究门槛均失败；当前注入/预算No-Go
+扩大训练，真人评分pending。封存Test继续只做完整性校验。
 执行代码冻结在独立role-feature-run-02 worktree的b256692，114个source/config
 文件与Git对象及实际训练记录相符；文档收尾不改变执行源码。
 seed修复远端CPU CI通过215项、明确跳过16项（没有Torch），本机232项全部执行。
 首轮GPU暴露固定上游TrainConfig无seed属性；worker从已校验原YAML读取一次seed，
 set_seed与encoder适配器显式共用该值，不扩展上游配置类；保留0-batch原失败报告。
 同seed四方法的初始化SHA、实际样本/噪声/timestep轨迹均相同，211/223初始化不同。
+CPU分析独立冻结ad9d5c9，仅修复身份门槛字段；GPU训练/推理仍绑定b256692，
+没有重训或改写预测。失败分析目录保留，成功结果另存analysis_02。
 
 当前实现：`conditioning/features.py`定义不可变old/new/D/P/valid单位图及schema，
 `feature_encoder.py`懒加载FP32小编码器；`datasets/features.py`只读取NPZ占据和

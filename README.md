@@ -4,8 +4,9 @@
 独立于Image VAE的角色特征最小试验设计见 [预注册](docs/role_feature_design.md)。
 2026-10-23已完成真实4B前反向/有限梯度/条件置换/零条件/成对重载验收、batch4
 容量及四方法×双seed×20updates训练。232项本机测试、Ruff、43项CLI和依赖检查
-通过；远端CPU CI为215 passed/16 skipped（没有Torch）。编辑质量与是否继续的
-研究判断见 [验收报告](docs/role_feature_report.md)，GPU消费成功不代表方法收益。
+通过；远端CPU CI通过（没有Torch的检查明确跳过）。96张固定Dev预测与实际SHA
+评估完成，两个seed均未通过预设门槛：**当前注入/20-update预算No-Go扩大训练**。
+完整指标、区间与案例见 [验收报告](docs/role_feature_report.md)，GPU消费成功不代表方法收益。
 旧负面结果、全部资产与真人pending状态保留，Test封存，不扩大训练。
 [PR #5](https://github.com/Vincent-Wenhan/image-editing/pull/5)记录本轮实现与真实验收。
 
@@ -13,6 +14,7 @@
 同seed初始化/训练轨迹一致且两seed独立；原0-batch失败记录保留。执行源码冻结b256692，
 新资产在outputs/role_feature_20261023/study_01，未改loss或第三方源码。
 身份门槛使用真实s=0预测target_mae，避免与数据自身source-target距离混淆。
+角色方案仅为显式Oracle上界；三人盲评按seed分别准备48任务/人，0条真实评分。
 
 以下为已完成的 **Role Conditioning Failure Analysis**，从已合并 PR #3 的 main
 `a647522` 开始。[预注册设计](docs/role_failure_analysis_design.md)规定新 Dev 和封存
