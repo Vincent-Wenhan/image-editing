@@ -8,7 +8,8 @@ Test、旧 checkpoint 干预、真人评审准备及最小 Geometry 上界；尚
 本轮真实运行完成：新512数据20组、旧checkpoint的120次诊断生成、双seed各20-step
 Geometry/Dynamic Binary训练及48张新Dev预测。彩色复制/重复物体再次出现；灰度V2
 虽改善D/P，T门槛在两个seed均未通过，当前编码No-Go，不扩大训练。四个新身份
-场景未目视复现旧大蓝块。新Test封存，两个三人盲评包均0条真实评分/pending。
+场景未目视复现旧大蓝块，但分布外P换色干预出现红边栏。新Test封存，两个三人
+盲评包均0条真实评分/pending。
 完整时间/显存/SHA/区间和风险见 [实际报告](docs/role_failure_analysis_report.md)。
 
 最小V2接口已实现 `oracle_geometry`：同双参考，P/ignore黑，旧独占64、新独占192、

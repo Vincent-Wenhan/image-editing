@@ -398,3 +398,11 @@ outputs/role_failure_20261022；新Test无模型运行，保持封存。旧60-st
 各一个三人盲评包，每人48项，全部0真实评分/pending/null区间。214本机测试、26
 CLI、Ruff、pip/wheel通过，CPU CI206 passed/8 skipped；GPU另有实际记录。
 详细checkpoint SHA、时间/显存、区间、负面观察及风险见docs/role_failure_analysis_report.md。
+
+## Failure Analysis：身份配色诊断补充
+
+从已完成的预定干预中复核seed43/dev_2026102201_001_s000：真值全P，合法蓝色
+P输入无大蓝块；将P循环换成红色则输出左侧红边栏，P漂移0.010924→0.077728，
+黑P为0.011731。source/noise/prompt一致，实际图像/控制摘要保存于
+identity_palette_intervention_01.json。明确这是OOD配色/通道语义变化下的身份风险，
+不是合法蓝色P复现，不新增GPU运行，也不计入真人评分。原No-Go建议不变。
