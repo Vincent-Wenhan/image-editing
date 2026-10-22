@@ -371,3 +371,11 @@ Geometry与Dynamic Binary同20-step/双独立seed小试验；均尚未运行。�
 214项测试/148.83s通过，Ruff已修正导入顺序并通过；新增固定checkpoint的配色/P清零/
 旧新区干预、实际图像和token摘要、位置分区诊断。评审表新增四类失败说明，空白
 评分原样保留；新使用指南明确真人组织、独立导入和不同预算分包。GPU验证尚未运行。
+
+## Failure Analysis：真实最小GPU已通过
+
+冻结GPU源码a07ba92。Geometry 2-step/batch1完成166.19s，peak15.0219/15.0371GiB；
+batch4容量完成180.64s，peak15.0219/17.0859GiB。重载worker89.66s、完整118.76s，
+旧新互换改变control/output，source/noise保持，重复PNG一致。正式4组20-step及旧
+checkpoint诊断仍待完成。新分支pushCI和合并mainCI成功，仓库外wheel/新配置通过。
+补充独立特征encoder的后续网格、零残差、容量对照与checkpoint契约，仅设计未实现。
