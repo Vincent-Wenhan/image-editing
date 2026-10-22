@@ -1,5 +1,9 @@
 # 工程架构重构
 
+PR #3 归档为 **Causal Role Data and Oracle Feasibility Study**，合并审计见
+[causal_role_feasibility_audit.md](causal_role_feasibility_audit.md)。后续 Role Conditioning
+Failure Analysis 使用独立分支、全新 Dev 与封存 Test，不复用旧 Test 做模型选择。
+
 2026-10-22收尾：202项测试及Ruff/CLI/wheel通过；20组128→512反事实场景、
 四方法双seed60步训练和192张固定重载评估已完成，数据/条件/adapter/源码来源通过。
 当前彩色Oracle Role编码未通过研究门槛，结论No-Go；真实三人评分仍pending。

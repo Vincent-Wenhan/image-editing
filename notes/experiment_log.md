@@ -343,3 +343,12 @@ Stage1三人各180项、角色dev三人各96项评审包已就绪；实际真人
 均pending/null区间，代理非盲观察独立存放。完整202 passed/86.83s，Ruff/CLI/pip
 及仓库外100项wheel/可配置scene展开通过。所有旧资产保留，临时脚本/环境完成后
 清理；Git仅代码/配置/文字报告。详见docs/role_validation_report.md。
+# 2026-10-22 UTC：PR #3 合并审计
+
+本轮正式归档为 Causal Role Data and Oracle Feasibility Study；原彩色角色负面结果不改。
+重新校验两分辨率反事实数据、10个 checkpoint、192张预测和全部配对统计，最大
+浮点差2.78e-17；32份来源记录逐文件与 Git 对象一致。Ruff、202项测试/99.26s、
+22个CLI入口及历史资产/第三方卫生通过。真实评分仍0条、pending。新审计记录在
+role-data worktree 的 outputs/merge_audit_20261022；两次审计调用退出也保留日志。
+详见 docs/causal_role_feasibility_audit.md。尚须最新归档提交CI通过后正常合并PR。
+

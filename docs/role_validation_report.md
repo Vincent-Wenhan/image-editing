@@ -1,5 +1,8 @@
 # 角色研究验证实际报告
 
+正式研究名称：**Causal Role Data and Oracle Feasibility Study**。
+合并前独立复核结果见 [审计记录](causal_role_feasibility_audit.md)；本报告原始结果不改写。
+
 更新时间：2026-10-22（Asia/Shanghai）。结论：**当前彩色 Oracle Role 路线 No-Go，暂停扩大训练及 Role Predictor。** 两个训练 seed 的 dev 门槛均未通过，独立 test 也没有支持收益。Dynamic Binary 的分区像素误差较低，但有重复物体，真人质量仍 pending。
 
 本轮根目录 `/home/jiangwenhan/project/image-editing-role-data/outputs/role_validation_20261022/`。旧 Stage 0/1/2 的图像、评分、权重、失败目录全部保留；本轮使用新目录，资产不入 Git。预定协议见 [设计](role_validation_design.md)。

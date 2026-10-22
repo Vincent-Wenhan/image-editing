@@ -1,5 +1,9 @@
 # Image Editing Research
 
+已完成研究轮次正式名称：**Causal Role Data and Oracle Feasibility Study**。
+PR #3 的源码、资产、统计与结论复核见 [合并审计](docs/causal_role_feasibility_audit.md)。
+彩色 Oracle Role 的负面结果及全部历史资产保留；后续失败分析独立开展。
+
 2026-10-22：已完成三评审者导入/配对统计工具、Stage 1公平性分组审计、20个独立
 train/dev/test场景组的128→512渲染，以及四方法×双seed的60-step LoRA与192张
 固定评估。202项测试、Ruff、CLI、wheel检查通过；真实评分仍pending。
