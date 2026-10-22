@@ -1,5 +1,11 @@
 # 工程架构重构
 
+独立Role Feature试验沿用现有模块边界，见 [设计](role_feature_design.md)。
+conditioning定义非RGB特征契约/编码，datasets只加载占据和角色，backends实现
+FLUX的受控残差；training复用固定trainer的额外参数hook及现有worker/租约；
+inference/evaluation复用run记录/分区统计并增加成对checkpoint验证。不开新框架，
+不改变默认No-mask/Mask，不训练Predictor或迁移Qwen。
+
 新研究沿用现有目录职责，见 [失败分析设计](role_failure_analysis_design.md)。
 几何编码/占据读取、后端显式上界、研究编排和诊断分别留在 conditioning/datasets、
 backends、training/inference、evaluation；不引入新目录层或修改第三方。

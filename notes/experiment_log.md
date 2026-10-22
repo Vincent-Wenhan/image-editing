@@ -406,3 +406,11 @@ P输入无大蓝块；将P循环换成红色则输出左侧红边栏，P漂移0.
 黑P为0.011731。source/noise/prompt一致，实际图像/控制摘要保存于
 identity_palette_intervention_01.json。明确这是OOD配色/通道语义变化下的身份风险，
 不是合法蓝色P复现，不新增GPU运行，也不计入真人评分。原No-Go建议不变。
+
+## 2026-10-22：Role Feature最小试验预注册
+
+PR #4完成最新CI/214项本机回归/26CLI及实际资产/指标复核后，正常merge为b73492f。
+新分支feat/role-feature-conditioning从最新main创建；沿用原512数据与封存Test。
+设计先行：独立类别/坐标特征、T=0零初始化残差、四组同容量/1024特征tokens/
+双seed211/223各20updates，先单卡接口/反向/重载门禁再小试验。不改变flow loss，
+不训练Predictor/Qwen，旧结果和真人评分包保留。所有新实验目前均计划，尚未运行。

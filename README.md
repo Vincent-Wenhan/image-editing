@@ -1,5 +1,10 @@
 # Image Editing Research
 
+当前分支 `feat/role-feature-conditioning` 从正常合并PR #4的main `b73492f`创建。
+独立于Image VAE的角色特征最小试验设计见 [预注册](docs/role_feature_design.md)。
+四组容量/token/预算匹配；先CPU与真实GPU接口门禁，再有界20-step。尚未运行的
+计划不得写成已验证收益；旧负面结果、全部资产与真人pending状态保留，Test封存。
+
 当前研究分支：**Role Conditioning Failure Analysis**，从已合并 PR #3 的 main
 `a647522` 开始。[预注册设计](docs/role_failure_analysis_design.md)规定新 Dev 和封存
 Test、旧 checkpoint 干预、真人评审准备及最小 Geometry 上界；尚未运行的新实验
