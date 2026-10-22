@@ -6,6 +6,10 @@ FIELDS = ("task_id", "edit_success", "preservation", "failure", "comment", "revi
 FAILURES = (
     "missed_edit",
     "wrong_location",
+    "duplicate_object",
+    "wrong_target_position",
+    "role_color_copy",
+    "identity_break",
     "collateral_change",
     "mask_artifact",
     "geometry",
@@ -46,7 +50,10 @@ img{width:300px;max-width:100%}h2{font-size:16px}label{display:inline-block;marg
 <p>编辑成功度：0=未完成或错误；1=部分完成；2=完整且位置/属性正确。
 无关内容保留：0=明显破坏；1=有可见偏移；2=良好保留（忽略必要的物理后果）。
 无法判断选 NA，并选 unjudgeable、说明原因。评分低于2时填写失败类别及说明。
-未评分留空。下载 CSV 后使用 review-score 导入；本页不联网、不上传。</p>
+未评分留空。duplicate_object=旧位置残留并新增物体；wrong_target_position=没有到达目标位置；
+role_color_copy=出现不符合source/target的控制色块；identity_break=无需编辑仍破坏画面。
+可在说明中记录多个问题，主类别选最严重项。下载 CSV 后使用 review import 导入；
+本页不联网、不上传。</p>
 <label>评审者 <input id="reviewer"></label><button id="export">下载评分 CSV</button>
 """
         + f'<script>document.querySelector("#reviewer").value={reviewer!r};</script>'
