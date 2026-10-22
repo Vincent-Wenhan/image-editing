@@ -351,3 +351,58 @@ Stage1三人各180项、角色dev三人各96项评审包已就绪；实际真人
 22个CLI入口及历史资产/第三方卫生通过。真实评分仍0条、pending。新审计记录在
 role-data worktree 的 outputs/merge_audit_20261022；两次审计调用退出也保留日志。
 详见 docs/causal_role_feasibility_audit.md。尚须最新归档提交CI通过后正常合并PR。
+
+## 2026-10-22 UTC：Failure Analysis 预注册
+
+PR #3 在 d7b6414 最新 push/PR CI 成功后正常 merge 为 a647522，未 force push。
+新分支 feat/role-conditioning-failure-analysis 从最新 main 创建。设计先行，计划
+新seed场景和封存Test、旧Oracle/Dynamic Binary固定干预、三人盲评准备，以及
+Geometry与Dynamic Binary同20-step/双独立seed小试验；均尚未运行。全部资产保留。
+
+## Failure Analysis：接口与检查（实现中）
+
+已实现灰度Geometry上界、实际占据SHA及禁止target RGB读取、Dev seal、旧checkpoint
+干预和颜色/旧区/新区诊断；原loss/网络不变。真人表单增加重复/目标位置/颜色/身份
+分类并补独立使用指南，所有真实评分仍pending。新20组512数据完成，跨历史隔离
+通过；Test封存，只做完整性校验。GPU和研究质量结论仍待运行，不宣称V2成功。
+
+## Failure Analysis：固定干预与真人工具验收
+
+214项测试/148.83s通过，Ruff已修正导入顺序并通过；新增固定checkpoint的配色/P清零/
+旧新区干预、实际图像和token摘要、位置分区诊断。评审表新增四类失败说明，空白
+评分原样保留；新使用指南明确真人组织、独立导入和不同预算分包。GPU验证尚未运行。
+
+## Failure Analysis：真实最小GPU已通过
+
+冻结GPU源码a07ba92。Geometry 2-step/batch1完成166.19s，peak15.0219/15.0371GiB；
+batch4容量完成180.64s，peak15.0219/17.0859GiB。重载worker89.66s、完整118.76s，
+旧新互换改变control/output，source/noise保持，重复PNG一致。正式4组20-step及旧
+checkpoint诊断仍待完成。新分支pushCI和合并mainCI成功，仓库外wheel/新配置通过。
+补充独立特征encoder的后续网格、零残差、容量对照与checkpoint契约，仅设计未实现。
+
+## Failure Analysis：有界实验完成及当前灰度No-Go
+
+四旧adapter各12个新Dev baseline+6例×3干预/重复共120次真实生成完成：循环RGB
+使生成色跟随变化，T区响应seed42/43为0.694801/0.537963；Dynamic Binary有重复
+物体、旧区残留和目标位置问题。四个新身份场景未复现历史大蓝块，原失败仍保留。
+
+新Geometry/Dynamic Binary各seed101/103、20updates/batch4完成，worker305.55–
+314.84s，peak15.0219/17.0859GiB，160有限LoRA张量、20次真实batch门禁及等预算
+校验通过。48张固定新Dev重载完成，wall302.88–307.87s，peak reserved16.3945GiB。
+Geometry T均值0.142595/0.143994，高于Binary0.083764/0.082599；D/P有改善，T区间
+跨零，不声称总体显著退化。但两seed预注册T改善门槛均失败，当前灰度编码No-Go，
+不增加数据/步数，不进入Predictor。固定样本仍重复并出现暗色外观复制。
+
+所有新GPU/统计执行冻结a07ba92，数据actual SHA/adapter/预算与完整provenance留在
+outputs/role_failure_20261022；新Test无模型运行，保持封存。旧60-step和新20-step
+各一个三人盲评包，每人48项，全部0真实评分/pending/null区间。214本机测试、26
+CLI、Ruff、pip/wheel通过，CPU CI206 passed/8 skipped；GPU另有实际记录。
+详细checkpoint SHA、时间/显存、区间、负面观察及风险见docs/role_failure_analysis_report.md。
+
+## Failure Analysis：身份配色诊断补充
+
+从已完成的预定干预中复核seed43/dev_2026102201_001_s000：真值全P，合法蓝色
+P输入无大蓝块；将P循环换成红色则输出左侧红边栏，P漂移0.010924→0.077728，
+黑P为0.011731。source/noise/prompt一致，实际图像/控制摘要保存于
+identity_palette_intervention_01.json。明确这是OOD配色/通道语义变化下的身份风险，
+不是合法蓝色P复现，不新增GPU运行，也不计入真人评分。原No-Go建议不变。

@@ -27,16 +27,29 @@ from src.infra.experiment import execute
 from src.training.config import build_config
 
 
-def prepare(data: Path, output: Path, protocol_path: Path) -> dict:
+def prepare(data: Path, output: Path, protocol_path: Path, cohort: Path | None = None) -> dict:
     validation = validate_scene_dataset(data)
     protocol = load_yaml(protocol_path)
-    if protocol["schema_version"] != 1 or protocol["methods"] != [
-        "static_mask",
-        "dilated_mask",
-        "dynamic_binary",
-        "oracle_role",
-    ]:
-        raise ValueError("Use the declared four-method upper-bound protocol")
+    geometry = protocol.get("study") == "role_geometry_pilot_v1"
+    expected = (
+        ["dynamic_binary", "oracle_geometry"]
+        if geometry
+        else [
+            "static_mask",
+            "dilated_mask",
+            "dynamic_binary",
+            "oracle_role",
+        ]
+    )
+    if protocol["schema_version"] != 1 or protocol["methods"] != expected:
+        raise ValueError("Use the declared matched upper-bound protocol")
+    if geometry:
+        from src.datasets.holdout import require_dev
+
+        if cohort is None or protocol["inference"]["splits"] != ["dev"]:
+            raise ValueError("Geometry pilot requires a sealed cohort and Dev-only inference")
+        require_dev(data, cohort)
+    pilot = "oracle_geometry" if geometry else "oracle_role"
     if output.exists():
         raise FileExistsError(output)
     output.mkdir(parents=True)
@@ -54,10 +67,12 @@ def prepare(data: Path, output: Path, protocol_path: Path) -> dict:
         validation=validation,
         jobs=[],
     )
+    if geometry:
+        plan["cohort"] = dict(path=str(cohort.resolve()), sha256=sha256(cohort))
     jobs = [
         (
             "smoke",
-            "oracle_role",
+            pilot,
             protocol["train_seeds"][0],
             protocol["smoke"]["steps"],
             protocol["smoke"]["batch_size"],
@@ -66,7 +81,7 @@ def prepare(data: Path, output: Path, protocol_path: Path) -> dict:
     jobs.append(
         (
             "capacity",
-            "oracle_role",
+            pilot,
             protocol["train_seeds"][0],
             protocol["smoke"]["steps"],
             protocol["batch_size"],
@@ -208,14 +223,27 @@ def verify_plan(plan: dict, phase: str) -> None:
     seeds, methods = plan["protocol"]["train_seeds"], plan["protocol"]["methods"]
     if not seeds or len(set(seeds)) != len(seeds):
         raise ValueError("Training seeds must be nonempty and distinct")
-    expected = {("smoke", "oracle_role", seeds[0]), ("capacity", "oracle_role", seeds[0])}
+    pilot = "oracle_role"
+    if plan["protocol"].get("study") == "role_geometry_pilot_v1":
+        from src.datasets.holdout import require_dev
+
+        if methods != ["dynamic_binary", "oracle_geometry"] or plan["protocol"]["inference"][
+            "splits"
+        ] != ["dev"]:
+            raise ValueError("Geometry study permits the declared methods on Dev only")
+        seal = Path(plan["cohort"]["path"])
+        if sha256(seal) != plan["cohort"]["sha256"]:
+            raise ValueError("Cohort seal SHA256 changed")
+        require_dev(Path(plan["data"]), seal)
+        pilot = "oracle_geometry"
+    expected = {("smoke", pilot, seeds[0]), ("capacity", pilot, seeds[0])}
     expected |= {("train", method, seed) for method in methods for seed in seeds}
     actual = {(j["phase"], j["method"], j["seed"]) for j in plan["jobs"]}
     if len(actual) != len(plan["jobs"]) or not actual <= expected:
         raise ValueError("Study job identities differ from declared protocol")
     if phase in {"train", "infer"} and (actual != expected or plan["status"] != "prepared"):
         raise ValueError("Complete every planned configuration before matched study execution")
-    if phase in {"smoke", "capacity"} and (phase, "oracle_role", seeds[0]) not in actual:
+    if phase in {"smoke", "capacity"} and (phase, pilot, seeds[0]) not in actual:
         raise ValueError("Requested pilot configuration is not prepared")
 
 
@@ -289,6 +317,9 @@ def main() -> None:
     prepare_parser.add_argument("--data", type=Path, required=True)
     prepare_parser.add_argument("--output", type=Path, required=True)
     prepare_parser.add_argument(
+        "--cohort", type=Path, help="Required sealed Dev cohort for Geometry"
+    )
+    prepare_parser.add_argument(
         "--protocol", type=Path, default=CONFIG_ROOT / "experiments/role_validation.yaml"
     )
     run_parser = actions.add_parser("run")
@@ -299,7 +330,7 @@ def main() -> None:
     run_parser.add_argument("--parallel", type=int, default=1)
     args = parser.parse_args()
     if args.action == "prepare":
-        print(prepare(args.data.resolve(), args.output.resolve(), args.protocol))
+        print(prepare(args.data.resolve(), args.output.resolve(), args.protocol, args.cohort))
     else:
         print(run_phase(args.output.resolve(), args.phase, args.parallel))
 

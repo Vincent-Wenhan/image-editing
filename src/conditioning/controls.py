@@ -17,6 +17,7 @@ class ControlKind(StrEnum):
     SHUFFLED_MASK = "shuffled_mask"
     SOFT_MASK = "soft_mask"
     ORACLE_ROLE = "oracle_role"
+    ORACLE_GEOMETRY = "oracle_geometry"
     DYNAMIC_BINARY = "dynamic_binary"
     PREDICTED_ROLE = "predicted_role"
 
@@ -31,7 +32,11 @@ class ControlBundle:
         object.__setattr__(self, "kind", ControlKind(self.kind))
         if self.kind == ControlKind.NONE and self.maps:
             raise ValueError("Unconditional controls must not contain maps")
-        if self.kind != ControlKind.NONE:
+        if self.kind == ControlKind.ORACLE_GEOMETRY:
+            from src.conditioning.geometry import geometry_rgb
+
+            geometry_rgb(self.maps)
+        elif self.kind != ControlKind.NONE:
             is_role = self.kind in {ControlKind.ORACLE_ROLE, ControlKind.PREDICTED_ROLE}
             key = "roles" if is_role else "mask"
             if set(self.maps) != {key}:
@@ -56,7 +61,11 @@ class ControlBundle:
         object.__setattr__(self, "metadata", MappingProxyType(dict(self.metadata)))
 
     def require_inference_safe(self) -> None:
-        if self.kind in {ControlKind.ORACLE_ROLE, ControlKind.DYNAMIC_BINARY}:
+        if self.kind in {
+            ControlKind.ORACLE_ROLE,
+            ControlKind.DYNAMIC_BINARY,
+            ControlKind.ORACLE_GEOMETRY,
+        }:
             raise ValueError("Oracle role labels are supervision; ordinary inference rejects them")
 
     def validate_geometry(self, size: tuple[int, int]) -> None:

@@ -1,0 +1,16 @@
+schema_version: 1
+study: role_geometry_pilot_v1
+methods: [dynamic_binary, oracle_geometry]
+train_seeds: [101, 103]
+steps: 20
+batch_size: 4
+rank: 16
+inference:
+  steps: 20
+  guidance: 4.0
+  seed: 42
+  splits: [dev]
+max_parallel: 4
+smoke:
+  steps: 2
+  batch_size: 1

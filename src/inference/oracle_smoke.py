@@ -16,6 +16,7 @@ from src.core.config import ProjectSettings
 from src.core.io import read_rows, sha256, write_json
 from src.core.random import sample_seed
 from src.core.types import GenerationOptions
+from src.datasets.geometry import load_geometry_condition
 from src.datasets.manifest import load_edit_input
 from src.datasets.scene_manifest import load_oracle_condition
 from src.datasets.scene_validation import validate_scene_dataset
@@ -43,32 +44,51 @@ def run(args) -> None:
         )
         edit, oracle = (
             load_edit_input(args.data_root, row),
-            load_oracle_condition(args.data_root, row),
+            (
+                load_geometry_condition
+                if args.control == "oracle_geometry"
+                else load_oracle_condition
+            )(args.data_root, row),
         )
         report.update(sample_id=row["id"], conditioning=dict(oracle.metadata))
         options = GenerationOptions(
             *edit.source.size, args.steps, args.guidance, sample_seed(args.seed, row["id"])
         )
-        labels = np.array(oracle.maps["roles"])
-        direct, dependency = labels == 0, labels == 1
-        labels[direct], labels[dependency] = 1, 0
-        path = args.output / "swapped_td_labels.png"
-        Image.fromarray(labels).save(path)
-        altered = ControlBundle(
-            oracle.kind,
-            {"roles": labels},
-            dict(oracle.metadata, role_sha256=sha256(path), diagnostic_intervention="swap_T_D"),
-        )
+        if args.control == "oracle_geometry":
+            swap_name = "swapped_old_new"
+            altered = ControlBundle(
+                oracle.kind,
+                dict(oracle.maps, old=oracle.maps["new"], new=oracle.maps["old"]),
+                dict(oracle.metadata, diagnostic_intervention=swap_name),
+            )
+        else:
+            swap_name = "swapped_td"
+            labels = np.array(oracle.maps["roles"])
+            direct, dependency = labels == 0, labels == 1
+            labels[direct], labels[dependency] = 1, 0
+            path = args.output / "swapped_td_labels.png"
+            Image.fromarray(labels).save(path)
+            altered = ControlBundle(
+                oracle.kind,
+                {"roles": labels},
+                dict(oracle.metadata, role_sha256=sha256(path), diagnostic_intervention="swap_T_D"),
+            )
         if args.lora:
             report["lora_sha256"] = sha256(args.lora)
         backend = Flux2Backend(args.model, args.lora)
-        for name, controls in (("oracle", oracle), ("swapped_td", altered), ("repeat", oracle)):
+        for name, controls in (("oracle", oracle), (swap_name, altered), ("repeat", oracle)):
             with trace_references(backend.pipe) as trace:
                 result = backend.edit_oracle(edit, controls, options, allow_oracle=True)
             if (
                 len(trace["vae"]) != 2
-                or not trace["vae"][1]["binary"]
-                or trace["vae"][1]["positive_channels_max"] != 1
+                or (
+                    args.control == "oracle_role"
+                    and (
+                        not trace["vae"][1]["binary"]
+                        or trace["vae"][1]["positive_channels_max"] != 1
+                    )
+                )
+                or (args.control == "oracle_geometry" and trace["vae"][1]["binary"])
                 or trace.get("attention", {}).get("offsets") != [0, 10, 20]
                 or len(set(trace["attention"]["counts"])) != 1
             ):
@@ -83,7 +103,7 @@ def run(args) -> None:
             )
             write_json(args.output / "report.json", report)
         original, swapped, repeat = [
-            report["results"][key] for key in ("oracle", "swapped_td", "repeat")
+            report["results"][key] for key in ("oracle", swap_name, "repeat")
         ]
         for key in ("source_sha256", "noise_sha256"):
             if original["trace"]["attention"][key] != swapped["trace"]["attention"][key]:
@@ -112,6 +132,9 @@ def main() -> None:
     parser.add_argument("--model", default=settings.assets["models"]["base"]["path"])
     parser.add_argument("--steps", type=int, default=4)
     parser.add_argument("--lora", help="Optional completed role adapter for reload protocol check")
+    parser.add_argument(
+        "--control", choices=["oracle_role", "oracle_geometry"], default="oracle_role"
+    )
     parser.add_argument(
         "--guidance", type=float, default=settings.process["sample"]["guidance_scale"]
     )

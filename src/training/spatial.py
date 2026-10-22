@@ -105,7 +105,14 @@ def verify_joint_batch(batch, latent, *, kind: str = "static_mask") -> None:
             if not image.isfinite().all() or image.min() < 0 or image.max() > 1:
                 raise ValueError("Raw controls must be finite RGB in [0,1]")
         mask = images[1]
-        if kind == ControlKind.ORACLE_ROLE:
+        if kind == ControlKind.ORACLE_GEOMETRY:
+            allowed = mask.new_tensor([0, 64 / 255, 128 / 255, 192 / 255, 1])
+            if (
+                not (mask == mask[:1]).all()
+                or not ((mask[..., None] - allowed).abs().amin(-1) < 1e-6).all()
+            ):
+                raise ValueError("Geometry reference must use the declared grayscale codes")
+        elif kind == ControlKind.ORACLE_ROLE:
             if not ((mask == 0) | (mask == 1)).all() or not (mask.sum(dim=0) <= 1).all():
                 raise ValueError("Role reference must be one-hot T/D/P RGB or black ignore")
         elif not ((mask == 0) | (mask == 1)).all() or not (mask == mask[:1]).all():
