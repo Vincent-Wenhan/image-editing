@@ -5,12 +5,15 @@ conditioning定义非RGB特征契约/编码，datasets只加载占据和角色�
 FLUX的受控残差；training复用固定trainer的额外参数hook及现有worker/租约；
 inference/evaluation复用run记录/分区统计并增加成对checkpoint验证。不开新框架，
 不改变默认No-mask/Mask，不训练Predictor或迁移Qwen。
-本轮230项CPU回归通过；真实4B GPU与质量对照因8卡占用pending，不能声称GPU
-或方法收益已验证。实际状态见 [特征验收报告](role_feature_report.md)。
-执行代码冻结在独立role-feature-run worktree的73ba397；文档收尾不改变执行源码。
-远端CPU CI通过215项、明确跳过15项，本机230项全部执行；43项CLI检查通过。
-2026-10-23 GPU续跑发现固定上游TrainConfig无seed属性；worker应从原YAML读取
-一次seed并显式传给encoder适配器，与全局set_seed一致，不扩展上游配置类。
+2026-10-23已完成232项CPU回归、43项CLI、真实4B前反向/置换/零条件/重载、
+batch4容量及四方法×双seed×20updates训练；固定Dev的质量门槛与研究结论见
+[特征验收报告](role_feature_report.md)。GPU接口消费成功不等于编辑质量改善。
+执行代码冻结在独立role-feature-run-02 worktree的b256692，114个source/config
+文件与Git对象及实际训练记录相符；文档收尾不改变执行源码。
+seed修复远端CPU CI通过215项、明确跳过16项（没有Torch），本机232项全部执行。
+首轮GPU暴露固定上游TrainConfig无seed属性；worker从已校验原YAML读取一次seed，
+set_seed与encoder适配器显式共用该值，不扩展上游配置类；保留0-batch原失败报告。
+同seed四方法的初始化SHA、实际样本/噪声/timestep轨迹均相同，211/223初始化不同。
 
 当前实现：`conditioning/features.py`定义不可变old/new/D/P/valid单位图及schema，
 `feature_encoder.py`懒加载FP32小编码器；`datasets/features.py`只读取NPZ占据和
@@ -34,6 +37,8 @@ CPU测试不等于GPU验收，真实结果单独记入新报告。
 encoder SHA、参数/token/预算和实际paired weights；`feature_analysis.py`复用原分区
 指标与场景bootstrap，分列身份、旧位残留/新位误差代理。自动像素门槛只给必要条件，
 不生成真人结果，也不能单凭这些代理宣布语义成功。
+身份门槛读取s=0子集的target_mae；identity_target_mae是数据source-target差异，
+不能衡量预测是否破坏身份。回归测试接入真实region_metrics/aggregate协议。
 
 新研究沿用现有目录职责，见 [失败分析设计](role_failure_analysis_design.md)。
 几何编码/占据读取、后端显式上界、研究编排和诊断分别留在 conditioning/datasets、

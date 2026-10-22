@@ -471,3 +471,35 @@ PR #4完成最新CI/214项本机回归/26CLI及实际资产/指标复核后，�
   不再从上游对象猜字段。补无seed对象/RNG/独立seed回归，再冻结并换新目录重试。
 - 修复后相关CPU回归13 passed/23.60s及Ruff通过；同seed初始化一致、211/223不同，
   不消耗原训练RNG。新报告增加实际encoder initial_seed并在公平性审计中核对。
+
+### 修复后最小训练与真实4B smoke通过
+
+- 冻结b256692，新的study_01/smoke_full_role_211完成2 updates/batch1；worker总耗时
+  154.23s（含初始化/缓存），peak allocated15.022/reserved15.037GiB，无OOM或清理错误。
+  两次真实融合，1024 feature/source tokens，13,312 encoder参数，总可训练23,114,752。
+  六组参数梯度均有限，第二步已传到categories/position/hidden；成对权重实际保存。
+- study_01/gpu_smoke真实4B检查通过，85.05s，peak allocated15.863/reserved16.135GiB。
+  初始Base/禁用No-mask/禁用Static Mask、训练后全零、PNG重载均exact；实际VAE只
+  编码一个[1,3,512,512] source，noise/source/feature各1024 tokens，空间IDs验证通过。
+  old/new、D/P交换及空间移动产生非零transformer输出差（Linf .046875/.03125/.03125），
+  实际反向六组有限非零梯度。消费验证不构成质量提升。
+- 新完整CPU回归231 passed/147.34s；资源审计23个文件通过/37.40s，无重新下载。
+  十个数据副本初始文件枚举相同（36个basename）；正式公平性仍须核验完整实际轨迹。
+  batch4容量也通过：168.05s、peak allocated15.022/reserved15.037GiB（含加载峰值），
+  留有OOM余量。已启动四方法×两个seed×20updates、batch4，最多四卡并行。
+  Dev评估和质量结论尚未产生。
+
+### 8组训练、96例推理完成；评估兼容修复计划
+
+- 四方法各seed211/223的20-step/batch4均正常完成，实测300.83–362.23s/组，
+  peak allocated15.022/reserved15.037–15.309GiB；160个LoRA张量有限，13,312参数
+  编码器成对保存，六组梯度非零。实际轨迹与初始参数/容量/token审计通过。
+- 96张512 Dev预测全部完成，8个原生推理进程正常退出；真实source/config均绑定
+  b256692。新Test未生成预测；GPU已释放，无OOM或清理失败。
+- 首次CPU分析在身份门槛报KeyError('identity_mae')，原日志与部分几何CSV保留
+  analysis_01。原单元fixture使用了虚构字段，未覆盖实际aggregate协议；改用s=0
+  target_mae，不能误用source-target的identity_target_mae。先补真实指标链回归，
+  固定评估修复提交，再用新目录重算。训练/推理与预算不变。
+- 修复回归5 passed/0.14s；新增真实region_metrics→aggregate→gate链，验证
+  source=target仍可能有预测身份破坏、1e-4容差与T/D/P门槛。完整232 passed/149.59s，
+  Ruff check/format通过。两seed各48任务/人的三人空白包已生成，0真实评分。

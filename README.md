@@ -2,14 +2,17 @@
 
 当前分支 `feat/role-feature-conditioning` 从正常合并PR #4的main `b73492f`创建。
 独立于Image VAE的角色特征最小试验设计见 [预注册](docs/role_feature_design.md)。
-独立特征与四组匹配配置已实现，230项CPU测试通过；8张GPU均被占用，UUID租约
-预检失败，真实4B smoke/20-step/Dev质量结果全部pending。当前Hold、不扩大训练；
-详见 [验收报告](docs/role_feature_report.md)。旧负面结果、全部资产与真人pending
-状态保留，Test封存。43项CLI及远端CPU CI通过（215 passed/15 skipped，未装Torch）；
-[PR #5](https://github.com/Vincent-Wenhan/image-editing/pull/5)保留draft等待GPU验证。
+2026-10-23已完成真实4B前反向/有限梯度/条件置换/零条件/成对重载验收、batch4
+容量及四方法×双seed×20updates训练。232项本机测试、Ruff、43项CLI和依赖检查
+通过；远端CPU CI为215 passed/16 skipped（没有Torch）。编辑质量与是否继续的
+研究判断见 [验收报告](docs/role_feature_report.md)，GPU消费成功不代表方法收益。
+旧负面结果、全部资产与真人pending状态保留，Test封存，不扩大训练。
+[PR #5](https://github.com/Vincent-Wenhan/image-editing/pull/5)记录本轮实现与真实验收。
 
-2026-10-23已恢复GPU验收。首轮暴露固定上游TrainConfig不保留seed的兼容问题，
-已修复为从已校验YAML显式传入，13项相关回归通过；原失败记录保留，预算和封存Test不变。
+首轮GPU暴露固定上游TrainConfig不保留seed的兼容问题，已从已校验YAML显式传入，
+同seed初始化/训练轨迹一致且两seed独立；原0-batch失败记录保留。执行源码冻结b256692，
+新资产在outputs/role_feature_20261023/study_01，未改loss或第三方源码。
+身份门槛使用真实s=0预测target_mae，避免与数据自身source-target距离混淆。
 
 以下为已完成的 **Role Conditioning Failure Analysis**，从已合并 PR #3 的 main
 `a647522` 开始。[预注册设计](docs/role_failure_analysis_design.md)规定新 Dev 和封存

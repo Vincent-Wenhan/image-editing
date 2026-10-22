@@ -78,8 +78,8 @@ GPU通过实时空闲检查与UUID租约。失败保留原traceback，用新目�
 最终执行Ruff/Pytest/全部CLI、真实GPU smoke、版本/文件SHA及提交资产审计；
 记录已实现/已运行/负面/剩余风险。新实验必须有冻结代码、配置、数据与GPU provenance。
 
-实现收尾：73ba397已冻结执行代码，CPU与CI验收见[实际报告](role_feature_report.md)。
-GPU因无空闲UUID租约仍pending，四组预算及上述研究门槛未改变；PR #5保留draft。
+2026-10-22实现收尾时：73ba397冻结执行代码，CPU与CI验收通过；当日GPU因无空闲
+UUID租约pending。此为历史资源状态，后续真实验收见[实际报告](role_feature_report.md)。
 
 ## 2026-10-23继续执行
 
@@ -95,3 +95,16 @@ GPU因无空闲UUID租约仍pending，四组预算及上述研究门槛未改变
 兼容修复只将worker已经读取并用于set_seed的YAML seed显式传给本项目适配器，
 不改上游配置类、loss或网络。回归必须使用没有seed属性的上游形状fixture，验证
 211/223分别初始化、同seed一致、CPU RNG恢复及原失败清理；重试必须新目录。
+
+修复提交b256692已冻结于role-feature-run-02，所有重试和正式实验在新study_01；
+没有覆盖73ba397的原失败。231项CPU与43项CLI、真实4B探针、batch4及8组20-step
+已实际通过。两seed各自四方法的20个实际update样本/噪声/timestep完全一致，
+13,312 encoder/23,114,752总参数、1024特征及单source tokens符合预注册。
+数据、预算、研究门槛未调整；质量判断独立于工程验收，真人评分不由程序填充。
+
+真实96例推理完成后的首次CPU评估暴露身份字段对接错误：role_metrics没有
+identity_mae，identity_target_mae表示source与target的距离，也不能当预测误差。
+修复应在s=0子集读取已有target_mae（此时target=source），保持预定1e-4容差与
+T/D/P门槛不变；测试必须接入真实region_metrics/aggregate输出，覆盖预测破坏身份
+而source=target误差仍为0的情况。保留analysis_01失败，用新评估目录和源码快照
+重算；不重训、不重新生成预测、不改原始指标或实验预算。

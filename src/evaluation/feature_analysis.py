@@ -16,7 +16,7 @@ from src.evaluation.role_metrics import paired_scene_ci, score_run
 
 
 def numeric_gate(methods: dict) -> dict:
-    """Predeclared pixel criteria are necessary, never sufficient for semantic Go."""
+    """Necessary pixel gates; s=0 target MAE measures output identity, not semantic Go."""
     full = methods["full_role"]
 
     def better(left, right, *, tolerance=0, strict=True):
@@ -34,8 +34,8 @@ def numeric_gate(methods: dict) -> dict:
                 full["nonzero"]["p_source_drift"], other["nonzero"]["p_source_drift"], strict=False
             ),
             identity=better(
-                full["by_strength"]["0.0"]["identity_mae"],
-                other["by_strength"]["0.0"]["identity_mae"],
+                full["by_strength"]["0.0"]["target_mae"],
+                other["by_strength"]["0.0"]["target_mae"],
                 tolerance=1e-4,
                 strict=False,
             ),
