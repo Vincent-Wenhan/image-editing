@@ -11,6 +11,7 @@ import numpy as np
 from PIL import Image
 
 from src.conditioning.controls import ControlBundle, ControlKind
+from src.conditioning.geometry import geometry_rgb
 from src.conditioning.oracle import role_rgb
 from src.core.io import read_rows, sha256, write_json
 from src.core.paths import data_path
@@ -18,10 +19,28 @@ from src.datasets.scene_manifest import load_oracle_condition
 from src.datasets.scene_validation import validate_scene_dataset
 from src.datasets.validation import dataset_splits
 
-ORACLE_KINDS = (ControlKind.ORACLE_ROLE, ControlKind.DYNAMIC_BINARY)
+ORACLE_KINDS = (ControlKind.ORACLE_ROLE, ControlKind.DYNAMIC_BINARY, ControlKind.ORACLE_GEOMETRY)
+
+
+def folder_name(kind: str) -> str:
+    return {
+        ControlKind.ORACLE_ROLE: "role_rgb",
+        ControlKind.DYNAMIC_BINARY: "mask_rgb",
+        ControlKind.ORACLE_GEOMETRY: "geometry_rgb",
+    }[kind]
+
+
+def load_condition(root: Path, row: dict, kind: str) -> ControlBundle:
+    if kind == ControlKind.ORACLE_GEOMETRY:
+        from src.datasets.geometry import load_geometry_condition
+
+        return load_geometry_condition(root, row)
+    return load_oracle_condition(root, row)
 
 
 def condition_image(bundle: ControlBundle, kind: str) -> Image.Image:
+    if kind == ControlKind.ORACLE_GEOMETRY:
+        return geometry_rgb(bundle.maps)
     if kind == ControlKind.ORACLE_ROLE:
         return role_rgb(bundle.maps["roles"])
     if kind != ControlKind.DYNAMIC_BINARY:
@@ -37,7 +56,7 @@ def export_role_controls(data_root: Path, output: Path, kind: str) -> Path:
     if output.exists():
         raise FileExistsError(output)
     output.mkdir(parents=True)
-    folder = "role_rgb" if kind == ControlKind.ORACLE_ROLE else "mask_rgb"
+    folder = folder_name(kind)
     index = dict(
         schema_version=2,
         kind=kind,
@@ -49,7 +68,7 @@ def export_role_controls(data_root: Path, output: Path, kind: str) -> Path:
         manifest = data_root / split / "manifest.csv"
         entries = {}
         for row in read_rows(manifest):
-            oracle = load_oracle_condition(data_root, row)
+            oracle = load_condition(data_root, row, kind)
             relative = f"{split}/{folder}/{row['id']}.png"
             path = output / relative
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -66,7 +85,7 @@ class RoleControlDataset:
     def __init__(self, root: Path, data_root: Path, kind: str) -> None:
         self.root, self.data_root = root.resolve(), data_root.resolve()
         self.kind = ControlKind(kind)
-        self.folder = "role_rgb" if self.kind == ControlKind.ORACLE_ROLE else "mask_rgb"
+        self.folder = folder_name(self.kind)
         self.index_path = self.root / "controls.json"
         self.digest = sha256(self.index_path)
         self.index = json.loads(self.index_path.read_text())
@@ -98,7 +117,7 @@ class RoleControlDataset:
         if row != self.rows[row["split"]].get(row["id"]):
             raise ValueError("Oracle row differs from canonical manifest")
         entry = self.index["splits"][row["split"]]["entries"][row["id"]]
-        oracle = load_oracle_condition(self.data_root, row)
+        oracle = load_condition(self.data_root, row, self.kind)
         if (
             any(entry.get(k) != v for k, v in oracle.metadata.items())
             or entry["path"] != f"{row['split']}/{self.folder}/{row['id']}.png"
@@ -111,7 +130,7 @@ class RoleControlDataset:
         path = data_path(self.root, entry["path"])
         if sha256(path) != entry["sha256"]:
             raise ValueError("Oracle reference SHA256 changed")
-        expected = condition_image(load_oracle_condition(self.data_root, row), self.kind)
+        expected = condition_image(load_condition(self.data_root, row, self.kind), self.kind)
         with Image.open(path) as image:
             if (
                 image.mode != "RGB"
@@ -125,9 +144,9 @@ class RoleControlDataset:
         if size != (int(row["width"]), int(row["height"])):
             raise ValueError("Oracle references cannot be implicitly resized")
         self.image(row)
-        oracle = load_oracle_condition(self.data_root, row)
+        oracle = load_condition(self.data_root, row, self.kind)
         metadata = dict(oracle.metadata, index_sha256=self.digest)
-        if self.kind == ControlKind.ORACLE_ROLE:
+        if self.kind in {ControlKind.ORACLE_ROLE, ControlKind.ORACLE_GEOMETRY}:
             return ControlBundle(self.kind, oracle.maps, metadata)
         return ControlBundle(
             self.kind,

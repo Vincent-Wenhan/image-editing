@@ -5,6 +5,25 @@
 Test、旧 checkpoint 干预、真人评审准备及最小 Geometry 上界；尚未运行的新实验
 不能引用前轮结果充当验证。
 
+最小V2接口已实现 `oracle_geometry`：同双参考，P/ignore黑，旧独占64、新独占192、
+重叠128、依赖255的三通道灰度；仅显式oracle，不是预测器。原loss/网络不变，
+独立特征编码仍是设计备选。真人使用步骤见 [评审指南](docs/human_review_guide.md)。
+
+```bash
+# 先生成并封存新的三分割数据，再准备最小匹配实验。
+python -m src.training.role_study prepare --data <new-scenes> --output <new-study> \
+  --protocol configs/experiments/role_geometry.yaml --cohort <cohort.json>
+python -m src.training.role_study run --output <new-study> --phase smoke
+image-edit gpu -- python -m src.inference.oracle_smoke --control oracle_geometry \
+  --data-root <new-scenes> --lora <smoke-checkpoint> --output <new-study>/oracle_reload_smoke
+# 完成重载后依次 capacity、train、infer；infer严格只用新Dev，不运行封存Test。
+```
+
+`src.datasets.holdout.seal_cohort` 检查与历史场景/源图SHA无重叠并写不可覆盖摘要；
+失败诊断 `python -m src.inference.role_diagnostics --help`，必须通过GPU租约。
+`python -m src.evaluation.role_failures --help` 分开记录配色敏感性、旧区残留距离与
+新区target误差，这些是像素诊断，不能代替物体计数和人工编辑成功率。
+
 已完成研究轮次正式名称：**Causal Role Data and Oracle Feasibility Study**。
 PR #3 的源码、资产、统计与结论复核见 [合并审计](docs/causal_role_feasibility_audit.md)。
 彩色 Oracle Role 的负面结果及全部历史资产保留；后续失败分析独立开展。

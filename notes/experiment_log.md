@@ -358,3 +358,10 @@ PR #3 在 d7b6414 最新 push/PR CI 成功后正常 merge 为 a647522，未 forc
 新分支 feat/role-conditioning-failure-analysis 从最新 main 创建。设计先行，计划
 新seed场景和封存Test、旧Oracle/Dynamic Binary固定干预、三人盲评准备，以及
 Geometry与Dynamic Binary同20-step/双独立seed小试验；均尚未运行。全部资产保留。
+
+## Failure Analysis：接口与检查（实现中）
+
+已实现灰度Geometry上界、实际占据SHA及禁止target RGB读取、Dev seal、旧checkpoint
+干预和颜色/旧区/新区诊断；原loss/网络不变。真人表单增加重复/目标位置/颜色/身份
+分类并补独立使用指南，所有真实评分仍pending。新20组512数据完成，跨历史隔离
+通过；Test封存，只做完整性校验。GPU和研究质量结论仍待运行，不宣称V2成功。

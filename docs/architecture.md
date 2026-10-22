@@ -4,6 +4,14 @@
 几何编码/占据读取、后端显式上界、研究编排和诊断分别留在 conditioning/datasets、
 backends、training/inference、evaluation；不引入新目录层或修改第三方。
 
+`conditioning/geometry.py` 校验三个同尺寸二值old/new/dependency图并编译灰度；
+`datasets/geometry.py` 只打开NPZ占据字段，实际SHA绑定原evidence，禁止读取RGB监督。
+ControlBundle增加独立的oracle_geometry类型，仍拒绝普通推理。P/ignore是零参考值，
+不是零VAE latent。`datasets/holdout.py` 保存跨历史分组/SHA隔离及封存Test契约；
+role_study复用现有训练编排，只新增Dev-only最小协议。`inference/role_diagnostics.py`
+明确区分原协议重载与分布外干预，`evaluation/role_failures.py` 分离位置/颜色代理量。
+新增真人失败类别向后兼容原CSV字段和旧评分；无原始真人结果时不填充任何数值。
+
 PR #3 归档为 **Causal Role Data and Oracle Feasibility Study**，合并审计见
 [causal_role_feasibility_audit.md](causal_role_feasibility_audit.md)。后续 Role Conditioning
 Failure Analysis 使用独立分支、全新 Dev 与封存 Test，不复用旧 Test 做模型选择。
