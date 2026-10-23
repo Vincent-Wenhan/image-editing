@@ -15,4 +15,12 @@ peak allocated15.022/reserved15.037GiB），但上游post_save_hook传入optimiz
 首次encoder错误绑定optimizer，最终重复路径被拒。两次失败快照的该绑定均无效，
 不得作为有效模型对；LoRA/无效encoder/trace仍保留。改为观测network.save_weights
 的实际LoRA路径并补回归，使用study_03重试，不修改第三方或覆盖旧目录。
+study_03冻结2f439d6：两步batch1训练成功198.78s，peak allocated15.022 /
+reserved15.037GiB；GPU前反向/zero/空间对齐/重载成功105.33s，15.866/16.268GiB。
+两步batch6容量检查成功266.36s，15.066/18.047GiB，低于总显存80%门槛。
+实际checkpoint与encoder摘要、各通道/层梯度见study_03原始JSON。
+正式四方法双seed各120updates已启动，启动时正常预检跳过占用的GPU0，先使用
+空闲GPU1–4；本报告不将尚未完成的训练或诊断列为研究验证。
+新增356图固定矩阵与监督/分层/梯度工具已实现，新增诊断GPU smoke和完整评估待运行。
+新增诊断及语义代理相关20 tests /22.08s通过，Ruff通过；完整套件待最终执行。
 当前可学习性/注入改进均未验证；真人0条/pending，Test继续封存。

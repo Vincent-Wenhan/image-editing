@@ -4,8 +4,9 @@ PR #6已正常合并main `8b261bb`，当前研究分支`feat/role-learnability`�
 本阶段检验少样本可学习性与角色注入失效：先预注册6个Train样本、四方法双seed
 同预算过拟合及梯度/层诊断，不用封存Test，不把记忆训练样本当作泛化。
 见[设计](docs/role_learnability_design.md)及[实际状态](docs/role_learnability_report.md)。
-已实现Train视图与固定trainer观测接口，相关CPU检查通过；新GPU训练/机制结论
-尚未产生。下文历史诊断与全部资产保留。
+已实现Train视图、固定trainer观测、共享噪声干预及监督诊断接口。两步GPU训练、
+前反向/重载及batch6容量门禁通过；正式四组双seed训练运行中，机制结论尚未产生。
+下文历史诊断与全部资产保留。
 
 ```bash
 python -m src.training.learnability_study prepare --data <existing-scenes> --cohort <existing-cohort.json> --output <new-study>
@@ -13,6 +14,10 @@ python -m src.training.learnability_study run --study <new-study> --phase smoke
 image-edit gpu -- python -m src.inference.learnability_smoke --study <new-study> --output <new-study>/gpu_smoke
 python -m src.training.learnability_study run --study <new-study> --phase capacity
 python -m src.training.learnability_study run --study <new-study> --phase train
+image-edit gpu -- python -m src.inference.learnability_diagnostic_smoke --study <new-study> --output <new-diagnostic-smoke>
+python -m src.training.learnability_study run --study <new-study> --phase infer
+python -m src.evaluation.learnability_analysis --study <new-study> --output <new-analysis>
+python -m src.evaluation.feature_diagnostic_gallery --summary <new-analysis>/train_summary.json --output <new-train-gallery>
 ```
 
 Train视图复制选定6例到新目录以隔离缓存，canonical manifest与数据不修改。
@@ -23,6 +28,9 @@ Train视图复制选定6例到新目录以隔离缓存，canonical manifest与�
 观测实际LoRA写入边界。study_01/02失败资产保留，新study_03重试。
 保留数量按成对快照上界计算，完成验收逐一检查0/中间/final的实际文件SHA，防止
 上游将encoder也计入自动清理后误删初始或中间权重。
+生成模块只接source与显式Oracle空间条件；target仅在独立evaluation模块的监督
+velocity/梯度诊断使用，不作为生成参考。分析校验完整矩阵、实际SHA、同组source/
+text/noise、成对权重及相同源码。真人评分继续pending；Train拟合不代表泛化。
 
 PR #5已正常合并main `676242b`。新分支feat/role-feature-diagnostics先诊断独立特征
 为何没有稳定收益，复用原checkpoint/Dev，新增训练更新固定为0；不扩大训练。

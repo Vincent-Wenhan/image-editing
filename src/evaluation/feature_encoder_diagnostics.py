@@ -18,6 +18,22 @@ from src.inference.feature_diagnostic_study import load_plan
 from src.infra.experiment import source_snapshot
 
 
+def input_components(encoder, tokens, grid):
+    """Observe the actual category/position sum without duplicating encoder math."""
+    captured = {}
+
+    def hidden(_module, args):
+        captured["hidden"] = args[0].detach()
+
+    handle = encoder.hidden.register_forward_pre_hook(hidden)
+    try:
+        residual = encoder(tokens, grid)
+    finally:
+        handle.remove()
+    category = tokens @ encoder.categories
+    return residual, category, captured["hidden"] - category
+
+
 def analyze(study: Path, output: Path):
     import torch
 
@@ -59,19 +75,8 @@ def analyze(study: Path, output: Path):
             field = load_features(root, row, ckpt["method"])
             tokens = torch.from_numpy(field.tokens())[None]
             grid = field.size[1] // 16, field.size[0] // 16
-            captured = {}
-
-            def hidden(_module, args, sink=captured):
-                sink["hidden_input"] = args[0].detach()
-
-            handle = encoder.hidden.register_forward_pre_hook(hidden)
             with torch.inference_mode():
-                try:
-                    original = encoder(tokens, grid)
-                finally:
-                    handle.remove()
-                category = tokens @ encoder.categories
-                position = captured["hidden_input"] - category
+                original, category, position = input_components(encoder, tokens, grid)
                 generator = torch.Generator(device="cpu").manual_seed(
                     sample_seed(p["inference"]["seed"], row["id"])
                 )

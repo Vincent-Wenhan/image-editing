@@ -78,3 +78,17 @@ loss下降但角色替换无对应行为，仅算拟合，不宣称学会角色�
 
 最终Go仅表示值得继续受控机制研究；No-Go限当前注入/预算。真人至少3位独立
 评分仍pending，不伪造；不训练Role Predictor、不迁移Qwen，封存Test继续保留。
+
+## 固定诊断矩阵与执行门禁
+
+Full在update0/20/60/120保留学习曲线，其余方法在120评估。Train全部6例，
+Dev全部12例；中间20/60仅Train。最终Train四方法均有original/zero/shuffle，
+Full再加old/new及D/P交换。最终Dev Full取排序前两组的full-strength、首组identity
+及首个非零样本做五种干预，其余只original；共356张生成图，204个原条件监督探针。
+各原条件另做t=0.1/0.5/0.9监督velocity诊断。Full最终每split首个非零样本记录
+真实CFG早/中/晚三个状态的分层回放及T/D/P梯度分解；不对Test做这些操作。
+
+新诊断先在2-step容量checkpoint做单例4-step GPU smoke，核对实际轨迹回放、
+zero/disabled、分层hook、监督target隔离、梯度有限性及异常清理，再运行完整矩阵。
+分区梯度采用共同全图分母，记录T/D/P/ignore对全图梯度的贡献和求和误差；
+这是未加权velocity诊断，不能冒充原训练器加权loss或自动微分以外的BF16导数。

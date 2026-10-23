@@ -1,5 +1,13 @@
 # 实验记录
 
+2026-10-23 Asia/Shanghai study_03训练smoke/前反向重载/batch6容量均完成，
+分别198.78/105.33/266.36s；peak reserved15.037/16.268/18.047GiB。
+四组双seed训练运行中，正常租约跳过已有进程的GPU0，首批分配空闲GPU1–4。
+共享噪声356图矩阵、监督velocity、T/D/P梯度分解及分层回放已实现；先单例GPU
+诊断smoke再完整运行，角色可学习性结论pending。两个失败study及历史全部保留。
+相关20 tests /22.08s与Ruff通过；包含无target参考、梯度分解守恒、层hook清理、
+Constant/完美/反向contrast、角色无作用拒绝及封存Test拒绝。
+
 2026-10-23 Asia/Shanghai 快照保留守卫：固定上游cleanup会把*.features.safetensors
 一并计数，保存上界按成对快照数计算，完成验收检查0/每20/final各对实际SHA，
 防止初始/中间权重被自动删除。未运行新的训练，等待study_03真实验收。

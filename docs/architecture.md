@@ -8,6 +8,15 @@ teacher诊断与source-only生成。设计先行，见role_learnability_design.m
 `feature_observer.py`在固定上游公开hook记录原loss、角色/层梯度及成对快照，不改loss；
 `feature_adapter.py`只在显式view元数据下启用，旧配置路径与目标保持兼容。
 `inference/learnability_smoke.py`复用已验证的真实4B前反向/zero/位置/重载探针。
+
+`inference/learnability.py`负责共享source/prompt/noise的Train/Dev生成与固定状态回放；
+`backends/layer_response.py`以可清理的作用域hook观测Diffusers图像流，不改变模型。
+`evaluation/feature_teacher.py`及`feature_gradient.py`独立加载监督target，只构造受控
+noisy target状态和velocity误差；生成从不接收target。后者用共同全图分母分解
+T/D/P/ignore梯度，不改训练器目标。`learnability_diagnostic_smoke.py`先验证真实GPU路径。
+`learnability_provenance.py`绑定实际权重、PNG、feature tokens、source/text/noise及完整
+预定矩阵；`learnability_analysis.py`复用区域/位置/阴影语义代理，另算同强度contrast、
+学习曲线与门槛。Train/Dev画廊显式绑定canonical manifest，拒绝封存Test。
 成对快照从network.save_weights实际写入处绑定，不使用传回optimizer.pt的上游
 post_save_hook。保留上界按LoRA+encoder双倍计算，完成验收逐一复核全部历史对。
 

@@ -20,9 +20,12 @@ def export(summary: Path, output: Path):
     if result["status"] != "complete":
         raise ValueError("Gallery requires a completed hash-verified analysis")
     root = Path(result["data"])
-    if sha256(root / "dev/manifest.csv") != result["manifest_sha256"]:
+    manifest = Path(result.get("manifest_path", root / "dev/manifest.csv"))
+    if manifest.resolve() not in {(root / s / "manifest.csv").resolve() for s in ["train", "dev"]}:
+        raise ValueError("Feature diagnostic galleries cannot use sealed Test")
+    if sha256(manifest) != result["manifest_sha256"]:
         raise ValueError("Gallery Dev manifest changed")
-    rows = {r["id"]: r for r in read_rows(root / "dev/manifest.csv")}
+    rows = {r["id"]: r for r in read_rows(manifest)}
     output.mkdir(parents=True)
     font = ImageFont.load_default(size=13)
     cards, contacts = [], []
