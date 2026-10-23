@@ -1,5 +1,11 @@
 # Image Editing Research
 
+PR #6已正常合并main `8b261bb`，当前研究分支`feat/role-learnability`。
+本阶段检验少样本可学习性与角色注入失效：先预注册6个Train样本、四方法双seed
+同预算过拟合及梯度/层诊断，不用封存Test，不把记忆训练样本当作泛化。
+见[设计](docs/role_learnability_design.md)及[实际状态](docs/role_learnability_report.md)。
+目前只有预注册，新训练/机制结论尚未产生；下文历史诊断与全部资产保留。
+
 PR #5已正常合并main `676242b`。新分支feat/role-feature-diagnostics先诊断独立特征
 为何没有稳定收益，复用原checkpoint/Dev，新增训练更新固定为0；不扩大训练。
 残差/BF16/时间步/通道干预与一个最小修复的预注册见

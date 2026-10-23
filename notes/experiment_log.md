@@ -1,5 +1,11 @@
 # 实验记录
 
+2026-10-23 14:39 Asia/Shanghai：PR #6复核252 passed/218.67s、Ruff/55 CLI、96图
+实际指标/区间、checkpoint/data SHA和六份空白盲评包后正常merge8b261bb。
+新分支feat/role-learnability从最新main创建，先登记6 Train样本、四方法×双seed
+120updates的有界可学习性实验；同组共享source/prompt/noise，梯度/层和teacher
+诊断隔离推理，Test封存。尚未实现或运行，不预设语义可学或最小修改；真人pending。
+
 2026-10-23 UTC 机制诊断完成：PR #5正常merge676242b，从最新main建新诊断分支。
 Phase A冻结d35b4c1；修复GPU冻结ecfe773、CPU评估冻结fbd385f。双seed四臂96图
 全部完成604.64/606.35s，peak allocated15.598/reserved16.266GiB；24张原始臂与

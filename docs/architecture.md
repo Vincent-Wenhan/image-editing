@@ -1,5 +1,9 @@
 # 工程架构重构
 
+2026-10-23可学习性阶段沿用现有边界：datasets建立只含选定Train资产的实验视图，
+training复用固定trainer与观测hook，backends只测特征/梯度，evaluation隔离监督
+teacher诊断与source-only生成。设计先行，见role_learnability_design.md；不重构目录。
+
 2026-10-23机制诊断复用conditioning/backends/inference/evaluation边界，仅增加观测
 和显式推理干预，不改目录或默认路径。权重冻结，新增训练0步；先测量再选一个
 改进，见[机制诊断预注册](role_feature_diagnostics_design.md)。
