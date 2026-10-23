@@ -1,5 +1,9 @@
 # 工程架构重构
 
+2026-10-23机制诊断复用conditioning/backends/inference/evaluation边界，仅增加观测
+和显式推理干预，不改目录或默认路径。权重冻结，新增训练0步；先测量再选一个
+改进，见[机制诊断预注册](role_feature_diagnostics_design.md)。
+
 独立Role Feature试验沿用现有模块边界，见 [设计](role_feature_design.md)。
 conditioning定义非RGB特征契约/编码，datasets只加载占据和角色，backends实现
 FLUX的受控残差；training复用固定trainer的额外参数hook及现有worker/租约；

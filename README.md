@@ -1,5 +1,10 @@
 # Image Editing Research
 
+PR #5已正常合并main `676242b`。新分支feat/role-feature-diagnostics先诊断独立特征
+为何没有稳定收益，复用原checkpoint/Dev，新增训练更新固定为0；不扩大训练。
+残差/BF16/时间步/通道干预与一个最小修复的预注册见
+[机制诊断设计](docs/role_feature_diagnostics_design.md)。下文保留上一轮实际结果。
+
 当前分支 `feat/role-feature-conditioning` 从正常合并PR #4的main `b73492f`创建。
 独立于Image VAE的角色特征最小试验设计见 [预注册](docs/role_feature_design.md)。
 2026-10-23已完成真实4B前反向/有限梯度/条件置换/零条件/成对重载验收、batch4

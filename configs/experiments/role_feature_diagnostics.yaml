@@ -1,0 +1,29 @@
+schema_version: 1
+study: role_feature_failure_analysis_v1
+training_updates: 0
+train_seeds: [211, 223]
+methods: [constant, binary, old_new, full_role]
+diagnostic_method: full_role
+diagnostic_samples:
+  - dev_2026102201_000_s000
+  - dev_2026102201_000_s001
+  - dev_2026102201_001_s002
+probe_steps: [0, 4, 9, 14, 19]
+variants: [original, zero, identity, swap_old_new, swap_dp, drop_old, drop_new, drop_d, drop_p, shift, shuffle]
+shift_tokens: 4
+shuffle_seed: 20261023
+inference:
+  side: 512
+  steps: 20
+  guidance: 4.0
+  seed: 42
+max_parallel: 2
+smoke:
+  steps: 4
+  sample: dev_2026102201_000_s001
+  variants: [original, zero, swap_old_new]
+gate:
+  edit_relative_improvement: 0.01
+  preservation_tolerance: 0.0001
+  bootstrap_resamples: 2000
+  bootstrap_seed: 42
