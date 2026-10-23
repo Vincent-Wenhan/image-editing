@@ -1,5 +1,8 @@
 # 实验记录
 
+2026-10-23 Asia/Shanghai 报告审阅明确跨方法是相同参数容量/预算而非相同已训练权重；
+通道归因仍要求同checkpoint对照。只澄清研究边界，不改变分数、门槛、源码或任何实验资产。
+
 2026-10-23 Asia/Shanghai 纯噪声方向收尾：PR #7正常merge1d3986b且main CI成功，
 新分支feat/role-direction-diagnostics复用16对最终权重；GPU源码444ac6b、CPU daa8bf7。
 16/16组、2016 case-state完成，0更新/0失败；完整GPU编排1987.24s，worker累计

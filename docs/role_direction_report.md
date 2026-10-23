@@ -21,8 +21,10 @@ detached worktree，editable安装复用现有环境/资产，不重新下载。
 复用PR #7 original/channel_rms的Constant、Binary、Old/New、Full Role，
 两独立训练seed307/311的最终120-step成对checkpoint，共16组。
 固定6 Train（2 scene groups）、12 Dev（4 scene groups），512²；prompt、source、
-sample seed42及CFG4均继承原计划。两版本同数据/参数/原训练预算，未增加曝光。
+sample seed42及CFG4均继承原计划。两版本同数据/参数容量/原训练预算，未增加曝光。
 Old/New的D/P槽是valid占位；Binary包含Oracle变化区域，不能当成无信息输入。
+不同方法的已训练LoRA权重不同；跨方法胜负不能单独归因于某个通道，因此另保留
+同checkpoint的strength、zero及dropD对照。
 
 每scene采用相同epsilon、source anchor和空间ID，主矩阵t=1/.9/.5/.1；
 t=1为真实初始纯噪声，其他t是target-free source bridge，使用实际BF16时间。
