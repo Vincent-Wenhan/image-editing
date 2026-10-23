@@ -63,6 +63,7 @@ class StateCapture:
         self.selected = set(selected_steps)
         self.times, self.states = [], {}
         self.branches = {}
+        self.outputs, self.pending = {}, None
 
     def __call__(self, _model, _args, kwargs):
         import torch
@@ -73,17 +74,31 @@ class StateCapture:
         step = len(self.times) - 1
         branch = self.branches.get(step, 0)
         self.branches[step] = branch + 1
+        self.pending = step, branch
         if step in self.selected:
             self.states.setdefault(step, {})[branch] = {
                 key: value.detach().cpu().clone() if isinstance(value, torch.Tensor) else value
                 for key, value in kwargs.items()
             }
 
+    def capture_output(self, _model, _args, output):
+        step, branch = self.pending
+        if step in self.selected:
+            ids = self.states[step][branch]["img_ids"]
+            noise = (ids[0] if ids.ndim == 3 else ids)[:, 0] == 0
+            self.outputs.setdefault(step, {})[branch] = (
+                output[0][:, noise.to(output[0].device)].detach().cpu().clone()
+            )
+
     def validate(self, steps: int):
         if len(self.times) != steps or any(v != 2 for v in self.branches.values()):
             raise RuntimeError("Expected paired positive/negative calls at each real CFG step")
         if set(self.states) != self.selected:
             raise RuntimeError("Selected diffusion states were not captured")
+        if set(self.outputs) != self.selected or any(
+            set(v) != {0, 1} for v in self.outputs.values()
+        ):
+            raise RuntimeError("Actual CFG outputs were not captured with their input states")
 
 
 def replay_branch(model, encoder, tokens, grid, inputs: dict, variants, protocol) -> dict:
@@ -199,6 +214,12 @@ def replay_states(model, encoder, tokens, grid, capture: StateCapture, variants,
             if positive["input_sha256"] != negative["input_sha256"]:
                 raise RuntimeError("CFG branches have different noise/source states")
             p, n = positive.pop("outputs"), negative.pop("outputs")
+            for branch, predictions in enumerate([p, n]):
+                expected = capture.outputs[step][branch].to(tokens.device).float()
+                if not torch.equal(predictions["original"], expected):
+                    raise RuntimeError(
+                        "Replayed original differs from its actual trajectory prediction"
+                    )
             guidance = protocol["inference"]["guidance"]
             reference = n["original"] + guidance * (p["original"] - n["original"])
             cfg = {}
@@ -218,6 +239,7 @@ def replay_states(model, encoder, tokens, grid, capture: StateCapture, variants,
                     negative=negative,
                     cfg=cfg,
                     zero_disabled_exact=True,
+                    replay_original_exact=True,
                 )
             )
     return result

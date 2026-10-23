@@ -139,6 +139,7 @@ def test_bf16_measurement_detects_lost_and_exact_updates():
 
 def test_paired_fixed_state_replay_observes_true_fusion_without_mutation():
     torch = pytest.importorskip("torch")
+    from src.backends.feature_fusion import feature_fusion
     from src.backends.feature_probe import StateCapture, replay_states
     from src.conditioning.feature_encoder import build_encoder
     from src.conditioning.features import EncoderConfig
@@ -173,6 +174,8 @@ def test_paired_fixed_state_replay_observes_true_fusion_without_mutation():
                 timestep=torch.tensor([time]),
             )
             capture(model, (), kwargs)
+            with torch.no_grad(), feature_fusion(model, encoder, tokens, (2, 2)):
+                capture.capture_output(model, (), model(**kwargs))
     capture.validate(2)
     before = x.clone()
     p = dict(shift_tokens=1, shuffle_seed=71, inference=dict(guidance=4.0))

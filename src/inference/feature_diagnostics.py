@@ -90,6 +90,11 @@ def run(args):
                     if name == "original"
                     else None
                 )
+                output_handle = (
+                    model.register_forward_hook(captured.capture_output)
+                    if name == "original"
+                    else None
+                )
                 try:
                     with feature_fusion(model, wrapped, tokens, grid) as stats:
                         generated = backend.base._generate(
@@ -98,6 +103,8 @@ def run(args):
                 finally:
                     if handle is not None:
                         handle.remove()
+                    if output_handle is not None:
+                        output_handle.remove()
                 folder = args.output / identifier / name
                 folder.mkdir(parents=True)
                 generated.image.save(folder / "prediction.png")

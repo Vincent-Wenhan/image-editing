@@ -8,6 +8,8 @@
 `inference/feature_diagnostic_study.py`引用旧checkpoint并锁定0训练预算，
 `feature_diagnostics.py`复用原backend/UUID租约；`evaluation/feature_encoder_diagnostics.py`
 在CPU分离类别/位置项与实际输出，不把归因指标称为质量提升。
+诊断phase/逐seed receipt绑定实际输出目录、report SHA和执行源码；失败用新attempt，
+成功同级任务复用。StateCapture保存实际正负分支预测，回放必须精确复现后再作归因。
 
 独立Role Feature试验沿用现有模块边界，见 [设计](role_feature_design.md)。
 conditioning定义非RGB特征契约/编码，datasets只加载占据和角色，backends实现

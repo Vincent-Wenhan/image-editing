@@ -14,6 +14,9 @@ python -m src.inference.feature_diagnostic_study run --study <new-study> --phase
 python -m src.inference.feature_diagnostic_study run --study <new-study> --phase diagnose
 ```
 
+资源预检或执行失败后使用`--attempt 2`等新编号；旧尝试保留，已完成的seed从校验过的
+receipt复用，完整phase禁止覆盖。固定状态回放还校验与原轨迹预测逐元素一致。
+
 观测/干预与固定CFG状态回放已实现，CPU检查通过；本阶段真实GPU及改进收益尚未
 验证，状态见[诊断报告](docs/role_feature_diagnostics_report.md)。
 

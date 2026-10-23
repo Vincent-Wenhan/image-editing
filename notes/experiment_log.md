@@ -8,6 +8,12 @@
 Phase A已实现五通道干预、BF16实际加法/FP32相加反事实、x_embedder/CFG固定状态
 回放、CPU encoder分解与冻结矩阵校验。相关14项/136.56s通过，新增漂移回归日志
 另存probe_guard_tests.log。下一步冻结代码后测真实checkpoint/GPU smoke，未选择修复。
+真实CPU encoder_analysis_01完成9.20s；参数初始化按seed重构并核对SHA，八个encoder
+均有更新。两个Full的类别/位置输入RMS比约.066/.069，identity参考全局残差差比
+.00704/.00526。面积与数值影响需继续验证，不能据此宣布主因已定。
+首次GPU正常租约因8卡均有进程/约44GiB而拒绝，未加载模型；原执行/trace保留。
+新增attempt隔离和成功兄弟任务复用，以及真实轨迹预测精确回放守卫；相关数值、
+重试、语义和角色回归合计15 passed/13.79s。GPU真实性仍pending，不占用他人卡。
 
 时间以 Asia/Shanghai 为准。每条记录说明配置、输入、产物、实际结果与限制。
 
