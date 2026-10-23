@@ -81,6 +81,9 @@ def mechanism_summary(observations, probes):
 
 def summarize(rows):
     result = summarize_records(rows)
+    result["teacher_preprocessing"] = sorted(
+        {r.get("teacher_preprocessing", "unspecified") for r in rows if "teacher" in r}
+    )
     selections = dict(all=rows, nonzero=[r for r in rows if r["strength"] > 0])
     for key, selected in selections.items():
         result[key].update({k: scene_mean(selected, k) for k in CONTRASTS})
@@ -139,6 +142,9 @@ def score_report(report, references):
         )
         if item["teacher"] is not None:
             record["teacher"] = item["teacher"]["records"]
+            record["teacher_preprocessing"] = item["teacher"].get(
+                "target_preprocessing", "legacy_reference_cast_order"
+            )
         groups.setdefault((item["split"], item["update"], item["variant"]), []).append(record)
     return {key: summarize(records) for key, records in groups.items()}
 

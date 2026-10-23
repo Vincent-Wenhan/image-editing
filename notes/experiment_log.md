@@ -1,5 +1,10 @@
 # 实验记录
 
+2026-10-23 Asia/Shanghai 监督target转换已拆分，256级BF16与source顺序区分、
+target不作参考、batch6/单例一致性等16 tests/51.13s通过；原pixel/contrast不变的
+更正overlay及安装/CLI相关8 tests/34.89s通过。新GPU更正worker尚待smoke。
+归一化完整712图两轮对照均No-Go，像素门槛不依赖teacher；监督更正在新目录继续。
+
 2026-10-23 Asia/Shanghai 监督诊断更正计划：固定上游target先FP32 rescale再cast，
 原teacher/梯度误用了source reference的cast-before-rescale helper。训练和全部
 生成/像素门槛不受影响；旧诊断保留并标明替代预处理，先CPU/BF16与真实GPU smoke，

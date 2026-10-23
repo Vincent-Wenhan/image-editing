@@ -3,9 +3,9 @@
 import numpy as np
 
 from src.backends.feature_fusion import feature_fusion
-from src.backends.flux2_encoding import reference_tensor
 from src.core.metadata import tensor_sha
 from src.datasets.scene_manifest import load_role_supervision
+from src.evaluation.feature_teacher import TARGET_PREPROCESSING, target_tensor
 
 
 def decompose_field_gradient(errors, masks, fields):
@@ -58,7 +58,7 @@ def gradient_probe(pipe, encoder, tokens, grid, captured, root, row, times, seed
     ids = inputs["img_ids"]
     noise_positions = (ids[0] if ids.ndim == 3 else ids)[:, 0] == 0
     with torch.no_grad():
-        target = reference_tensor(supervision.target, device=tokens.device, dtype=pipe.vae.dtype)
+        target = target_tensor(supervision.target, device=tokens.device, dtype=pipe.vae.dtype)
         latent = pipe._encode_vae_image(
             target, generator=torch.Generator(device=tokens.device).manual_seed(seed)
         )
@@ -113,5 +113,6 @@ def gradient_probe(pipe, encoder, tokens, grid, captured, root, row, times, seed
         target_sha256=row["target_sha256"],
         source_sha256=row["source_sha256"],
         target_latent_sha256=tensor_sha(z0),
+        target_preprocessing=TARGET_PREPROCESSING,
         records=result,
     )

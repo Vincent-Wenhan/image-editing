@@ -72,6 +72,26 @@ def test_capacity_constant_zero_init_and_actual_role_effect():
     assert all(p.grad is not None and p.grad.isfinite().all() for p in fixed.parameters())
 
 
+def test_training_batch_and_single_inference_have_same_field_encoding():
+    torch = pytest.importorskip("torch")
+    from src.conditioning.feature_encoder import build_encoder, category_inputs
+
+    encoder = build_encoder(EncoderConfig(normalization="channel_rms"))
+    with torch.no_grad():
+        encoder.output.weight.normal_(std=0.02)
+    values = torch.rand(6, 16, 5)
+    values[..., 4] = 1
+    values[0, :, 2] = 0
+    values[..., 3] = 1 - values[..., 2]
+    individual = torch.cat([category_inputs(x[None], "channel_rms") for x in values])
+    assert torch.equal(category_inputs(values, "channel_rms"), individual)
+    encoder.train()
+    batched = encoder(values, (4, 4))
+    encoder.eval()
+    singles = torch.cat([encoder(x[None], (4, 4)) for x in values])
+    assert torch.allclose(batched, singles, rtol=1e-5, atol=1e-7)
+
+
 def test_legacy_and_normalized_checkpoint_metadata_reload(tmp_path):
     torch = pytest.importorskip("torch")
     pytest.importorskip("safetensors")

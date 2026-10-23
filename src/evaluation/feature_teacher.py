@@ -3,16 +3,28 @@
 import numpy as np
 
 from src.backends.feature_fusion import feature_fusion
-from src.backends.flux2_encoding import reference_tensor
 from src.core.metadata import tensor_sha
 from src.datasets.scene_manifest import load_role_supervision
+
+TARGET_PREPROCESSING = "fp32_rescale_then_vae_dtype"
+
+
+def target_tensor(image, *, device, dtype):
+    """Pinned dataset target transform; source references have a different cast order."""
+    import torch
+
+    if image.mode != "RGB":
+        raise ValueError("Supervised target must be RGB")
+    values = np.array(image, dtype=np.float32) / 255
+    tensor = torch.from_numpy(values).permute(2, 0, 1).unsqueeze(0)
+    return (tensor * 2 - 1).to(device=device, dtype=dtype)
 
 
 def score_teacher(pipe, encoder, tokens, grid, captured, root, row, times, seed):
     import torch
 
     supervision = load_role_supervision(root, row)
-    target = reference_tensor(supervision.target, device=tokens.device, dtype=pipe.vae.dtype)
+    target = target_tensor(supervision.target, device=tokens.device, dtype=pipe.vae.dtype)
     ids = captured["img_ids"]
     noise_positions = (ids[0] if ids.ndim == 3 else ids)[:, 0] == 0
     context_sha = tensor_sha(captured["encoder_hidden_states"])
@@ -83,5 +95,6 @@ def score_teacher(pipe, encoder, tokens, grid, captured, root, row, times, seed)
         target_sha256=row["target_sha256"],
         objective="unweighted diagnostic MSE, not configured upstream weighted loss",
         target_is_reference=False,
+        target_preprocessing=TARGET_PREPROCESSING,
         records=rows,
     )

@@ -15,6 +15,11 @@ PR #6已正常合并main `8b261bb`，当前研究分支`feat/role-learnability`�
 新研究视图可显式指定`prepare ... --normalization channel_rms`，默认none保留旧计算。
 原始字段仍是[0,1]，checkpoint记录归一化选项；新配置仅复用同一预算YAML。
 
+已确认旧teacher/梯度诊断误用了source的cast顺序。训练/PNG/像素门槛保持有效；
+target专用FP32归一化回归已补充，使用`src.inference.learnability_supervised`在新目录
+更正监督诊断，`src.evaluation.learnability_supervised`派生summary并核对原像素结果不变。
+旧诊断保留为legacy_reference_cast_order；最终机制结论使用更正版本。
+
 ```bash
 python -m src.training.learnability_study prepare --data <existing-scenes> --cohort <existing-cohort.json> --output <new-study>
 python -m src.training.learnability_study run --study <new-study> --phase smoke

@@ -24,6 +24,14 @@ T/D/P/ignore梯度，不改训练器目标。`learnability_diagnostic_smoke.py`�
 序列化省略默认项以兼容旧checkpoint。study CLI只覆盖这个显式选项，预算不复制。
 `learnability_comparison.py`复核两study除该选项外的实际初始化、样本/噪声、容量、
 优化配置和预算相等，再做原/新Full的配对比较及固定门槛验收。
+
+监督target与source reference的像素变换分开：target在FP32映射到[-1,1]后转换
+VAE dtype，source保留固定上游的cast-before-rescale。`feature_teacher.target_tensor`
+供监督velocity/梯度共享，256个8bit值的BF16回归核对固定上游转换。
+`inference/learnability_supervised.py`用原权重、source-only首状态重算旧监督诊断，
+逐项匹配原20-step的source/text/noise SHA；不训练或替换原生成图像。
+`evaluation/learnability_supervised.py`输出新的更正summary，硬性核对原pixel/contrast
+和决策不变，保留原分析、旧teacher与所有出处。新版记录显式标注target预处理。
 成对快照从network.save_weights实际写入处绑定，不使用传回optimizer.pt的上游
 post_save_hook。保留上界按LoRA+encoder双倍计算，完成验收逐一复核全部历史对。
 

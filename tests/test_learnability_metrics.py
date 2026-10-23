@@ -107,3 +107,37 @@ def test_full_batch_trace_rejects_same_capacity_but_duplicate_examples():
     trained["feature_statistics"]["input_trace"][1]["ids"] = ["a", "a"]
     with pytest.raises(ValueError, match="exactly once"):
         verify_full_batch_trace(trained, {"a", "b"})
+
+
+def test_supervised_overlay_keeps_primary_scores_and_legacy_records(scene_data):
+    from src.evaluation.feature_diagnostic_analysis import scene_references, score_prediction
+    from src.evaluation.learnability_analysis import CONTRASTS, summarize
+    from src.evaluation.learnability_supervised import patch_scores
+
+    records, corrected = [], {}
+    for identifier, reference in scene_references(scene_data, "train").items():
+        row = reference["row"]
+        teacher = [dict(time=0.5, velocity_mse=1.0, regions=dict(t=1.0, d=1.0, p=1.0))]
+        records.append(
+            dict(
+                id=identifier,
+                group_id=row["group_id"],
+                strength=float(row["strength"]),
+                update=120,
+                variant="original",
+                teacher=teacher,
+                **score_prediction(reference, reference["source"]),
+                **dict.fromkeys(CONTRASTS),
+            )
+        )
+        corrected[(120, identifier)] = dict(
+            teacher=dict(
+                records=[dict(time=0.5, velocity_mse=0.5, regions=dict(t=0.5, d=0.5, p=0.5))]
+            )
+        )
+    original = summarize(records)
+    patched = patch_scores(original, corrected)
+    assert all(original[k] == patched[k] for k in ["all", "nonzero", "by_strength"])
+    assert original["teacher_by_time"]["0.5"]["velocity_mse"] == 1.0
+    assert patched["teacher_by_time"]["0.5"]["velocity_mse"] == 0.5
+    assert original["records"][0]["teacher"][0]["velocity_mse"] == 1.0

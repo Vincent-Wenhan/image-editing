@@ -6,6 +6,25 @@ from types import SimpleNamespace
 import pytest
 
 
+def test_bf16_target_matches_native_dataset_transform_for_every_byte():
+    torch = pytest.importorskip("torch")
+    torchvision = pytest.importorskip("torchvision")
+    import numpy as np
+    from PIL import Image
+
+    from src.backends.flux2_encoding import reference_tensor
+    from src.evaluation.feature_teacher import target_tensor
+
+    image = Image.fromarray(np.repeat(np.arange(256, dtype=np.uint8).reshape(16, 16, 1), 3, 2))
+    expected = torchvision.transforms.ToTensor()(image)
+    expected = (expected * 2 - 1).to(torch.bfloat16)[None]
+    actual = target_tensor(image, device="cpu", dtype=torch.bfloat16)
+    assert torch.equal(actual, expected)
+    assert not torch.equal(actual, reference_tensor(image, device="cpu", dtype=torch.bfloat16))
+    with pytest.raises(ValueError, match="RGB"):
+        target_tensor(image.convert("L"), device="cpu", dtype=torch.bfloat16)
+
+
 def test_teacher_never_passes_target_as_reference_or_calls_generation(scene_data):
     torch = pytest.importorskip("torch")
     from src.conditioning.feature_encoder import build_encoder
