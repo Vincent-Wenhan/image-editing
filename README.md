@@ -1,5 +1,51 @@
 # Image Editing Research
 
+PR #6已正常合并main `8b261bb`，当前研究分支`feat/role-learnability`。
+本阶段检验少样本可学习性与角色注入失效：先预注册6个Train样本、四方法双seed
+同预算过拟合及梯度/层诊断，不用封存Test，不把记忆训练样本当作泛化。
+见[设计](docs/role_learnability_design.md)及[实际状态](docs/role_learnability_report.md)。
+已完成原注入及唯一channel_rms改进的四方法×双seed对照，共1920updates、712图。
+两版本均未通过fit/角色利用/D增量门槛；通道归一化减少BF16差分丢失，仍无正确的
+位置/阴影控制，当前配方No-Go扩大训练。T/D/P作为反事实数据与诊断仍值得保留。
+本地276 tests、67 CLI、真实GPU门禁及23个模型文件实际SHA通过；真人评分pending，
+不把loss下降、少样本拟合或非零梯度当成角色语义或泛化。
+下文历史诊断与全部资产保留。
+
+唯一候选修改先预注册于[通道预条件设计](docs/role_learnability_repair_design.md)：
+现有编码器内逐通道空间RMS归一化，不增加参数、不改loss；实现与验证状态见报告。
+新研究视图可显式指定`prepare ... --normalization channel_rms`，默认none保留旧计算。
+原始字段仍是[0,1]，checkpoint记录归一化选项；新配置仅复用同一预算YAML。
+
+已确认旧teacher/梯度诊断误用了source的cast顺序。训练/PNG/像素门槛保持有效；
+target专用FP32归一化回归已补充，使用`src.inference.learnability_supervised`在新目录
+更正监督诊断，`src.evaluation.learnability_supervised`派生summary并核对原像素结果不变。
+旧诊断保留为legacy_reference_cast_order；最终机制结论使用更正版本。
+
+```bash
+python -m src.training.learnability_study prepare --data <existing-scenes> --cohort <existing-cohort.json> --output <new-study>
+python -m src.training.learnability_study run --study <new-study> --phase smoke
+image-edit gpu -- python -m src.inference.learnability_smoke --study <new-study> --output <new-study>/gpu_smoke
+python -m src.training.learnability_study run --study <new-study> --phase capacity
+python -m src.training.learnability_study run --study <new-study> --phase train
+image-edit gpu -- python -m src.inference.learnability_diagnostic_smoke --study <new-study> --output <new-diagnostic-smoke>
+python -m src.training.learnability_study run --study <new-study> --phase infer
+python -m src.evaluation.learnability_analysis --study <new-study> --output <new-analysis>
+python -m src.evaluation.feature_diagnostic_gallery --summary <new-analysis>/train_summary.json --output <new-train-gallery>
+python -m src.evaluation.learnability_comparison --study <original-study> --baseline <original-analysis>/summary.json --normalized-study <normalized-study> --normalized <normalized-analysis>/summary.json --output <new-comparison.json>
+```
+
+Train视图复制选定6例到新目录以隔离缓存，canonical manifest与数据不修改。
+观测复用原loss与optimizer；checkpoint按真实update0/每20/final成对保存，不自动删旧权重。
+首轮真实smoke在Accelerate优化器观测边界失败（0更新），原study_01保留；修复仅
+解包step-hook注册，训练目标不变，使用新目录重试，状态见可学习性报告。
+第二次两步训练后发现上游保存回调传入optimizer路径，错误绑定已拒绝；改为
+观测实际LoRA写入边界。study_01/02失败资产保留，study_03完整基线已完成。
+保留数量按成对快照上界计算，完成验收逐一检查0/中间/final的实际文件SHA，防止
+上游将encoder也计入自动清理后误删初始或中间权重。
+生成模块只接source与显式Oracle空间条件；target仅在独立evaluation模块的监督
+velocity/梯度诊断使用，不作为生成参考。分析校验完整矩阵、实际SHA、同组source/
+text/noise、成对权重及相同源码。真人评分继续pending；Train拟合不代表泛化。
+
 PR #5已正常合并main `676242b`。新分支feat/role-feature-diagnostics先诊断独立特征
 为何没有稳定收益，复用原checkpoint/Dev，新增训练更新固定为0；不扩大训练。
 残差/BF16/时间步/通道干预与一个最小修复的预注册见

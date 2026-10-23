@@ -1,5 +1,49 @@
 # 工程架构重构
 
+2026-10-23可学习性阶段沿用现有边界：datasets建立只含选定Train资产的实验视图，
+training复用固定trainer与观测hook，backends只测特征/梯度，evaluation隔离监督
+teacher诊断与source-only生成。设计先行，见role_learnability_design.md；不重构目录。
+`datasets/research_view.py`核对父cohort/实际图像SHA并仅导出Train目标/参考与共同caption；
+`training/learnability_study.py`锁定6例/四方法/双seed预算，复用原launcher/worker。
+`feature_observer.py`在固定上游公开hook记录原loss、角色/层梯度及成对快照，不改loss；
+`feature_adapter.py`只在显式view元数据下启用，旧配置路径与目标保持兼容。
+`inference/learnability_smoke.py`复用已验证的真实4B前反向/zero/位置/重载探针。
+
+`inference/learnability.py`负责共享source/prompt/noise的Train/Dev生成与固定状态回放；
+`backends/layer_response.py`以可清理的作用域hook观测Diffusers图像流，不改变模型。
+`evaluation/feature_teacher.py`及`feature_gradient.py`独立加载监督target，只构造受控
+noisy target状态和velocity误差；生成从不接收target。后者用共同全图分母分解
+T/D/P/ignore梯度，不改训练器目标。`learnability_diagnostic_smoke.py`先验证真实GPU路径。
+`learnability_provenance.py`绑定实际权重、PNG、feature tokens、source/text/noise及完整
+预定矩阵；`learnability_analysis.py`复用区域/位置/阴影语义代理，另算同强度contrast、
+学习曲线与门槛。Train/Dev画廊显式绑定canonical manifest，拒绝封存Test。
+`learnability_training.py`校验每次完整Train曝光并汇总真实loss/输入幅度；机制输出
+保留case、timestep及CFG分支范围，区域梯度范数不归一化为“贡献比例”。
+唯一修复为`EncoderConfig.normalization=channel_rms`：既有类别输入的空间RMS
+预条件化，统计stop-gradient，仍用原valid门控和输出上界。默认none不增加运算，
+序列化省略默认项以兼容旧checkpoint。study CLI只覆盖这个显式选项，预算不复制。
+`learnability_comparison.py`复核两study除该选项外的实际初始化、样本/噪声、容量、
+优化配置和预算相等，再做原/新Full的配对比较及固定门槛验收。
+
+监督target与source reference的像素变换分开：target在FP32映射到[-1,1]后转换
+VAE dtype，source保留固定上游的cast-before-rescale。`feature_teacher.target_tensor`
+供监督velocity/梯度共享，256个8bit值的BF16回归核对固定上游转换。
+`inference/learnability_supervised.py`用原权重、source-only首状态重算旧监督诊断，
+逐项匹配原20-step的source/text/noise SHA；不训练或替换原生成图像。
+`evaluation/learnability_supervised.py`输出新的更正summary，硬性核对原pixel/contrast
+和决策不变，保留原分析、旧teacher与所有出处。新版记录显式标注target预处理。
+更正直接复制原像素记录及聚合，仅调用独立teacher汇总，避免旧scene集合浮点
+次序引入末位差。原分析的舍入值也原样保留，不用放宽门槛替代来源校验。
+成对快照从network.save_weights实际写入处绑定，不使用传回optimizer.pt的上游
+post_save_hook。保留上界按LoRA+encoder双倍计算，完成验收逐一复核全部历史对。
+
+本轮四方法×双seed×原/归一化两版本已完成1920正式updates、712图，默认路径不变。
+原注入和唯一RMS候选均未通过预注册角色语义门槛，不据此自动扩大训练。
+BF16差分丢失减少而位置/阴影控制仍失败，数值消费与研究有效性分开验收；
+完整结果与监督预处理勘误见[可学习性报告](role_learnability_report.md)。
+276项本机测试含Torch、67项CLI通过；远端无Torch CI为241 passed/35 skipped。
+Train/Dev实际SHA、独立seed及source-only状态绑定；Test不生成、不用于选型。
+
 2026-10-23机制诊断复用conditioning/backends/inference/evaluation边界，仅增加观测
 和显式推理干预，不改目录或默认路径。权重冻结，新增训练0步；先测量再选一个
 改进，见[机制诊断预注册](role_feature_diagnostics_design.md)。

@@ -62,9 +62,20 @@ def verify_features(config: dict) -> dict | None:
     if Path(process["model"]["name_or_path"]).resolve() != base:
         raise ValueError("Feature training requires the pinned local Klein Base 4B")
     dataset = process["datasets"][0]
+    target, reference = root / "train/target", root / "train/reference"
+    if "training_view" in meta:
+        from src.datasets.research_view import verify_view
+
+        view = Path(meta["training_view"])
+        if sha256(view) != meta["training_view_sha256"]:
+            raise ValueError("Research training view SHA256 changed")
+        verify_view(view, root=root)
+        target, reference = view.parent / "target", view.parent / "reference"
+    elif meta.get("observation"):
+        raise ValueError("Research observations require a verified training view")
     if (
-        Path(dataset["folder_path"]).resolve() != (root / "train/target").resolve()
-        or dataset["control_path"] != [str((root / "train/reference").resolve())]
+        Path(dataset["folder_path"]).resolve() != target.resolve()
+        or dataset["control_path"] != [str(reference.resolve())]
         or not dataset["full_size_control_images"]
         or len(dataset["resolution"]) != 1
         or any(

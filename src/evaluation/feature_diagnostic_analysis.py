@@ -30,10 +30,14 @@ EXTRA_METRICS = (
 )
 
 
-def scene_references(root: Path) -> dict:
+def scene_references(root: Path, split: str = "dev", identifiers: set[str] | None = None) -> dict:
     """Evaluation-only references; target/background never enter the inference worker."""
+    if split not in {"train", "dev"}:
+        raise ValueError("Research semantic diagnostics cannot inspect sealed Test")
     result = {}
-    for row in read_rows(root / "dev/manifest.csv"):
+    for row in read_rows(root / split / "manifest.csv"):
+        if identifiers is not None and row["id"] not in identifiers:
+            continue
         supervision = load_role_supervision(root, row)
         size = int(row["width"]), int(row["height"])
         source, target = [pixels(root / row[k], size) for k in ["source_path", "target_path"]]
@@ -58,6 +62,8 @@ def scene_references(root: Path) -> dict:
             valid=valid,
             locator=TranslationLocator(source, target, background, old, new),
         )
+    if identifiers is not None and set(result) != identifiers:
+        raise ValueError("Requested semantic examples differ from the selected split")
     return result
 
 

@@ -22,15 +22,25 @@ class FeatureTraining:
         self.metadata = metadata
         self.seed = seed
         self.root = Path(metadata["data_root"])
+        view = metadata.get("training_view")
+        self.training_folder = Path(view).parent / "target" if view else self.root / "train/target"
+        if view:
+            from src.datasets.research_view import verify_view
+
+            selected = set(verify_view(Path(view), root=self.root)["ids"])
+        else:
+            selected = None
         self.tokens = {
             row["id"]: torch.from_numpy(load_features(self.root, row, metadata["mode"]).tokens())
             for row in read_rows(self.root / "train/manifest.csv")
+            if selected is None or row["id"] in selected
         }
         self.encoder = None
         self.handles, self.restore = [], []
         self.stats = dict(
             batches=0, fusion_calls=0, gradients={}, input_trace=[], initial_seed=seed
         )
+        self.observer = None
 
     def initialize(self, process, params):
         import torch
@@ -38,6 +48,12 @@ class FeatureTraining:
         if self.encoder is not None:
             raise RuntimeError("Feature optimizer already initialized")
         params = [dict(group, params=list(group["params"])) for group in params]
+        if self.observer is not None:
+            fingerprint = hashlib.sha256()
+            for group in params:
+                for parameter in group["params"]:
+                    fingerprint.update(parameter.detach().float().cpu().numpy().tobytes())
+            self.stats["network_initial_sha256"] = fingerprint.hexdigest()
         # Do not change the pretrained LoRA/data-loader random stream.
         with torch.random.fork_rng(devices=[]):
             torch.random.default_generator.manual_seed(self.seed)
@@ -48,6 +64,10 @@ class FeatureTraining:
             )
         ).hexdigest()
         self.encoder.to(device=process.device_torch, dtype=torch.float32)
+        if self.observer is not None:
+            from src.training.feature_observer import install_pair_saver
+
+            install_pair_saver(self, process.network)
         for name, parameter in self.encoder.named_parameters():
 
             def observe(gradient, key=name):
@@ -75,7 +95,7 @@ class FeatureTraining:
         selected = []
         for item in items:
             identifier = Path(item.path).stem
-            expected = self.root / "train/target" / f"{identifier}.png"
+            expected = self.training_folder / f"{identifier}.png"
             if (
                 identifier not in self.tokens
                 or Path(item.path).resolve() != expected.resolve()
@@ -122,9 +142,25 @@ class FeatureTraining:
             )
         ):
             raise RuntimeError("Feature encoder did not receive finite upstream learning gradients")
+        if self.observer is not None and path.exists():
+            from src.core.io import sha256
+
+            owned = [
+                r["encoder"]
+                for r in self.observer.record["checkpoints"]
+                if Path(r["encoder"]["path"]).resolve() == path.resolve()
+                and r["lora_sha256"] == sha256(lora)
+            ]
+            if len(owned) != 1 or owned[0]["sha256"] != sha256(path):
+                raise ValueError("Existing observed checkpoint differs from the saved pair")
+            return owned[0]
         return save_encoder(path, self.encoder, lora, self.metadata["mode"])
 
     def close(self):
+        if self.observer is not None:
+            for handle in self.observer.tensor_hooks:
+                handle.remove()
+            self.observer.tensor_hooks.clear()
         for owner, name, original in reversed(self.restore):
             setattr(owner, name, original)
         self.restore.clear()
@@ -158,8 +194,20 @@ def install_features(model_type, metadata: dict, revision: str, *, seed: int, tr
             state.stats["input_trace"][-1]["timestep"] = timestep.detach().float().cpu().tolist()
         if state.encoder is None:
             raise RuntimeError("Feature encoder optimizer was not initialized")
-        with feature_fusion(model.transformer, state.encoder, tokens, grid, flavor="bfl") as stats:
-            result = noise(model, latent_model_input, *args, batch=batch, **kwargs)
+        from contextlib import nullcontext
+
+        context = (
+            state.observer.forward(
+                model.transformer, tokens, grid, state.stats["input_trace"][-1]["ids"]
+            )
+            if state.observer
+            else nullcontext(tokens)
+        )
+        with context as actual_tokens:
+            with feature_fusion(
+                model.transformer, state.encoder, actual_tokens, grid, flavor="bfl"
+            ) as stats:
+                result = noise(model, latent_model_input, *args, batch=batch, **kwargs)
         if (
             stats["calls"] != 1
             or stats["source_tokens"] != [grid[0] * grid[1]] * tokens.shape[0]
@@ -176,6 +224,10 @@ def install_features(model_type, metadata: dict, revision: str, *, seed: int, tr
         (trainer_type, "hook_add_extra_train_params", extra),
         (model_type, "get_noise_prediction", noise),
     ]
+    if metadata.get("observation"):
+        from src.training.feature_observer import install_observer
+
+        state.observer = install_observer(state, trainer_type)
     trainer_type.hook_add_extra_train_params = add
     model_type.get_noise_prediction = predict
     return state

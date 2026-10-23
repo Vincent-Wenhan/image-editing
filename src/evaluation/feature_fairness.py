@@ -69,6 +69,8 @@ def audit_seed(jobs: list[dict]) -> dict:
             initial_sha256=stats["initial_sha256"],
             input_trace=stats["input_trace"],
         )
+        if "network_initial_sha256" in stats:
+            fingerprint["network_initial_sha256"] = stats["network_initial_sha256"]
         if reference is not None and fingerprint != reference:
             raise ValueError(
                 "Feature methods differ in actual inputs/capacity/initialization/budget"

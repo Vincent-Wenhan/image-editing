@@ -19,6 +19,7 @@ class EncoderConfig:
     output: int = 128
     stride: int = 16
     max_residual: float = 0.25
+    normalization: str = "none"
 
     def __post_init__(self):
         if (
@@ -29,11 +30,16 @@ class EncoderConfig:
             or isinstance(self.max_residual, bool)
             or not np.isfinite(self.max_residual)
             or not 0 < self.max_residual <= 1
+            or not isinstance(self.normalization, str)
+            or self.normalization not in {"none", "channel_rms"}
         ):
             raise ValueError("Unsupported FLUX role feature configuration")
 
     def as_dict(self) -> dict:
-        return asdict(self)
+        result = asdict(self)
+        if self.normalization == "none":
+            result.pop("normalization")
+        return result
 
 
 @dataclass(frozen=True)

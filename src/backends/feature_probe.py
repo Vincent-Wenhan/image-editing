@@ -95,7 +95,18 @@ class StateCapture:
             raise RuntimeError("Actual CFG outputs were not captured with their input states")
 
 
-def replay_branch(model, encoder, tokens, grid, inputs: dict, variants, protocol, *, encoders=None):
+def replay_branch(
+    model,
+    encoder,
+    tokens,
+    grid,
+    inputs: dict,
+    variants,
+    protocol,
+    *,
+    encoders=None,
+    measure_layers=False,
+):
     import torch
 
     inputs = {
@@ -109,6 +120,11 @@ def replay_branch(model, encoder, tokens, grid, inputs: dict, variants, protocol
     context_sha = tensor_sha(inputs["encoder_hidden_states"])
     guard_x, guard_context = x.clone(), inputs["encoder_hidden_states"].clone()
     outputs, embedded, measurements, effective, residuals = {}, {}, {}, {}, {}
+    layer_state = None
+    if measure_layers:
+        from src.backends.layer_response import LayerResponses
+
+        layer_state = LayerResponses(model, noise, inputs["encoder_hidden_states"].shape[1])
     for name in ["disabled", *variants]:
         wrapped = (
             None
@@ -133,7 +149,10 @@ def replay_branch(model, encoder, tokens, grid, inputs: dict, variants, protocol
         eh = wrapped.register_forward_hook(encoded) if wrapped is not None else None
         handle = model.x_embedder.register_forward_hook(embed)
         try:
-            with feature_fusion(model, wrapped, tokens, grid):
+            with (
+                feature_fusion(model, wrapped, tokens, grid),
+                layer_state.observe(name) if layer_state else nullcontext(),
+            ):
                 fh = model.register_forward_pre_hook(fused, with_kwargs=True)
                 try:
                     outputs[name] = model(**inputs)[0][:, noise].float()
@@ -179,6 +198,8 @@ def replay_branch(model, encoder, tokens, grid, inputs: dict, variants, protocol
             float((~different[support]).float().mean()) if support.any() else None
         )
         record["residual_vs_original"] = difference(residuals[name], residuals["original"])
+        if layer_state:
+            record["layers"] = layer_state.records[name]
         records[name] = record
     return dict(
         input_sha256=original_sha, text_sha256=context_sha, records=records, outputs=outputs
@@ -186,7 +207,16 @@ def replay_branch(model, encoder, tokens, grid, inputs: dict, variants, protocol
 
 
 def replay_states(
-    model, encoder, tokens, grid, capture: StateCapture, variants, protocol, *, encoders=None
+    model,
+    encoder,
+    tokens,
+    grid,
+    capture: StateCapture,
+    variants,
+    protocol,
+    *,
+    encoders=None,
+    measure_layers=False,
 ):
     import torch
 
@@ -213,6 +243,7 @@ def replay_states(
                             variants,
                             protocol,
                             encoders=encoders,
+                            measure_layers=measure_layers,
                         )
                     )
             positive, negative = measured

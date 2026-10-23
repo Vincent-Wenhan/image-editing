@@ -1,0 +1,29 @@
+schema_version: 1
+study: role_learnability_v1
+methods: [constant, binary, old_new, full_role]
+train_seeds: [307, 311]
+train_groups: 2
+strengths: [0.0, 0.5, 1.0]
+steps: 120
+batch_size: 6
+rank: 16
+lora_lr: 0.0001
+feature_lr: 0.001
+encoder: {hidden: 64, channels: 5, output: 128, stride: 16, max_residual: 0.25}
+prompt: 'Move the object to the location indicated by the spatial condition, update its shadow, and preserve unrelated content. If the old and new occupancies coincide, keep the image unchanged.'
+save_every: 20
+observe_updates: [1, 20, 60, 120]
+inference: {steps: 20, guidance: 4.0, seed: 42}
+teacher_times: [0.1, 0.5, 0.9]
+max_parallel: 4
+smoke: {steps: 2, batch_size: 1}
+gate:
+  identity_tolerance: 0.001
+  role_improvement: 0.05
+  source_relative_improvement: 0.25
+  t_max: 0.05
+  d_max: 0.10
+  p_max: 0.01
+  identity_max: 0.01
+  contrast_max: 0.75
+  bootstrap_resamples: 2000

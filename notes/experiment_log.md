@@ -1,5 +1,120 @@
 # 实验记录
 
+2026-10-23 Asia/Shanghai 本轮收尾：原注入与唯一channel_rms的四方法×双seed均完成，
+正式1920updates、712图、112对checkpoint保留，两个版本均未通过fit/角色利用/D增量。
+RMS使固定Train Old/New BF16差分丢失从79.8–86.0%降到25.2–38.5%，仍未形成正确
+目标位移/阴影；相对原Full T只改善2.39%/0.93%、D恶化6.69%/1.73%，No-Go扩大。
+276 passed/324.77s，Ruff209文件、67 CLI及两个更正入口、pip通过；代码CI39949485853
+success（无Torch：241 passed/35 skipped）。监督更正4B smoke263.67s/16.264GiB；
+16组GPU更正408 teacher/8梯度案例完成、0新增训练，source/text/noise与原生成一致。
+旧CPU overlay末位归约拒绝及等待流水线失败保留；最终CPU冻结4362e2e，新03分析、
+比较、172联系图及两套PNG/SVG曲线完成，88组像素/聚合和门槛原值保留。
+50份报告、4个原执行Git源码、712实际PNG和19个最终CPU receipt、16个空闲GPU
+receipt审计通过。四例实际配对图观察独立存comparison_inspection_02，不是人评。
+真人仍0位/0评分，Test封存，第三方tracked源码干净；不再增加第二个改法或训练预算。
+实际报告docs/role_learnability_report.md；最终Git/PR CI验收另存final_acceptance_01。
+
+2026-10-23 Asia/Shanghai overlay仅重算独立teacher汇总，原像素逐例及聚合直接复制；
+新增历史末位差参数化回归及安装/CLI共9 tests通过，完整回归另跑。16组GPU监督
+更正均完成，0新增训练；旧CPU overlay严格归约比较失败的日志保留，新目录继续。
+
+2026-10-23 Asia/Shanghai overlay收尾：发现旧scene集合浮点归约的末位差可误触
+严格相等门禁。先明确直接复用原像素记录及聚合、只独立汇总teacher的修复范围；
+不重新训练或生成，不改原报告与决策。计划新增末位差回归，新CPU目录另存最终结果。
+
+2026-10-23 Asia/Shanghai 监督target转换已拆分，256级BF16与source顺序区分、
+target不作参考、batch6/单例一致性等16 tests/51.13s通过；原pixel/contrast不变的
+更正overlay及安装/CLI相关8 tests/34.89s通过。新GPU更正worker尚待smoke。
+归一化完整712图两轮对照均No-Go，像素门槛不依赖teacher；监督更正在新目录继续。
+
+2026-10-23 Asia/Shanghai 监督诊断更正计划：固定上游target先FP32 rescale再cast，
+原teacher/梯度误用了source reference的cast-before-rescale helper。训练和全部
+生成/像素门槛不受影响；旧诊断保留并标明替代预处理，先CPU/BF16与真实GPU smoke，
+再以已有checkpoint在新目录更正teacher/梯度，不追加训练或改变验收标准。
+
+2026-10-23 Asia/Shanghai 时间/更新诊断：以真实BF16转换核对训练及采样时间，
+t≥0.9训练为307的5/720、311的18/720，采样9/20；t≥0.95为0/1次，采样6/20。
+仅作暴露统计，未做第二个采样改法。实际Old/New/D参数均明显更新，AdamW尺度
+自适应及valid门控使原始梯度大小不能直接当作语义重要性；审计JSON保留。
+
+2026-10-23 Asia/Shanghai 原/新正式训练全部完成，合计1920updates；八组跨版本
+实际初始化、每step ID/noisy latent/timestep和容量逐项一致，归一化完整推理/评估继续。
+Constant初始张量一致，update20 LoRA重训仍有linf0.0009765625；来源未逐核定位。
+真实GPU同权重Constant算子前向及参数/输入梯度逐元素相同（0.708s）；这是轻量
+编码器复核，不冒称4B smoke。首次指定卡预检拒绝无GPU启动，两个attempt均保留。
+
+2026-10-23 Asia/Shanghai 基线跨update/方法/seed的6组source/text/noise和54组teacher
+输入逐一匹配，fixed_state_audit_01保存实际报告SHA；65项CLI通过。
+归一化新增梯度GPU诊断176.71s/16.281GiB通过，正式训练正常租约GPU1–4，跳过忙GPU0。
+
+2026-10-23 Asia/Shanghai 原注入完整356图/SHA/公平性/区域语义评估完成：两seed均
+未通过fit、role_usage及D_increment。Train Full307 T/D/P为0.168249/0.311111/0.009029，
+311为0.169695/0.334928/0.010695；contrast均约1，loss下降但未学会按角色移动。
+68张联系图及四例非盲检查保留；这些不是人工评分。原注入当前预算No-Go。
+全本地272 passed/205.96s，CI39929339061 success；6份历史盲评表288行仍空白。
+归一化两步训练245.45s、前反向重载155.02s、batch6容量329.06s均成功，
+峰值reserved分别15.037/16.268/18.355GiB；新诊断及正式对照按冻结pipeline继续，未预设有效。
+
+2026-10-23 Asia/Shanghai channel_rms实现：仅类别输入空间RMS、stop-gradient统计，
+不改结构/loss/valid门控；默认计算与旧metadata保持兼容。20 tests/35.55s通过，
+计划沿用同一6例/四方法/双seed/120步，GPU smoke通过后才启动有界对照。
+新增跨study实际trace/初始化/容量一致性与固定收益门槛验收，尚无修复有效性结论。
+5项归一化/metadata/收益门槛测试20.49s通过；基线完整356图矩阵及八份推理来源校验完成。
+
+2026-10-23 Asia/Shanghai 唯一修改预注册：基于seed307已完成Train6例的contrast约1、
+稀疏Old/New/D参数梯度小于P/valid、实际BF16差分丢失，提出逐通道空间RMS
+预条件化；仅输入尺度，不新增参数/模型或改变loss。最多追加四组双seed各120步。
+原双seed/Dev矩阵仍继续完成；候选尚未实现，不预设有效，设计先提交。
+
+2026-10-23 Asia/Shanghai 960个更新已完成，四方法×双seed均保留全部成对快照。
+补充每update恰好覆盖6个选定Train ID的验收，拒绝相同batch大小却重复/缺样本。
+5项contrast/门槛/矩阵/曝光测试0.14s通过；机制汇总保留CFG分支和实际时间/层范围。
+固定生成与监督诊断仍在运行，尚无完整Go/No-Go；没有改变模型或loss。
+
+2026-10-23 Asia/Shanghai aef9662：真实诊断GPU smoke171.49s，峰值15.880/
+16.281GiB，通过轨迹回放、零条件、七层观测、三t梯度与hook清理；正常租约GPU5。
+本地完整266 passed/297.53s、64 CLI、Ruff通过，CI39923024977 success。
+23模型文件实际SHA审计28.51s及外部commit/无tracked改动通过；首次审计读取
+editable元数据字段假设错误，asset_audit_01失败日志保留，02修正只读校验通过。
+seed307四组120步均完成且实际配对审计通过，seed311和完整评估运行中，暂无研究结论。
+
+2026-10-23 Asia/Shanghai study_03训练smoke/前反向重载/batch6容量均完成，
+分别198.78/105.33/266.36s；peak reserved15.037/16.268/18.047GiB。
+四组双seed训练运行中，正常租约跳过已有进程的GPU0，首批分配空闲GPU1–4。
+共享噪声356图矩阵、监督velocity、T/D/P梯度分解及分层回放已实现；先单例GPU
+诊断smoke再完整运行，角色可学习性结论pending。两个失败study及历史全部保留。
+相关20 tests /22.08s与Ruff通过；包含无target参考、梯度分解守恒、层hook清理、
+Constant/完美/反向contrast、角色无作用拒绝及封存Test拒绝。
+
+2026-10-23 Asia/Shanghai 快照保留守卫：固定上游cleanup会把*.features.safetensors
+一并计数，保存上界按成对快照数计算，完成验收检查0/每20/final各对实际SHA，
+防止初始/中间权重被自动删除。未运行新的训练，等待study_03真实验收。
+
+2026-10-23 Asia/Shanghai 第二次GPU重试：冻结fd15882完成2updates/211.53s，
+peak15.022/15.037GiB；最终保存失败，因为固定上游post_save_hook实际传入
+optimizer.pt，初始encoder被错误绑定、最终重复路径被拒。两次失败中的该encoder
+绑定无效，不用于模型评估。原快照/trace完整保留study_01/02。自有观测改在
+network.save_weights的实际文件写入后绑定SHA，补optimizer回调布局回归，
+新study_03重试；不改上游、loss或训练预算。
+
+2026-10-23 Asia/Shanghai 首轮真实GPU边界失败：冻结d6026cd，smoke在
+AcceleratedOptimizer.register_step_pre_hook缺少内部hook字典时AttributeError；
+0 batch/0更新，初始成对权重和原始trace/显存保留study_01。修复仅沿optimizer
+包装链注册到实际PyTorch optimizer，补模拟相同继承布局的回归；新study_02重试。
+不改loss、训练预算、父数据或第三方。可学习性仍未验证，真人pending。
+
+2026-10-23 Asia/Shanghai 可学习性工程：新增不可覆盖的6例Train视图，共同caption与
+父manifest/源图/目标实际SHA绑定，训练缓存独立。固定trainer观测hook记录实际loss、
+通道/类别/位置/层梯度、原始初始化SHA及真实update编号的成对checkpoint；loss不变。
+首轮16项CPU回归46.80s通过，包含观测前后loss/梯度/RNG精确一致、无Dev/Test进入
+训练视图、caption与配对篡改拒绝。真实GPU训练/可学习性结论尚未产生。
+
+2026-10-23 14:39 Asia/Shanghai：PR #6复核252 passed/218.67s、Ruff/55 CLI、96图
+实际指标/区间、checkpoint/data SHA和六份空白盲评包后正常merge8b261bb。
+新分支feat/role-learnability从最新main创建，先登记6 Train样本、四方法×双seed
+120updates的有界可学习性实验；同组共享source/prompt/noise，梯度/层和teacher
+诊断隔离推理，Test封存。尚未实现或运行，不预设语义可学或最小修改；真人pending。
+
 2026-10-23 UTC 机制诊断完成：PR #5正常merge676242b，从最新main建新诊断分支。
 Phase A冻结d35b4c1；修复GPU冻结ecfe773、CPU评估冻结fbd385f。双seed四臂96图
 全部完成604.64/606.35s，peak allocated15.598/reserved16.266GiB；24张原始臂与
