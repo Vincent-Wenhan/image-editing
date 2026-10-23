@@ -3,8 +3,11 @@
 PR #7已正常合并main `1d3986b`。新分支`feat/role-direction-diagnostics`只用既有
 原版/channel_rms checkpoint做纯噪声条件方向诊断，训练更新固定0。
 先预注册共同状态、flow方向符号、CFG/BF16与下一步Go/No-Go门槛，见
-[方向诊断设计](docs/role_direction_design.md)。真实4B/512² smoke已通过（186.54s，
-峰值allocated/reserved 15.59/16.27 GiB）；完整方向矩阵正在运行，研究结论待分析。
+[方向诊断设计](docs/role_direction_design.md)。真实4B/512² smoke及16/16组诊断已完成，
+48,384条分支分数均已核验：Full未稳定优于Binary/Old-New，独立D和P保持未过门槛，
+原版与channel_rms均No-Go推进仅高噪声采样训练；曝光与表示/注入限制仍无法因果区分。
+303 tests、73 CLI、Ruff和真实GPU通过；完整数值、区间、耗时/显存及限制见
+[方向诊断报告](docs/role_direction_report.md)。新训练更新0，未新增修复或权重。
 target只用于独立评分，Test封存，真人评分保持pending；历史研究记录如下。
 
 冻结权重诊断入口（编排器为每个GPU子进程申请正常UUID租约）：

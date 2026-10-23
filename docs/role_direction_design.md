@@ -104,3 +104,6 @@ CPU先测符号、完美/反向/正交/零能量、T/D/P加权、同状态、BF1
 所有输出用新目录、source/config/manifest/条件/velocity/监督实际SHA与原异常/时间/
 显存记录；保存各scene表、方向热图、时间曲线和明确标记的自动失败类别。
 真人包保持原始评分，真实0条就继续pending，不自动邀请或代填。
+
+实际执行及固定门槛结果见[方向诊断报告](role_direction_report.md)。本预注册初始提交
+245274f先于GPU实验，六项标准未改；原版/channel_rms均No-Go，本轮0训练。

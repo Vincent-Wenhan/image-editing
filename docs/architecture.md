@@ -13,7 +13,10 @@ target-free状态、检验zero/disabled与空间ID，记录实际残差及BF16�
 `direction_visualization.py`导出时间曲线、全scene方向热图及明确标记的自动失败类别，
 只复用PR #7既有生成图，不生成真人评分。可选plots依赖固定Matplotlib版本。
 设计及冻结Go/No-Go门槛见[方向诊断预注册](role_direction_design.md)；真实GPU smoke
-已通过，完整16组运行中，不能将工程门禁成功等同于正确语义。
+及完整16组已完成，target/source-only与空间/数值审计通过，权重不变。
+[实际报告](role_direction_report.md)记录48,384条分支分数和16个失败门槛切片：
+机械信号进入网络仍未形成可靠有向T/D收益，P额外漂移；不启动高噪声采样训练。
+保留低时间source bridge与分布内训练轨迹的区别，不将曝光差异误判为已证实主因。
 
 2026-10-23可学习性阶段沿用现有边界：datasets建立只含选定Train资产的实验视图，
 training复用固定trainer与观测hook，backends只测特征/梯度，evaluation隔离监督

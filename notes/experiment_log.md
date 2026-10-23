@@ -1,5 +1,20 @@
 # 实验记录
 
+2026-10-23 Asia/Shanghai 纯噪声方向收尾：PR #7正常merge1d3986b且main CI成功，
+新分支feat/role-direction-diagnostics复用16对最终权重；GPU源码444ac6b、CPU daa8bf7。
+16/16组、2016 case-state完成，0更新/0失败；完整GPU编排1987.24s，worker累计
+6334.82s，峰值allocated/reserved15.614/16.268 GiB；lease释放，未触碰他人GPU。
+CPU分析412.55s、画廊72.96s，48,384分支分数/12,096机制观测；6216去重BF16归档、
+288监督归档分离，32权重实际SHA及两Git源码逐文件重验，64图表实际SHA通过。
+原版/RMS全部16 gate切片失败：Full无稳定超越Binary/Old-New的方向，Old/New
+Swap不稳定、独立D弱/反向，Dev P/identity相对zero多2.85–3.87%/2.68–4.10%误差。
+RMS Full角色交换融合丢失83.23%→30.85%仍未获得正确方向；native/FP32 CFG
+均No-Go，不把数值存活/通用端点改善当语义成功。不能区分曝光不足与表示/注入限制，
+不启动下一轮timestep采样训练。303 tests/222.52s、73 CLI/110.01s、Ruff224文件、
+pip/安装/仓库检查通过（最终format含报告225文件），代码CI39966675465为264 passed/39无Torch skipped。
+全scene曲线/热图及四个非盲agent观察明确区别真人；6原表SHA未变、288空白、0评分，
+Test封存。详见docs/role_direction_report.md及outputs/role_direction_20261023。
+
 2026-10-23 Asia/Shanghai 冻结GPU源码444ac6b，真实4B/512²方向smoke通过：
 186.54s，峰值allocated/reserved 15.595/16.268 GiB，14共同状态案例、六种条件，
 native CFG与实际scheduler精确一致，zero/disabled等价，冻结权重SHA不变，0更新。
