@@ -1,5 +1,12 @@
 # 实验记录
 
+2026-10-23 Asia/Shanghai 第二次GPU重试：冻结fd15882完成2updates/211.53s，
+peak15.022/15.037GiB；最终保存失败，因为固定上游post_save_hook实际传入
+optimizer.pt，初始encoder被错误绑定、最终重复路径被拒。两次失败中的该encoder
+绑定无效，不用于模型评估。原快照/trace完整保留study_01/02。自有观测改在
+network.save_weights的实际文件写入后绑定SHA，补optimizer回调布局回归，
+新study_03重试；不改上游、loss或训练预算。
+
 2026-10-23 Asia/Shanghai 首轮真实GPU边界失败：冻结d6026cd，smoke在
 AcceleratedOptimizer.register_step_pre_hook缺少内部hook字典时AttributeError；
 0 batch/0更新，初始成对权重和原始trace/显存保留study_01。修复仅沿optimizer

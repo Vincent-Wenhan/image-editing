@@ -26,6 +26,36 @@ def step_hook_optimizer(optimizer):
     return optimizer
 
 
+def install_pair_saver(state, network):
+    """Observe the actual LoRA write; upstream post_save_hook receives optimizer.pt."""
+    from src.backends.feature_checkpoint import save_encoder
+    from src.core.io import sha256
+
+    original = network.save_weights
+
+    @wraps(original)
+    def save(path, *args, **kwargs):
+        result = original(path, *args, **kwargs)
+        lora = Path(path)
+        if lora.suffix != ".safetensors":
+            raise ValueError("Expected the actual LoRA safetensors save boundary")
+        saved = save_encoder(
+            lora.with_suffix(".features.safetensors"), state.encoder, lora, state.metadata["mode"]
+        )
+        state.observer.record["checkpoints"].append(
+            dict(
+                update=state.observer.update,
+                lora=str(lora),
+                lora_sha256=sha256(lora),
+                encoder=saved,
+            )
+        )
+        return result
+
+    state.restore.append((network, "save_weights", original))
+    network.save_weights = save
+
+
 class TrainingObserver:
     def __init__(self, state):
         import torch
@@ -200,14 +230,11 @@ class TrainingObserver:
 
 def install_observer(state, trainer_type):
     """Wrappers delegate before recording, preserve return tensors, RNG and exceptions."""
-    from src.backends.feature_checkpoint import save_encoder
-    from src.core.io import sha256
 
     observer = TrainingObserver(state)
     for name in [
         "hook_train_loop",
         "calculate_loss",
-        "post_save_hook",
         "hook_before_train_loop",
         "end_step_hook",
     ]:
@@ -237,22 +264,6 @@ def install_observer(state, trainer_type):
                     values["noise"],
                     values["timesteps"],
                     values["batch"],
-                )
-            elif __name == "post_save_hook":
-                lora = Path(args[0])
-                saved = save_encoder(
-                    lora.with_suffix(".features.safetensors"),
-                    state.encoder,
-                    lora,
-                    state.metadata["mode"],
-                )
-                observer.record["checkpoints"].append(
-                    dict(
-                        update=observer.update,
-                        lora=str(lora),
-                        lora_sha256=sha256(lora),
-                        encoder=saved,
-                    )
                 )
             elif __name == "hook_before_train_loop":
                 process.save(step=0)

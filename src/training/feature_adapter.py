@@ -64,6 +64,10 @@ class FeatureTraining:
             )
         ).hexdigest()
         self.encoder.to(device=process.device_torch, dtype=torch.float32)
+        if self.observer is not None:
+            from src.training.feature_observer import install_pair_saver
+
+            install_pair_saver(self, process.network)
         for name, parameter in self.encoder.named_parameters():
 
             def observe(gradient, key=name):

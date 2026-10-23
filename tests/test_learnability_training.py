@@ -183,3 +183,38 @@ def test_step_observer_unwraps_accelerated_optimizer_without_changing_step():
     wrapped.step()
     handle.remove()
     assert observed == [2.0] and torch.allclose(parameter.detach(), torch.tensor(0.8))
+
+
+def test_checkpoint_pair_uses_actual_lora_write_not_optimizer_callback(tmp_path):
+    pytest.importorskip("torch")
+    pytest.importorskip("safetensors")
+    from src.backends.feature_checkpoint import load_encoder
+    from src.conditioning.feature_encoder import build_encoder
+    from src.conditioning.features import EncoderConfig
+    from src.training.feature_observer import install_pair_saver
+
+    class Network:
+        def save_weights(self, path, *, dtype, metadata):
+            path.write_bytes(b"LoRA fixture, not actual trained weights")
+            return metadata
+
+    state = SimpleNamespace(
+        encoder=build_encoder(EncoderConfig()),
+        metadata=dict(mode="full_role"),
+        observer=SimpleNamespace(update=0, record=dict(checkpoints=[])),
+        restore=[],
+    )
+    network = Network()
+    original = network.save_weights
+    install_pair_saver(state, network)
+    lora = tmp_path / "network_000000000.safetensors"
+    assert network.save_weights(lora, dtype="fixture", metadata={"step": 0}) == {"step": 0}
+    (tmp_path / "optimizer.pt").write_bytes(b"optimizer fixture")
+    record = state.observer.record["checkpoints"][0]
+    assert record["lora_sha256"] == sha256(lora)
+    assert not (tmp_path / "optimizer.features.safetensors").exists()
+    _, meta = load_encoder(tmp_path / "network_000000000.features.safetensors", lora)
+    assert meta["lora_sha256"] == sha256(lora)
+    owner, name, saved = state.restore.pop()
+    setattr(owner, name, saved)
+    assert network.save_weights == original
