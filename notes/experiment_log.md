@@ -1,5 +1,17 @@
 # 实验记录
 
+2026-10-23 Asia/Shanghai 基线跨update/方法/seed的6组source/text/noise和54组teacher
+输入逐一匹配，fixed_state_audit_01保存实际报告SHA；65项CLI通过。
+归一化新增梯度GPU诊断176.71s/16.281GiB通过，正式训练正常租约GPU1–4，跳过忙GPU0。
+
+2026-10-23 Asia/Shanghai 原注入完整356图/SHA/公平性/区域语义评估完成：两seed均
+未通过fit、role_usage及D_increment。Train Full307 T/D/P为0.168249/0.311111/0.009029，
+311为0.169695/0.334928/0.010695；contrast均约1，loss下降但未学会按角色移动。
+68张联系图及四例非盲检查保留；这些不是人工评分。原注入当前预算No-Go。
+全本地272 passed/205.96s，CI39929339061 success；6份历史盲评表288行仍空白。
+归一化两步训练245.45s、前反向重载155.02s、batch6容量329.06s均成功，
+峰值reserved分别15.037/16.268/18.355GiB；新诊断及正式对照按冻结pipeline继续，未预设有效。
+
 2026-10-23 Asia/Shanghai channel_rms实现：仅类别输入空间RMS、stop-gradient统计，
 不改结构/loss/valid门控；默认计算与旧metadata保持兼容。20 tests/35.55s通过，
 计划沿用同一6例/四方法/双seed/120步，GPU smoke通过后才启动有界对照。

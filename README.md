@@ -4,9 +4,10 @@ PR #6已正常合并main `8b261bb`，当前研究分支`feat/role-learnability`�
 本阶段检验少样本可学习性与角色注入失效：先预注册6个Train样本、四方法双seed
 同预算过拟合及梯度/层诊断，不用封存Test，不把记忆训练样本当作泛化。
 见[设计](docs/role_learnability_design.md)及[实际状态](docs/role_learnability_report.md)。
-已实现Train视图、固定trainer观测、共享噪声干预及监督诊断接口。两步GPU训练、
-前反向/重载、batch6容量和新增梯度诊断GPU门禁通过；本地266 tests、64 CLI及
-23个模型文件实际SHA审计通过。正式四组双seed训练/评估运行中，机制结论尚未产生。
+已完成原注入四方法×双seed的960updates、356图与实际SHA/噪声配对评估，
+两个seed均未通过fit/角色利用/D增量门槛，原注入在本预算下No-Go。
+本地272 tests、GPU门禁、23个模型文件实际SHA通过；唯一channel_rms候选运行中，
+尚无候选收益结论，真人评分pending，不把少样本拟合或非零梯度当成泛化。
 下文历史诊断与全部资产保留。
 
 唯一候选修改先预注册于[通道预条件设计](docs/role_learnability_repair_design.md)：
@@ -32,7 +33,7 @@ Train视图复制选定6例到新目录以隔离缓存，canonical manifest与�
 首轮真实smoke在Accelerate优化器观测边界失败（0更新），原study_01保留；修复仅
 解包step-hook注册，训练目标不变，使用新目录重试，状态见可学习性报告。
 第二次两步训练后发现上游保存回调传入optimizer路径，错误绑定已拒绝；改为
-观测实际LoRA写入边界。study_01/02失败资产保留，新study_03重试。
+观测实际LoRA写入边界。study_01/02失败资产保留，study_03完整基线已完成。
 保留数量按成对快照上界计算，完成验收逐一检查0/中间/final的实际文件SHA，防止
 上游将encoder也计入自动清理后误删初始或中间权重。
 生成模块只接source与显式Oracle空间条件；target仅在独立evaluation模块的监督
