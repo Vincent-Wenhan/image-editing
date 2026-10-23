@@ -39,6 +39,7 @@ noise token数1024。复用原训练器/编码器/优化器；不从四个不同
 正常UUID租约。OOM不自动改变正式batch/预算，失败保留并先修工程问题。
 checkpoint保存0及每20步、最终120；成对encoder/LoRA均保留，禁止上游自动删旧权重。
 记录每步真实loss、样本/噪声/timestep、初始参数SHA，四组同seed逐项匹配。
+完成评估还逐update检查6个ID恰好各出现一次，不能仅凭batch维度认定完整样本曝光。
 
 ## 梯度、时间与层诊断
 
@@ -92,3 +93,4 @@ Full再加old/new及D/P交换。最终Dev Full取排序前两组的full-strength
 zero/disabled、分层hook、监督target隔离、梯度有限性及异常清理，再运行完整矩阵。
 分区梯度采用共同全图分母，记录T/D/P/ignore对全图梯度的贡献和求和误差；
 这是未加权velocity诊断，不能冒充原训练器加权loss或自动微分以外的BF16导数。
+机制汇总保留实际timestep、CFG分支、所选case与各层，不将梯度范数比称为可加贡献占比。

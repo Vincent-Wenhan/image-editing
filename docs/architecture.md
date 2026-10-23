@@ -17,6 +17,8 @@ T/D/P/ignore梯度，不改训练器目标。`learnability_diagnostic_smoke.py`�
 `learnability_provenance.py`绑定实际权重、PNG、feature tokens、source/text/noise及完整
 预定矩阵；`learnability_analysis.py`复用区域/位置/阴影语义代理，另算同强度contrast、
 学习曲线与门槛。Train/Dev画廊显式绑定canonical manifest，拒绝封存Test。
+`learnability_training.py`校验每次完整Train曝光并汇总真实loss/输入幅度；机制输出
+保留case、timestep及CFG分支范围，区域梯度范数不归一化为“贡献比例”。
 成对快照从network.save_weights实际写入处绑定，不使用传回optimizer.pt的上游
 post_save_hook。保留上界按LoRA+encoder双倍计算，完成验收逐一复核全部历史对。
 

@@ -1,5 +1,10 @@
 # 实验记录
 
+2026-10-23 Asia/Shanghai 960个更新已完成，四方法×双seed均保留全部成对快照。
+补充每update恰好覆盖6个选定Train ID的验收，拒绝相同batch大小却重复/缺样本。
+5项contrast/门槛/矩阵/曝光测试0.14s通过；机制汇总保留CFG分支和实际时间/层范围。
+固定生成与监督诊断仍在运行，尚无完整Go/No-Go；没有改变模型或loss。
+
 2026-10-23 Asia/Shanghai aef9662：真实诊断GPU smoke171.49s，峰值15.880/
 16.281GiB，通过轨迹回放、零条件、七层观测、三t梯度与hook清理；正常租约GPU5。
 本地完整266 passed/297.53s、64 CLI、Ruff通过，CI39923024977 success。

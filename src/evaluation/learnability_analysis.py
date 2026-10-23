@@ -24,6 +24,61 @@ from src.training.learnability_study import load_plan
 CONTRASTS = ("t_contrast_mae", "d_contrast_mae", "t_contrast_response", "d_contrast_response")
 
 
+def mechanism_summary(observations, probes):
+    """Keep time, branch and sampled-case scope explicit; gradient norms are not shares."""
+    training = {}
+    for method, measured in observations.items():
+        training[method] = dict(
+            loss_first20=measured["loss_first20"],
+            loss_last20=measured["loss_last20"],
+            category_to_position_mean=sum(
+                s["content_to_position"] for s in measured["input_scales"]
+            )
+            / len(measured["input_scales"]),
+            updates=[
+                dict(
+                    update=u["update"],
+                    timestep=u["timestep"],
+                    fusion=u["fusion"],
+                    parameters=u["parameters"],
+                    optimizer_groups=u["optimizer_groups"],
+                    layers=u["layers"],
+                )
+                for u in measured["updates"]
+            ],
+        )
+    states = []
+    for case in probes["states"]:
+        for state in case["probes"]:
+            for branch in ["positive", "negative"]:
+                states.append(
+                    dict(
+                        id=case["id"],
+                        split=case["split"],
+                        step=state["step"],
+                        timestep=state["timestep"],
+                        branch=branch,
+                        variants={
+                            name: dict(
+                                role_difference_lost_fraction=r["role_difference_lost_fraction"],
+                                residual_vs_original=r["residual_vs_original"],
+                                fusion=r["fusion"],
+                                velocity_vs_original=r["output_vs_original"],
+                                layers=r["layers"],
+                                cfg_vs_original=state["cfg"][name],
+                            )
+                            for name, r in state[branch]["records"].items()
+                        },
+                    )
+                )
+    return dict(
+        training=training,
+        states=states,
+        gradients=probes["gradients"],
+        scope="First nonzero Train/Dev case only; region gradient norms are not additive fractions",
+    )
+
+
 def summarize(rows):
     result = summarize_records(rows)
     selections = dict(all=rows, nonzero=[r for r in rows if r["strength"] > 0])
@@ -194,6 +249,7 @@ def analyze(study: Path, output: Path):
             gates=gates,
             probes=probes,
             training_observations=observations,
+            mechanisms=mechanism_summary(observations, probes),
         )
         for split in ["train", "dev"]:
             views[split]["seeds"][str(seed)] = methods[split]

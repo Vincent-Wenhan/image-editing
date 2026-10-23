@@ -11,9 +11,20 @@ from src.datasets.features import load_features
 from src.evaluation.feature_encoder_diagnostics import input_components
 
 
+def verify_full_batch_trace(trained, ids):
+    trace = trained["feature_statistics"]["input_trace"]
+    if len(trace) != trained["steps"] or any(
+        len(t["ids"]) != len(ids) or set(t["ids"]) != ids for t in trace
+    ):
+        raise ValueError(
+            "Every overfit update must contain each selected Train example exactly once"
+        )
+
+
 def training_diagnostics(trained, root, ids):
     import torch
 
+    verify_full_batch_trace(trained, ids)
     observation = trained["feature_statistics"]["observation"]
     encoder, _ = load_encoder(
         Path(trained["feature_checkpoint"]["path"]), Path(trained["checkpoint"])

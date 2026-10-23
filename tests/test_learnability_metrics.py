@@ -95,3 +95,15 @@ def test_semantic_references_refuse_sealed_test_before_loading(tmp_path):
 
     with pytest.raises(ValueError, match="sealed Test"):
         scene_references(tmp_path, "test")
+
+
+def test_full_batch_trace_rejects_same_capacity_but_duplicate_examples():
+    from src.evaluation.learnability_training import verify_full_batch_trace
+
+    trained = dict(
+        steps=2, feature_statistics=dict(input_trace=[dict(ids=["a", "b"]), dict(ids=["b", "a"])])
+    )
+    verify_full_batch_trace(trained, {"a", "b"})
+    trained["feature_statistics"]["input_trace"][1]["ids"] = ["a", "a"]
+    with pytest.raises(ValueError, match="exactly once"):
+        verify_full_batch_trace(trained, {"a", "b"})
