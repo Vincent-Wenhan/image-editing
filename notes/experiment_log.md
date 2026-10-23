@@ -1,5 +1,10 @@
 # 实验记录
 
+2026-10-23 Asia/Shanghai 监督诊断更正计划：固定上游target先FP32 rescale再cast，
+原teacher/梯度误用了source reference的cast-before-rescale helper。训练和全部
+生成/像素门槛不受影响；旧诊断保留并标明替代预处理，先CPU/BF16与真实GPU smoke，
+再以已有checkpoint在新目录更正teacher/梯度，不追加训练或改变验收标准。
+
 2026-10-23 Asia/Shanghai 时间/更新诊断：以真实BF16转换核对训练及采样时间，
 t≥0.9训练为307的5/720、311的18/720，采样9/20；t≥0.95为0/1次，采样6/20。
 仅作暴露统计，未做第二个采样改法。实际Old/New/D参数均明显更新，AdamW尺度

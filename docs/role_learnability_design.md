@@ -94,3 +94,17 @@ zero/disabled、分层hook、监督target隔离、梯度有限性及异常清理
 分区梯度采用共同全图分母，记录T/D/P/ignore对全图梯度的贡献和求和误差；
 这是未加权velocity诊断，不能冒充原训练器加权loss或自动微分以外的BF16导数。
 机制汇总保留实际timestep、CFG分支、所选case与各层，不将梯度范数比称为可加贡献占比。
+
+## 监督诊断预处理更正
+
+2026-10-23：复核固定上游data_loader.py发现target路径为ToTensor/FP32 rescale，
+再转换VAE dtype；source control则先cast再rescale。原teacher/gradient错误复用了
+reference helper，旧数值仅属于该替代预处理，不能称为与训练target像素变换一致。
+训练、实际训练梯度、生成与pixel/contrast门槛不受此问题影响，不重新训练或覆盖结果。
+
+先新增target专用转换及覆盖全部8bit值的BF16回归，再真实GPU单例smoke。
+用原checkpoint、相同Train/Dev、timestep/seed和source/text/noise，在新目录更正
+全部原条件teacher与Full固定梯度探针。缓存source-only单步首状态，核对与原20-step
+实际初始状态SHA；target只在状态捕获后由evaluation加载，不作为生成参考。
+原记录及旧预处理的图表保留，派生更正summary单独绑定原分析和更正报告SHA。
+更正不改变方法、loss、参数、正式更新预算、Go门槛或Test封存状态。
