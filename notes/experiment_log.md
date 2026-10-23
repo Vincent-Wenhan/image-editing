@@ -1,5 +1,9 @@
 # 实验记录
 
+2026-10-23 Asia/Shanghai overlay收尾：发现旧scene集合浮点归约的末位差可误触
+严格相等门禁。先明确直接复用原像素记录及聚合、只独立汇总teacher的修复范围；
+不重新训练或生成，不改原报告与决策。计划新增末位差回归，新CPU目录另存最终结果。
+
 2026-10-23 Asia/Shanghai 监督target转换已拆分，256级BF16与source顺序区分、
 target不作参考、batch6/单例一致性等16 tests/51.13s通过；原pixel/contrast不变的
 更正overlay及安装/CLI相关8 tests/34.89s通过。新GPU更正worker尚待smoke。

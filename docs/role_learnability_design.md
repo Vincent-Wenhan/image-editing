@@ -108,3 +108,8 @@ reference helper，旧数值仅属于该替代预处理，不能称为与训练t
 实际初始状态SHA；target只在状态捕获后由evaluation加载，不作为生成参考。
 原记录及旧预处理的图表保留，派生更正summary单独绑定原分析和更正报告SHA。
 更正不改变方法、loss、参数、正式更新预算、Go门槛或Test封存状态。
+
+overlay进一步限定为直接复制原像素记录及聚合，仅更正teacher与梯度：旧aggregate
+按无序scene集合求均值，跨进程浮点次序可能产生末位差异，不应以重新归约代替
+已绑定SHA的原统计。独立teacher汇总复用同一公共函数；回归覆盖旧聚合末位差异
+时仍原样保留像素值，GPU worker/checkpoint不变，只用新CPU目录生成最终summary。
