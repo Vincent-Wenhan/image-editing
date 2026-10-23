@@ -1,5 +1,49 @@
 # 工程架构重构
 
+独立Role Feature试验沿用现有模块边界，见 [设计](role_feature_design.md)。
+conditioning定义非RGB特征契约/编码，datasets只加载占据和角色，backends实现
+FLUX的受控残差；training复用固定trainer的额外参数hook及现有worker/租约；
+inference/evaluation复用run记录/分区统计并增加成对checkpoint验证。不开新框架，
+不改变默认No-mask/Mask，不训练Predictor或迁移Qwen。
+2026-10-23已完成232项CPU回归、43项CLI、真实4B前反向/置换/零条件/重载、
+batch4容量及四方法×双seed×20updates训练；固定Dev的质量门槛与研究结论见
+[特征验收报告](role_feature_report.md)。GPU接口消费成功不等于编辑质量改善。
+96张Dev重载预测与哈希评估已完成，两seed研究门槛均失败；当前注入/预算No-Go
+扩大训练，真人评分pending。封存Test继续只做完整性校验。
+执行代码冻结在独立role-feature-run-02 worktree的b256692，114个source/config
+文件与Git对象及实际训练记录相符；文档收尾不改变执行源码。
+seed修复远端CPU CI通过215项、明确跳过16项（没有Torch），本机232项全部执行。
+首轮GPU暴露固定上游TrainConfig无seed属性；worker从已校验原YAML读取一次seed，
+set_seed与encoder适配器显式共用该值，不扩展上游配置类；保留0-batch原失败报告。
+同seed四方法的初始化SHA、实际样本/噪声/timestep轨迹均相同，211/223初始化不同。
+CPU分析独立冻结ad9d5c9，仅修复身份门槛字段；GPU训练/推理仍绑定b256692，
+没有重训或改写预测。失败分析目录保留，成功结果另存analysis_02。
+
+当前实现：`conditioning/features.py`定义不可变old/new/D/P/valid单位图及schema，
+`feature_encoder.py`懒加载FP32小编码器；`datasets/features.py`只读取NPZ占据和
+role/valid，Constant不暴露valid边界。`backends/feature_fusion.py`按实际(T,H,W,L)
+ID注入噪声token，source/文本不变；`feature_checkpoint.py`绑定LoRA实际SHA、base
+revision、mode和配置。`flux2_features.py`独立显式上界入口只编码source RGB。
+
+`training/feature_config.py`锁定未增强几何/单参考/原flowmatch目标，
+`feature_adapter.py`使用固定trainer原有extra-params hook，不修改external或loss；
+worker成功保存FP32特征权重，异常仍保留原traceback/遥测并撤销所有hook。
+`feature_study.py`固定四方法/独立seed/预算，先smoke、真实重载探针、实测batch容量，
+然后有界训练/Dev推理。只支持fresh start；禁止单独恢复LoRA而漏掉编码器状态。
+
+`inference/feature_runner.py`保存原run格式加role_features字段；
+`evaluation/feature_provenance.py`重算actual encoder/LoRA/field SHA与封存Dev，
+缺失metadata不得降级No-mask。`feature_smoke.py`真实检查零初始化Base、禁用Mask、
+训练后零条件、角色/位置置换、空间ID、source-only VAE、反向有限梯度和PNG重载。
+CPU测试不等于GPU验收，真实结果单独记入新报告。
+
+`evaluation/feature_fairness.py`核验四组实际update样本/噪声/timestep轨迹、相同初始
+encoder SHA、参数/token/预算和实际paired weights；`feature_analysis.py`复用原分区
+指标与场景bootstrap，分列身份、旧位残留/新位误差代理。自动像素门槛只给必要条件，
+不生成真人结果，也不能单凭这些代理宣布语义成功。
+身份门槛读取s=0子集的target_mae；identity_target_mae是数据source-target差异，
+不能衡量预测是否破坏身份。回归测试接入真实region_metrics/aggregate协议。
+
 新研究沿用现有目录职责，见 [失败分析设计](role_failure_analysis_design.md)。
 几何编码/占据读取、后端显式上界、研究编排和诊断分别留在 conditioning/datasets、
 backends、training/inference、evaluation；不引入新目录层或修改第三方。
@@ -14,7 +58,7 @@ role_study复用现有训练编排，只新增Dev-only最小协议。`inference/
 
 本轮工程/真实GPU验收与研究决策见 [失败分析实际报告](role_failure_analysis_report.md)：
 固定旧adapter干预120次、同预算双seed灰度pilot训练/48例Dev评估完成。当前灰度
-编码未通过T改善门槛，停在小试验；独立角色特征层未实现，真实评分pending。
+编码未通过T改善门槛，停在小试验；当时独立角色特征层尚未实现，真实评分pending。
 新Test仍封存，不能把完整性校验写成模型测试结果。
 
 PR #3 归档为 **Causal Role Data and Oracle Feasibility Study**，合并审计见

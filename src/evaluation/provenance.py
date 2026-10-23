@@ -21,7 +21,12 @@ def verify_run(root: Path, manifest: str | Path, record: dict) -> dict[str, dict
     if sha256(manifest) != record.get("manifest_sha256"):
         raise ValueError("Manifest SHA256 differs from the inference run")
     config = record["config"]
-    if (config.get("control") in ORACLE_KINDS) != bool(config.get("allow_oracle", False)):
+    features = "feature_mode" in config or "role_features" in record
+    if features and ("feature_mode" not in config or "role_features" not in record):
+        raise ValueError("Feature inference metadata cannot be omitted")
+    if (config.get("control") in ORACLE_KINDS or features) != bool(
+        config.get("allow_oracle", False)
+    ):
         raise ValueError("Inference oracle upper-bound permission differs from method")
     preprocessing = reference_preprocessing(
         config.get("control", "none"), config.get("reference_preprocessing", "auto")
@@ -53,6 +58,10 @@ def verify_run(root: Path, manifest: str | Path, record: dict) -> dict[str, dict
     elif record.get("conditioning"):
         raise ValueError("No-mask run contains undeclared conditions")
     selected = rows[: config["limit"]]
+    if features:
+        from src.evaluation.feature_provenance import verify_features
+
+        verify_features(root, Path(manifest), record, selected)
     if [item["id"] for item in record["results"]] != [row["id"] for row in selected]:
         raise ValueError("Inference sample selection differs from configured manifest subset")
     for row, item in zip(selected, record["results"], strict=True):

@@ -1,6 +1,22 @@
 # Image Editing Research
 
-当前研究分支：**Role Conditioning Failure Analysis**，从已合并 PR #3 的 main
+当前分支 `feat/role-feature-conditioning` 从正常合并PR #4的main `b73492f`创建。
+独立于Image VAE的角色特征最小试验设计见 [预注册](docs/role_feature_design.md)。
+2026-10-23已完成真实4B前反向/有限梯度/条件置换/零条件/成对重载验收、batch4
+容量及四方法×双seed×20updates训练。232项本机测试、Ruff、43项CLI和依赖检查
+通过；远端CPU CI通过（没有Torch的检查明确跳过）。96张固定Dev预测与实际SHA
+评估完成，两个seed均未通过预设门槛：**当前注入/20-update预算No-Go扩大训练**。
+完整指标、区间与案例见 [验收报告](docs/role_feature_report.md)，GPU消费成功不代表方法收益。
+旧负面结果、全部资产与真人pending状态保留，Test封存，不扩大训练。
+[PR #5](https://github.com/Vincent-Wenhan/image-editing/pull/5)记录本轮实现与真实验收。
+
+首轮GPU暴露固定上游TrainConfig不保留seed的兼容问题，已从已校验YAML显式传入，
+同seed初始化/训练轨迹一致且两seed独立；原0-batch失败记录保留。执行源码冻结b256692，
+新资产在outputs/role_feature_20261023/study_01，未改loss或第三方源码。
+身份门槛使用真实s=0预测target_mae，避免与数据自身source-target距离混淆。
+角色方案仅为显式Oracle上界；三人盲评按seed分别准备48任务/人，0条真实评分。
+
+以下为已完成的 **Role Conditioning Failure Analysis**，从已合并 PR #3 的 main
 `a647522` 开始。[预注册设计](docs/role_failure_analysis_design.md)规定新 Dev 和封存
 Test、旧 checkpoint 干预、真人评审准备及最小 Geometry 上界；尚未运行的新实验
 不能引用前轮结果充当验证。
@@ -14,7 +30,27 @@ Geometry/Dynamic Binary训练及48张新Dev预测。彩色复制/重复物体再
 
 最小V2接口已实现 `oracle_geometry`：同双参考，P/ignore黑，旧独占64、新独占192、
 重叠128、依赖255的三通道灰度；仅显式oracle，不是预测器。原loss/网络不变，
-独立特征编码仍是设计备选。真人使用步骤见 [评审指南](docs/human_review_guide.md)。
+独立特征的当前实现与验收见下节。真人使用步骤见 [评审指南](docs/human_review_guide.md)。
+
+独立特征入口（显式Oracle、固定尺寸、仅Dev）：
+
+```bash
+python -m src.training.feature_study prepare --data-root <verified-scenes> \
+  --cohort <sealed-cohort.json> --output <new-study>
+python -m src.training.feature_study run smoke --study <new-study>
+image-edit gpu -- python -m src.inference.feature_smoke --data-root <verified-scenes> \
+  --cohort <sealed-cohort.json> --lora <smoke-lora> --encoder <paired-features> \
+  --output <new-study>/gpu_smoke
+# GPU门禁成功后才允许 capacity → train → infer，不启用自动batch扩大。
+python -m src.training.feature_study run capacity --study <new-study>
+python -m src.training.feature_study run train --study <new-study>
+python -m src.training.feature_study run infer --study <new-study>
+python -m src.evaluation.feature_analysis --study <new-study> --output <new-summary>
+```
+
+RoleFeatures为5×H×W浮点单位图；16像素面积池化、类别/坐标编码、零初始化残差。
+编码器独立于Image VAE，成对权重绑定LoRA SHA，缺失或错配明确报错。
+当前只支持新目录单卡独立训练与最终重载，不支持中断续训或多卡DDP。
 
 ```bash
 # 先生成并封存新的三分割数据，再准备最小匹配实验。

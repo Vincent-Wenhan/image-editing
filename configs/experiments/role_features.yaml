@@ -1,0 +1,24 @@
+schema_version: 1
+study: independent_role_features_v1
+methods: [constant, binary, old_new, full_role]
+train_seeds: [211, 223]
+steps: 20
+batch_size: 4
+rank: 16
+lora_lr: 0.0001
+feature_lr: 0.001
+encoder:
+  hidden: 64
+  channels: 5
+  output: 128
+  stride: 16
+  max_residual: 0.25
+inference:
+  steps: 20
+  guidance: 4.0
+  seed: 42
+  splits: [dev]
+max_parallel: 4
+smoke:
+  steps: 2
+  batch_size: 1

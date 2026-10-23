@@ -59,7 +59,7 @@ def run_training(
     )
     write_json(report, result)
     started = time.perf_counter()
-    job, runtime = None, None
+    job, runtime, features = None, None, None
     primary_failure = False
     try:
         lock = json.loads((root / "configs/assets.lock.json").read_text())
@@ -76,11 +76,19 @@ def run_training(
         if memory_plan:
             result["memory_plan"] = json.loads(memory_plan.read_text())
         full_config = load_yaml(config)
+        from src.training.feature_config import verify_features
+
+        feature_metadata = verify_features(full_config)
         conditioning = verify_training_controls(full_config)
         if conditioning:
             result["conditioning"] = conditioning
         configuration = full_config["config"]
         settings = configuration["process"][0]
+        if (
+            feature_metadata
+            and (Path(settings["training_folder"]) / configuration["name"]).exists()
+        ):
+            raise FileExistsError("Feature training supports fresh paired checkpoints only")
         result.update(batch_size=settings["train"]["batch_size"], steps=settings["train"]["steps"])
         for key, value in {
             "HF_HUB_OFFLINE": "1",
@@ -95,9 +103,13 @@ def run_training(
             runtime.model_type._image_edit_joint_controls = True
             runtime.model_type._image_edit_joint_batches = 0
             runtime.model_type._image_edit_condition_kind = conditioning["kind"]
-        runtime.set_seed(
-            settings["train"].get("seed", ProjectSettings.load().process["train"]["seed"])
-        )
+        seed = settings["train"].get("seed", ProjectSettings.load().process["train"]["seed"])
+        runtime.set_seed(seed)
+        if feature_metadata:
+            from src.training.feature_adapter import install_features
+
+            features = install_features(runtime.model_type, feature_metadata, revision, seed=seed)
+            result["role_features"] = feature_metadata
         runtime.torch.cuda.reset_peak_memory_stats()
         write_json(report, result)
         job = runtime.get_job(str(config))
@@ -109,6 +121,10 @@ def run_training(
         checkpoint = Path(settings["training_folder"]) / configuration["name"]
         checkpoint /= f"{configuration['name']}.safetensors"
         result.update(validate_checkpoint(checkpoint))
+        if features:
+            result["feature_checkpoint"] = features.save(
+                checkpoint.with_suffix(".features.safetensors"), checkpoint
+            )
         result["status"] = "complete"
     except BaseException as error:
         primary_failure = True
@@ -124,6 +140,9 @@ def run_training(
                 runtime.model_type._image_edit_joint_controls = False
                 runtime.model_type._image_edit_condition_kind = "static_mask"
         telemetry_errors, cleanup_errors = {}, {}
+        if features:
+            result["feature_statistics"] = features.stats
+            attempt("feature_hooks.close", features.close, cleanup_errors)
         torch = runtime.torch if runtime else sys.modules.get("torch")
         if runtime is None and torch is not None:
             initialized = attempt(

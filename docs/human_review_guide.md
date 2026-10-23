@@ -29,7 +29,7 @@ image-edit review merge --bundle <bundle> --import <import-a> \
 三位完整独立评审之前保持 pending、人工区间为 null。组织者负责真人身份和独立性，
 工具只验证声明、任务覆盖、数值和原始字节SHA；NA不当0分。
 
-本轮分成两个独立包：旧60-step checkpoint 的新Dev诊断比较，及新20-step matched
+2026-10-22失败分析分成两个独立包：旧60-step checkpoint 的新Dev诊断比较，及新20-step matched
 Geometry/Dynamic Binary比较。不同预算不混成“公平方法收益”。干预图不混入正式
 方法评分。seed分列，场景是统计单位，失败分组只作描述；完整真人结果另行报告。
 
@@ -43,3 +43,24 @@ Geometry/Dynamic Binary比较。不同预算不混成“公平方法收益”。
 两包均已生成三套空白表，实际评分0条。将上面命令的bundle替换为对应私有基准，
 annotations使用同包的tasks.csv。原始真实CSV可放该实验根的新 `human_imports/`
 子目录，每次导入/修订/汇总使用新名字；尚未收到CSV时不要执行填分或假导入。
+
+## 2026-10-23独立Role Feature评审准备
+
+新包在role-feature worktree的 `outputs/role_feature_20261023/human_feature_01/`。
+seed211与223各自包含四种同预算方法、12例Dev，共48任务/人；每个包都有
+`panels/rater_a/index.html`、b/c及空白CSV。每位评审完成两包共96项，训练seed
+分别统计，不将两个seed当作八个独立场景。方法名和seed不出现在公开评分页面。
+
+|训练seed|公开入口（仅分发panels整体）|私有导入基准|
+|---|---|---|
+|211|`seed211/panels/rater_a/index.html`，b/c同理|`seed211/bundle/`|
+|223|`seed223/panels/rater_a/index.html`，b/c同理|`seed223/bundle/`|
+
+两包共用根目录 `tasks.csv` 的12个编辑任务类型；这是由原指令/强度确定的任务注释，
+不是编辑成功评分。导入/合并命令沿用上文，bundle分别替换为对应seed的私有目录，
+annotations指向该tasks.csv。用不同的新输出目录保存每个seed的真实导入与汇总。
+保留此前所有评审包，不覆盖空表或真实原始CSV。
+
+两包均已实际导出并校验图像/映射/原run哈希，当前**0条真实评分，pending三位独立
+评审者**。没有执行真实评分导入或生成分数、人工置信区间。非盲代理联系图位于
+另一个inspection目录，仅供研究诊断；不能分发给盲评者或填入人工结果。

@@ -164,3 +164,47 @@ def test_oom_is_explicit_and_cleanup_still_runs(worker_case):
         )
     assert json.loads(case.report.read_text())["out_of_memory"] is True
     assert "cleanup" in case.events and case.events[-1] == "empty_cache"
+
+
+@pytest.mark.parametrize("close_fails", [False, True])
+def test_feature_failure_keeps_exception_stats_and_releases_hooks(
+    worker_case, monkeypatch, close_fails
+):
+    from src.training import feature_adapter, feature_config
+
+    case = worker_case
+    metadata = dict(mode="full_role")
+    monkeypatch.setattr(feature_config, "verify_features", lambda _: metadata)
+    original = RuntimeError("original feature training failure")
+
+    def fail():
+        raise original
+
+    def close():
+        case.events.append("feature_close")
+        if close_fails:
+            raise RuntimeError("feature hook cleanup failure")
+
+    state = SimpleNamespace(
+        stats=dict(batches=1, gradients={"fixture": {"finite": True}}), close=close
+    )
+
+    def install(*args, seed):
+        assert seed == 42
+        return state
+
+    monkeypatch.setattr(feature_adapter, "install_features", install)
+    case.runtime.model_type = type("ModelFixture", (), {})
+    case.job.run = fail
+    with pytest.raises(RuntimeError) as captured:
+        worker.run_training(
+            case.config, case.report, case.root, runtime_loader=lambda *args: case.runtime
+        )
+    assert captured.value is original
+    report = json.loads(case.report.read_text())
+    assert report["status"] == "failed" and report["role_features"] == metadata
+    assert report["feature_statistics"] == state.stats
+    assert report["peak_reserved_gib"] == 10
+    assert case.events.index("feature_close") < case.events.index("cleanup")
+    assert case.events[-1] == "empty_cache"
+    assert bool(report.get("cleanup_errors")) == close_fails

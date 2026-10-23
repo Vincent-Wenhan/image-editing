@@ -406,3 +406,123 @@ P输入无大蓝块；将P循环换成红色则输出左侧红边栏，P漂移0.
 黑P为0.011731。source/noise/prompt一致，实际图像/控制摘要保存于
 identity_palette_intervention_01.json。明确这是OOD配色/通道语义变化下的身份风险，
 不是合法蓝色P复现，不新增GPU运行，也不计入真人评分。原No-Go建议不变。
+
+## 2026-10-22：Role Feature最小试验预注册
+
+PR #4完成最新CI/214项本机回归/26CLI及实际资产/指标复核后，正常merge为b73492f。
+新分支feat/role-feature-conditioning从最新main创建；沿用原512数据与封存Test。
+设计先行：独立类别/坐标特征、T=0零初始化残差、四组同容量/1024特征tokens/
+双seed211/223各20updates，先单卡接口/反向/重载门禁再小试验。不改变flow loss，
+不训练Predictor/Qwen，旧结果和真人评分包保留。所有新实验目前均计划，尚未运行。
+## 2026-10-22 Role Feature Conditioning 实现准备（Asia/Shanghai）
+
+- PR #4正常合并为main b73492f，复核214 tests/26 CLI及actual SHA/历史No-Go；
+  证据保留role-failure worktree outputs/pr4_merge_audit_20261022，不改旧资产。
+- feat/role-feature-conditioning按role_feature_design先记设计。新增独立5通道特征、
+  零初始化噪声token残差、成对checkpoint、extra-optimizer训练与Dev-only推理接口。
+  不改external、loss、No-mask/Mask入口或历史数据。新结果仅outputs/role_feature_20261022。
+- 已完成首轮8项特征/训练CPU测试（45.88s），原worker/兼容/安装19项通过（97.68s）。
+  后续完整测试、真实GPU smoke、容量及双seed四组20-step尚未运行，研究结论pending。
+- 真人评分仍0条/pending；新Test仅完整性校验，不产生模型输出。
+
+## 2026-10-22 Role Feature Conditioning CPU验收与GPU资源门禁
+
+- 新实现完整回归230 passed/272.27s、Ruff check/format和pip check通过；小尺寸
+  真实Diffusers Transformer完成CPU前反向/gradient checkpointing/有限梯度/置换/
+  零条件与成对权重重载，不把它称为4B GPU验证。全部CLI另存cli_checks.json。
+- 真实模型/数据/版本/两个人工包审计通过，21个Base文件和training VAE对固定
+  Hub内容摘要一致（78.53s），三个external tracked clean，未重新下载或覆盖资产。
+- 四方法×两个seed的20-step/batch4配置及两次2-step校准数据副本已准备；所有
+  训练、GPU probes、checkpoint、96张Dev预测和编辑质量均未运行/pending。
+- 17:13起8卡均存在计算进程；17:22:13 UUID租约预检真实失败：No idle, unlocked
+  GPU available; no task was started。记录保留新根lease_preflight_01/及SMI快照。
+  这不是训练失败/OOM，未中断他人，也未启动绕过租约的任务。
+- 结论Hold/No-Go扩大训练，不宣称方法已被支持或否定。下一步仅在空闲卡先执行
+  2-step及真实4B feature_smoke，再容量与有界对照；Test和真人评分继续封存/pending。
+  详细实现、SHA、门槛和风险见docs/role_feature_report.md。
+
+## 2026-10-22 Role Feature Conditioning 提交与执行冻结
+
+- 31f0896设计、73ba397实现正常push；PR #5为draft。实现push CI 39758090688
+  通过215 tests/15 skipped（13.40s，CI无Torch）；本机230项均实际执行。43项CLI
+  帮助及checkout外导入通过。所有新增Git对象资产审计通过，代码均低于500行。
+- image-editing-role-feature-run固定73ba397，独立editable环境就绪；114个source/
+  config文件实际SHA逐一匹配Git对象。保留此前租约失败，不覆盖结果。
+- 17:51:50复查每卡约498MiB但仍有8个计算进程，第二次冻结源码UUID预检失败，
+  记录lease_preflight_02。未启动任何模型任务，不将低util误认作可用GPU。
+- 研究判断仍Hold，不扩大训练；2-step/4B smoke/容量/8组20-step/96 Dev全部pending。
+
+## 2026-10-23 Role Feature GPU验收续跑：计划与启动
+
+- 用户通知GPU已空闲，实时8卡0MiB/0%、无计算进程；正常UUID租约已启动单卡
+  2-step/batch1。代码冻结73ba397，原数据/seed211/223与20updates预算保持不变。
+- 沿用未产生训练产物的准备任务，新会话日志另放outputs/role_feature_20261023。
+  先真实4B接口/梯度/置换/零条件/重载，再batch4容量，过门禁后四组双seed与Dev。
+- 此条仅记录启动，训练/质量结论尚未产生。资源/数据/模型版本哈希同步复核；
+  历史结果、人工包全部保留，真人pending，Test封存，无Predictor或Qwen。
+
+### 首轮真实GPU暴露的seed兼容错误
+
+- 冻结73ba397的smoke_full_role_211在初始化extra-params时AttributeError：固定
+  上游TrainConfig没有seed属性。0个batch/0次融合，无更新/无checkpoint；109.39s，
+  peak allocated14.852/reserved14.869GiB，非OOM，cleanup/telemetry无错误，GPU已释放。
+- 失败报告和原始trace保留outputs/role_feature_20261022/study/smoke_full_role_211。
+  修复计划：worker从已校验YAML读取一次seed，set_seed和encoder显式共用该值；
+  不再从上游对象猜字段。补无seed对象/RNG/独立seed回归，再冻结并换新目录重试。
+- 修复后相关CPU回归13 passed/23.60s及Ruff通过；同seed初始化一致、211/223不同，
+  不消耗原训练RNG。新报告增加实际encoder initial_seed并在公平性审计中核对。
+
+### 修复后最小训练与真实4B smoke通过
+
+- 冻结b256692，新的study_01/smoke_full_role_211完成2 updates/batch1；worker总耗时
+  154.23s（含初始化/缓存），peak allocated15.022/reserved15.037GiB，无OOM或清理错误。
+  两次真实融合，1024 feature/source tokens，13,312 encoder参数，总可训练23,114,752。
+  六组参数梯度均有限，第二步已传到categories/position/hidden；成对权重实际保存。
+- study_01/gpu_smoke真实4B检查通过，85.05s，peak allocated15.863/reserved16.135GiB。
+  初始Base/禁用No-mask/禁用Static Mask、训练后全零、PNG重载均exact；实际VAE只
+  编码一个[1,3,512,512] source，noise/source/feature各1024 tokens，空间IDs验证通过。
+  old/new、D/P交换及空间移动产生非零transformer输出差（Linf .046875/.03125/.03125），
+  实际反向六组有限非零梯度。消费验证不构成质量提升。
+- 新完整CPU回归231 passed/147.34s；资源审计23个文件通过/37.40s，无重新下载。
+  十个数据副本初始文件枚举相同（36个basename）；正式公平性仍须核验完整实际轨迹。
+  batch4容量也通过：168.05s、peak allocated15.022/reserved15.037GiB（含加载峰值），
+  留有OOM余量。已启动四方法×两个seed×20updates、batch4，最多四卡并行。
+  Dev评估和质量结论尚未产生。
+
+### 8组训练、96例推理完成；评估兼容修复计划
+
+- 四方法各seed211/223的20-step/batch4均正常完成，实测300.83–362.23s/组，
+  peak allocated15.022/reserved15.037–15.309GiB；160个LoRA张量有限，13,312参数
+  编码器成对保存，六组梯度非零。实际轨迹与初始参数/容量/token审计通过。
+- 96张512 Dev预测全部完成，8个原生推理进程正常退出；真实source/config均绑定
+  b256692。新Test未生成预测；GPU已释放，无OOM或清理失败。
+- 首次CPU分析在身份门槛报KeyError('identity_mae')，原日志与部分几何CSV保留
+  analysis_01。原单元fixture使用了虚构字段，未覆盖实际aggregate协议；改用s=0
+  target_mae，不能误用source-target的identity_target_mae。先补真实指标链回归，
+  固定评估修复提交，再用新目录重算。训练/推理与预算不变。
+- 修复回归5 passed/0.14s；新增真实region_metrics→aggregate→gate链，验证
+  source=target仍可能有预测身份破坏、1e-4容差与T/D/P门槛。完整232 passed/149.59s，
+  Ruff check/format通过。两seed各48任务/人的三人空白包已生成，0真实评分。
+
+### 真实GPU与匹配Dev研究收尾
+
+- b256692冻结的8组原生训练均完整20updates/batch4，每组80次样本曝光；
+  encoder13,312/总参数23,114,752、1024 feature/source/noise tokens，两个seed
+  独立，同seed四方法的初始化/20步样本ID/噪声SHA/timestep完全匹配。
+- 96张512² Dev预测全部完成，8组进程246.76–262.67s，12例采样各129.94–132.34s；
+  peak allocated15.594/reserved16.262GiB。全部单source、非零融合与实际PNG SHA
+  已核验，No-mask/Mask禁用兼容、零初始化/全零/有限梯度/位置置换/重载真实通过。
+- ad9d5c9评估源码冻结，analysis_02完成/173.22s；analysis_01字段失败原样保留。
+  seed211 Full T/D/P/身份=.083218/.265628/.019441/.022798，Constant为
+  .083134/.266279/.019464/.022340；seed223 Full=.085822/.269701/.016218/.018667，
+  Constant=.085740/.269247/.016167/.018757。身份是s=0的预测MAE，非数据自身差异。
+- 两seed都未满足预注册的完整门槛，当前注入/20-update预算No-Go扩大；多数场景
+  CI跨0，不推断所有独立角色特征无效。旧/新独占区域代理与重复物体分开报告。
+- 八张完整非盲联系图/SHA和agent_observations保留inspection_02：错位、形变、
+  seed211额外阴影及003_s002主体截断；未确认清晰双物体主体，不能用阴影充当重复。
+  身份未见旧大色板但仍有预测误差。代理观察不作真人评分或编辑成功率。
+- human_feature_01按211/223分别导出两个48任务/人的三人空白包，0真实评分；旧包
+  全保留，指南同步。Test没有推理、画廊或选型，旧模型/数据/实验均未覆盖或重下载。
+- 232 passed/149.59s、Ruff/43CLI/pip检查通过；ad9d5c9的push/PR CI
+  39834629455/39834619043均success。详细表格、全部checkpoint SHA、原失败、版本
+  和证据索引在docs/role_feature_report.md。只正常提交推送，不force push。
