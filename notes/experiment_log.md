@@ -1,5 +1,12 @@
 # 实验记录
 
+2026-10-23 Asia/Shanghai aef9662：真实诊断GPU smoke171.49s，峰值15.880/
+16.281GiB，通过轨迹回放、零条件、七层观测、三t梯度与hook清理；正常租约GPU5。
+本地完整266 passed/297.53s、64 CLI、Ruff通过，CI39923024977 success。
+23模型文件实际SHA审计28.51s及外部commit/无tracked改动通过；首次审计读取
+editable元数据字段假设错误，asset_audit_01失败日志保留，02修正只读校验通过。
+seed307四组120步均完成且实际配对审计通过，seed311和完整评估运行中，暂无研究结论。
+
 2026-10-23 Asia/Shanghai study_03训练smoke/前反向重载/batch6容量均完成，
 分别198.78/105.33/266.36s；peak reserved15.037/16.268/18.047GiB。
 四组双seed训练运行中，正常租约跳过已有进程的GPU0，首批分配空闲GPU1–4。

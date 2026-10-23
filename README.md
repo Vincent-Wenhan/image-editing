@@ -5,7 +5,8 @@ PR #6已正常合并main `8b261bb`，当前研究分支`feat/role-learnability`�
 同预算过拟合及梯度/层诊断，不用封存Test，不把记忆训练样本当作泛化。
 见[设计](docs/role_learnability_design.md)及[实际状态](docs/role_learnability_report.md)。
 已实现Train视图、固定trainer观测、共享噪声干预及监督诊断接口。两步GPU训练、
-前反向/重载及batch6容量门禁通过；正式四组双seed训练运行中，机制结论尚未产生。
+前反向/重载、batch6容量和新增梯度诊断GPU门禁通过；本地266 tests、64 CLI及
+23个模型文件实际SHA审计通过。正式四组双seed训练/评估运行中，机制结论尚未产生。
 下文历史诊断与全部资产保留。
 
 ```bash
