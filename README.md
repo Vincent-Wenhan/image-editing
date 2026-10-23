@@ -40,11 +40,14 @@ python -m src.inference.feature_repair_study prepare --study <new-study>
 python -m src.inference.feature_repair_study run --study <new-study> --phase repair_smoke
 python -m src.inference.feature_repair_study run --study <new-study> --phase compare
 python -m src.evaluation.feature_diagnostic_analysis --study <new-study> --phase compare --output <new-analysis>
+python -m src.evaluation.feature_repair_analysis --study <new-study> --summary <new-analysis>/summary.json \
+  --output <new-analysis>/gates.json
 ```
 
 四臂共享每例两次冻结encoder预计算；记录真实GPU残差文件SHA，原缓存必须精确
 复现旧PNG。新run保持原协议并显式声明residual_intervention，人工工具校验实际
 字段、encoder、公式与缓存后才能导出；不会自动填写评分。
+252项本机CPU回归（138.39s）已通过；修复真实4B smoke110.64s通过，96图比较运行中。
 
 当前分支 `feat/role-feature-conditioning` 从正常合并PR #4的main `b73492f`创建。
 独立于Image VAE的角色特征最小试验设计见 [预注册](docs/role_feature_design.md)。

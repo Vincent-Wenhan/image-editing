@@ -15,6 +15,7 @@ from src.evaluation.role_failures import geometry_metrics, pixels
 from src.evaluation.role_metrics import aggregate, region_metrics
 from src.evaluation.scene_semantics import TranslationLocator, change_proxies
 from src.inference.feature_diagnostic_study import load_plan, phase_outputs
+from src.infra.experiment import source_snapshot
 
 EXTRA_METRICS = (
     "old_only_target_mae",
@@ -123,6 +124,7 @@ def analyze(study: Path, output: Path, phase: str, original_analysis: Path | Non
         human_status="pending",
         real_ratings=0,
         scope="Synthetic pixel/template proxies; candidates are not object counts or human scores",
+        source=source_snapshot(),
         calibration={k: r["locator"].calibration for k, r in references.items()},
         seeds={},
     )
@@ -176,6 +178,39 @@ def analyze(study: Path, output: Path, phase: str, original_analysis: Path | Non
                 or report["training_updates"] != 0
             ):
                 raise ValueError("Incomplete or mismatched intervention experiment")
+            expected_ids = (
+                set(references)
+                if phase == "compare"
+                else set(plan["protocol"]["diagnostic_samples"])
+            )
+            if phase == "compare":
+                from src.inference.feature_repair_study import load_comparison
+
+                _, comparison = load_comparison(study)
+                variants = comparison["recipe"]["variants"]
+                if report["comparison_sha256"] != sha256(study / "comparison.json"):
+                    raise ValueError("Repair report differs from its preregistered recipe")
+                for name in variants:
+                    run = json.loads((directory / name / "run.json").read_text())
+                    verify_run(root, root / "dev/manifest.csv", run)
+                    selected = [r for r in report["results"] if r["variant"] == name]
+                    if (
+                        run["results"] != selected
+                        or run["residual_intervention"] != name
+                        or run["lora_sha256"] != checkpoint["lora_sha256"]
+                        or run["role_features"]["sha256"] != checkpoint["encoder_sha256"]
+                        or any(
+                            run["config"][k] != plan["protocol"]["inference"][k]
+                            for k in ("side", "steps", "guidance", "seed")
+                        )
+                    ):
+                        raise ValueError("Repair run differs from its actual checkpoint/budget")
+            else:
+                variants = plan["protocol"]["variants"]
+            declared = [(r["id"], r["variant"]) for r in report["results"]]
+            expected = {(identifier, name) for identifier in expected_ids for name in variants}
+            if set(declared) != expected or len(declared) != len(expected):
+                raise ValueError("Incomplete or duplicate intervention matrix")
             entries = [
                 dict(
                     item,

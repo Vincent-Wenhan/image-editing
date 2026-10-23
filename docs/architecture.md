@@ -21,6 +21,9 @@ Phase A真实GPU已完成。下一步仅验证冻结权重的identity居中/能�
 冻结Phase A证据与唯一配方，`feature_repair.py`复用原融合、sampler、probes和租约。
 `evaluation/feature_residual_provenance.py`校验实际数组SHA、字段、参数与算子公式，
 跨设备FP32重算容差rtol1e-5/atol1e-7；旧run不携带干预字段时仍走原校验。
+compare评估先复核四臂完整Dev矩阵、实际run/条件数组/checkpoint/预算，再计算指标。
+`evaluation/feature_repair_analysis.py`只应用预注册门槛与场景配对bootstrap，不将
+数值通过直接标为研究Go；视觉和真人状态单独保持，缺少真实评分不生成区间。
 
 独立Role Feature试验沿用现有模块边界，见 [设计](role_feature_design.md)。
 conditioning定义非RGB特征契约/编码，datasets只加载占据和角色，backends实现

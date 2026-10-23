@@ -1,5 +1,11 @@
 # 实验记录
 
+2026-10-23 UTC 修复工程验收：完整252 passed/138.39s，Ruff通过；新增严格四臂
+矩阵/run/预算校验、预定1%门槛及场景配对区间，真人状态保持pending。
+冻结ecfe773真实4B repair_smoke完成110.64s：两例8张，缓存/实时encoder精确、
+identity候选/zero精确、固定状态回放/zero禁用精确、非零编辑生效/成对重载精确。
+正常UUID租约下双seed96图比较已启动，质量尚未评估，未新增训练或模型权重。
+
 2026-10-23 UTC 最小修复实现：原/零/identity居中能量匹配/valid分层置乱四臂，
 同encoder参数与token、0训练，真实数组SHA及公式校验复用旧run与盲评协议。
 首轮相关11tests/12.89s通过；修正CPU fixture的fork_rng为devices=[]，避免初始化
