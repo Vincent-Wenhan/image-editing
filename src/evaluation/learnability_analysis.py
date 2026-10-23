@@ -79,6 +79,27 @@ def mechanism_summary(observations, probes):
     )
 
 
+def summarize_teacher(rows):
+    """Aggregate supervised probes independently of already-recorded pixel statistics."""
+    result = {}
+    for time in sorted({t["time"] for r in rows for t in r.get("teacher", [])}):
+        records = [
+            dict(
+                group_id=r["group_id"],
+                velocity_mse=t["velocity_mse"],
+                **{f"{k}_velocity_mse": v for k, v in t["regions"].items()},
+            )
+            for r in rows
+            for t in r.get("teacher", [])
+            if t["time"] == time
+        ]
+        result[str(time)] = {
+            key: scene_mean(records, key)
+            for key in ["velocity_mse", "t_velocity_mse", "d_velocity_mse", "p_velocity_mse"]
+        }
+    return result
+
+
 def summarize(rows):
     result = summarize_records(rows)
     result["teacher_preprocessing"] = sorted(
@@ -91,22 +112,7 @@ def summarize(rows):
     for strength, part in result["by_strength"].items():
         selected = [r for r in rows if r["strength"] == float(strength)]
         part.update({k: scene_mean(selected, k) for k in CONTRASTS})
-    result["teacher_by_time"] = {}
-    for time in sorted({t["time"] for r in rows for t in r.get("teacher", [])}):
-        records = [
-            dict(
-                group_id=r["group_id"],
-                velocity_mse=t["velocity_mse"],
-                **{f"{k}_velocity_mse": v for k, v in t["regions"].items()},
-            )
-            for r in rows
-            for t in r.get("teacher", [])
-            if t["time"] == time
-        ]
-        result["teacher_by_time"][str(time)] = {
-            key: scene_mean(records, key)
-            for key in ["velocity_mse", "t_velocity_mse", "d_velocity_mse", "p_velocity_mse"]
-        }
+    result["teacher_by_time"] = summarize_teacher(rows)
     return result
 
 

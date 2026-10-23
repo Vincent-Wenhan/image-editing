@@ -7,7 +7,7 @@ from pathlib import Path
 
 from src.core.io import sha256, write_json
 from src.evaluation.feature_teacher import TARGET_PREPROCESSING
-from src.evaluation.learnability_analysis import summarize
+from src.evaluation.learnability_analysis import summarize_teacher
 from src.evaluation.learnability_provenance import verify_inference, verify_teacher
 from src.inference.learnability import evaluation_rows
 from src.infra.experiment import source_snapshot
@@ -87,18 +87,17 @@ def verified_correction(study, plan, job, corrections):
 
 
 def patch_scores(scored, corrections):
-    """Reuse verified per-image scores; no pixel re-evaluation or legacy-file mutation."""
-    rows = copy.deepcopy(scored["records"])
+    """Keep verified pixel records and aggregates exactly, including legacy rounding."""
+    result = copy.deepcopy(scored)
+    rows = result["records"]
     for row in rows:
         if "teacher" in row:
             row["teacher"] = corrections[(row["update"], row["id"])]["teacher"]["records"]
             row["teacher_preprocessing"] = TARGET_PREPROCESSING
-    result = summarize(rows)
-    for key in ["all", "nonzero", "by_strength"]:
-        if scored[key] != result[key]:
-            raise RuntimeError(
-                "Supervised correction unexpectedly changed primary pixel/contrast metrics"
-            )
+    result["teacher_by_time"] = summarize_teacher(rows)
+    result["teacher_preprocessing"] = sorted(
+        {r["teacher_preprocessing"] for r in rows if "teacher" in r}
+    )
     return result
 
 

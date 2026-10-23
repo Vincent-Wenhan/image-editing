@@ -32,8 +32,17 @@ VAE dtype，source保留固定上游的cast-before-rescale。`feature_teacher.ta
 逐项匹配原20-step的source/text/noise SHA；不训练或替换原生成图像。
 `evaluation/learnability_supervised.py`输出新的更正summary，硬性核对原pixel/contrast
 和决策不变，保留原分析、旧teacher与所有出处。新版记录显式标注target预处理。
+更正直接复制原像素记录及聚合，仅调用独立teacher汇总，避免旧scene集合浮点
+次序引入末位差。原分析的舍入值也原样保留，不用放宽门槛替代来源校验。
 成对快照从network.save_weights实际写入处绑定，不使用传回optimizer.pt的上游
 post_save_hook。保留上界按LoRA+encoder双倍计算，完成验收逐一复核全部历史对。
+
+本轮四方法×双seed×原/归一化两版本已完成1920正式updates、712图，默认路径不变。
+原注入和唯一RMS候选均未通过预注册角色语义门槛，不据此自动扩大训练。
+BF16差分丢失减少而位置/阴影控制仍失败，数值消费与研究有效性分开验收；
+完整结果与监督预处理勘误见[可学习性报告](role_learnability_report.md)。
+275项本机测试含Torch、67项CLI通过；远端无Torch CI为240 passed/35 skipped。
+Train/Dev实际SHA、独立seed及source-only状态绑定；Test不生成、不用于选型。
 
 2026-10-23机制诊断复用conditioning/backends/inference/evaluation边界，仅增加观测
 和显式推理干预，不改目录或默认路径。权重冻结，新增训练0步；先测量再选一个

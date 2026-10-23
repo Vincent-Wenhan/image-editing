@@ -109,7 +109,8 @@ def test_full_batch_trace_rejects_same_capacity_but_duplicate_examples():
         verify_full_batch_trace(trained, {"a", "b"})
 
 
-def test_supervised_overlay_keeps_primary_scores_and_legacy_records(scene_data):
+@pytest.mark.parametrize("legacy_roundoff", [False, True])
+def test_supervised_overlay_keeps_primary_scores_and_legacy_records(scene_data, legacy_roundoff):
     from src.evaluation.feature_diagnostic_analysis import scene_references, score_prediction
     from src.evaluation.learnability_analysis import CONTRASTS, summarize
     from src.evaluation.learnability_supervised import patch_scores
@@ -136,6 +137,10 @@ def test_supervised_overlay_keeps_primary_scores_and_legacy_records(scene_data):
             )
         )
     original = summarize(records)
+    if legacy_roundoff:
+        # Historical scene-set iteration can change the last bit across hash seeds.
+        for part in [original["all"], original["nonzero"], *original["by_strength"].values()]:
+            part["target_mae"] = float(np.nextafter(part["target_mae"], np.inf))
     patched = patch_scores(original, corrected)
     assert all(original[k] == patched[k] for k in ["all", "nonzero", "by_strength"])
     assert original["teacher_by_time"]["0.5"]["velocity_mse"] == 1.0
