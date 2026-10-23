@@ -1,5 +1,58 @@
 # 实验记录
 
+2026-10-23 UTC 机制诊断完成：PR #5正常merge676242b，从最新main建新诊断分支。
+Phase A冻结d35b4c1；修复GPU冻结ecfe773、CPU评估冻结fbd385f。双seed四臂96图
+全部完成604.64/606.35s，peak allocated15.598/reserved16.266GiB；24张原始臂与
+旧PNG精确一致，8例身份候选/zero一致，原权重、数据与所有历史输出保持。
+CPU实际残差/字段/公式/SHA/预算复核62.84s，门槛3.59s、24张联系图8.67s。
+211候选T改善0.243%、D恶化0.991%；223 T恶化1.090%、D改善0.663%，均未达到
+预定1%且未优于zero/置乱，P/身份通过。当前冻结修复No-Go，不扩大原注入训练。
+BF16/弱差分有证据，但数值改善不是角色语义收益；位置错误、阴影过宽和主体截断
+仍在，模板重复候选不冒充物体计数。七例非盲观察独立存inspection_01，不是人评。
+human_repair_01两seed各48任务/人×三人空表真实导出，0真实评分/pending。Test
+只核完整性，不推理、不选型。252 passed/138.39s、Ruff185文件、55 CLI、pip通过；
+评估CI39905206592为229 passed/23 skipped（无Torch），真实GPU另有完整记录。
+所有新资产位于outputs/role_feature_diagnostics_20261023，无新checkpoint或第三方修改。
+报告详见docs/role_feature_diagnostics_report.md；保留T/D/P数据/诊断研究，性能方法
+暂不推进，下一步先真人评分和预注册条件方向归因，不做Predictor/Qwen/大训练。
+
+2026-10-23 UTC 修复工程验收：完整252 passed/138.39s，Ruff通过；新增严格四臂
+矩阵/run/预算校验、预定1%门槛及场景配对区间，真人状态保持pending。
+冻结ecfe773真实4B repair_smoke完成110.64s：两例8张，缓存/实时encoder精确、
+identity候选/zero精确、固定状态回放/zero禁用精确、非零编辑生效/成对重载精确。
+正常UUID租约下双seed96图比较已启动，质量尚未评估，未新增训练或模型权重。
+
+2026-10-23 UTC 最小修复实现：原/零/identity居中能量匹配/valid分层置乱四臂，
+同encoder参数与token、0训练，真实数组SHA及公式校验复用旧run与盲评协议。
+首轮相关11tests/12.89s通过；修正CPU fixture的fork_rng为devices=[]，避免初始化
+不参与测试的CUDA设备。真实修复GPU smoke和96图比较尚未运行，不能声称质量收益。
+
+2026-10-23 UTC Phase A真实GPU收尾：冻结d35b4c1，smoke127.30s，两seed诊断
+527.55/527.45s，allocated15.594/reserved16.299GiB；6张旧baseline精确重现，
+固定轨迹输出回放及零/禁用等价通过。所有旧权重与Test保持不变。CPU面积校正后
+identity差分仍仅2.854%/2.211%，Old/New真实BF16差分91%–95%被舍入；单纯FP32
+求和再cast改善极小，CFG抵消未获证据。先预注册identity居中/能量匹配的唯一算子，
+original/zero/centered/valid内置乱四臂，0训练；实现、GPU smoke和96图对照尚未运行。
+见docs/role_feature_repair_design.md。原尝试失败保留，真人0评分/pending。
+
+2026-10-23 UTC新阶段：PR #5正常合并676242b，合并审计232项/192.17s、43 CLI、
+23模型文件/80.31s通过，旧No-Go复算一致（5个全样本归约值仅1e-17差）。
+新分支feat/role-feature-diagnostics先写role_feature_diagnostics_design：冻结已有
+四方法/双seed权重，新增训练0步，仅Dev机制诊断；之后选一个最小改进做smoke和
+同权重/预算对照。新GPU和质量结果尚未产生，不预设主因；真人pending，Test封存。
+Phase A已实现五通道干预、BF16实际加法/FP32相加反事实、x_embedder/CFG固定状态
+回放、CPU encoder分解与冻结矩阵校验。相关14项/136.56s通过，新增漂移回归日志
+另存probe_guard_tests.log。下一步冻结代码后测真实checkpoint/GPU smoke，未选择修复。
+真实CPU encoder_analysis_01完成9.20s；参数初始化按seed重构并核对SHA，八个encoder
+均有更新。两个Full的类别/位置输入RMS比约.066/.069，identity参考全局残差差比
+.00704/.00526。面积与数值影响需继续验证，不能据此宣布主因已定。
+首次GPU正常租约因8卡均有进程/约44GiB而拒绝，未加载模型；原执行/trace保留。
+新增attempt隔离和成功兄弟任务复用，以及真实轨迹预测精确回放守卫；相关数值、
+重试、语义和角色回归合计15 passed/13.79s。GPU真实性仍pending，不占用他人卡。
+语义工具增加GT校准/弃权模板位置与重复候选，D创建/移除/方向响应、P边缘漂移，
+原PNG SHA绑定与非盲叠图。CPU统计增加变化token内作用和受控高斯BF16测量；
+后者不冒称真实扩散输入。下一步冻结这些工具，实算原96例与局部信号，真人仍0条。
+
 时间以 Asia/Shanghai 为准。每条记录说明配置、输入、产物、实际结果与限制。
 
 ## 2026-10-21：Stage 1 初步对照完成

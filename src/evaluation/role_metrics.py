@@ -111,7 +111,11 @@ def score_run(root: Path, manifest: Path, predictions: Path) -> dict:
     )
 
 
-def paired_scene_ci(left: list[dict], right: list[dict], metric: str, seed: int = 42) -> dict:
+def paired_scene_ci(
+    left: list[dict], right: list[dict], metric: str, seed: int = 42, *, resamples: int = 2000
+) -> dict:
+    if type(resamples) is not int or resamples < 1:
+        raise ValueError("Bootstrap resamples must be a positive integer")
     indexed = {row["id"]: row for row in right}
     if set(indexed) != {row["id"] for row in left}:
         raise ValueError("Paired role cohorts differ")
@@ -126,7 +130,7 @@ def paired_scene_ci(left: list[dict], right: list[dict], metric: str, seed: int 
     rng = np.random.default_rng(seed)
     interval = None
     if len(values) >= 2:
-        boot = values[rng.integers(len(values), size=(2000, len(values)))].mean(axis=1)
+        boot = values[rng.integers(len(values), size=(resamples, len(values)))].mean(axis=1)
         interval = np.quantile(boot, [0.025, 0.975]).tolist()
     return dict(
         mean_difference=float(values.mean()) if len(values) else None,

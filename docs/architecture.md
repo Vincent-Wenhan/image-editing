@@ -1,5 +1,33 @@
 # 工程架构重构
 
+2026-10-23机制诊断复用conditioning/backends/inference/evaluation边界，仅增加观测
+和显式推理干预，不改目录或默认路径。权重冻结，新增训练0步；先测量再选一个
+改进，见[机制诊断预注册](role_feature_diagnostics_design.md)。
+`conditioning/feature_interventions.py`仅变换既有五通道token，不读取监督；
+`backends/feature_probe.py`在原fusion前后观测并配对回放CFG状态，不复制模型实现。
+`inference/feature_diagnostic_study.py`引用旧checkpoint并锁定0训练预算，
+`feature_diagnostics.py`复用原backend/UUID租约；`evaluation/feature_encoder_diagnostics.py`
+在CPU分离类别/位置项与实际输出，不把归因指标称为质量提升。
+诊断phase/逐seed receipt绑定实际输出目录、report SHA和执行源码；失败用新attempt，
+成功同级任务复用。StateCapture保存实际正负分支预测，回放必须精确复现后再作归因。
+`evaluation/scene_semantics.py`提供GT校准/可弃权的平移模板与阴影方向代理，
+`feature_diagnostic_analysis.py`绑定原PNG SHA、分列T/D/P/位置与覆盖，
+`feature_diagnostic_gallery.py`只生成非盲研究叠图，目标/背景只在evaluation读取。
+CPU encoder诊断另外报告变化token内响应及单位高斯CPU噪声量化，后者不是扩散轨迹。
+Phase A真实GPU及冻结权重的identity居中/能量匹配残差算子四臂比较已完成，
+不增加参数/token/训练；设计与对照见[修复预注册](role_feature_repair_design.md)。
+`conditioning/feature_residuals.py`仅操作冻结encoder输出，不读target；四臂共享两次
+预计算，缓存绑定完整输入/grid，置乱保持pooled-valid分层。`inference/feature_repair_study.py`
+冻结Phase A证据与唯一配方，`feature_repair.py`复用原融合、sampler、probes和租约。
+`evaluation/feature_residual_provenance.py`校验实际数组SHA、字段、参数与算子公式，
+跨设备FP32重算容差rtol1e-5/atol1e-7；旧run不携带干预字段时仍走原校验。
+compare评估先复核四臂完整Dev矩阵、实际run/条件数组/checkpoint/预算，再计算指标。
+`evaluation/feature_repair_analysis.py`只应用预注册门槛与场景配对bootstrap，不将
+数值通过直接标为研究Go；视觉和真人状态单独保持，缺少真实评分不生成区间。
+双seed各48张Dev、原始缓存24图精确复现；修复T/D门槛失败，当前No-Go，不进入
+扩大训练或Predictor。人工空包与非盲观察分开，Test封存，完整证据见
+[诊断实际报告](role_feature_diagnostics_report.md)。252本机测试/55 CLI与真实GPU smoke通过。
+
 独立Role Feature试验沿用现有模块边界，见 [设计](role_feature_design.md)。
 conditioning定义非RGB特征契约/编码，datasets只加载占据和角色，backends实现
 FLUX的受控残差；training复用固定trainer的额外参数hook及现有worker/租约；

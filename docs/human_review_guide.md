@@ -1,5 +1,13 @@
 # 真人盲评使用准备
 
+2026-10-23冻结残差诊断新增包位于role-feature-diagnostics worktree的
+`outputs/role_feature_diagnostics_20261023/human_repair_01/`。seed211/223各有四臂×
+12例Dev=48任务/人，三份独立顺序空表；真实评分0条/pending。仅分发各seed的
+`panels/`，不分发方法/seed映射、repair_gallery或本轮负面结论。两seed分别导入，
+不和以前的训练方法包混合；这里是同一冻结checkpoint的推理干预比较、0新增训练。
+私有基准为`seed211/bundle/`及`seed223/bundle/`，annotations使用本根tasks.csv。
+导入/合并命令同下文；输出与原始真实CSV使用新目录，保留所有旧包和历史记录。
+
 工具准备不等于收到评分。当前所有真实评分仍 pending；页面中 rater_a/b/c 仅为
 待分配代号。组织者须实际邀请至少三位独立真人，不能由程序或代理代填、互相讨论，
 也不能将单人改代号充当多人。此工作流不自动发送任何邀请。

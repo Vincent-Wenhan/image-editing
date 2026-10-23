@@ -1,6 +1,58 @@
 # Image Editing Research
 
-当前分支 `feat/role-feature-conditioning` 从正常合并PR #4的main `b73492f`创建。
+PR #5已正常合并main `676242b`。新分支feat/role-feature-diagnostics先诊断独立特征
+为何没有稳定收益，复用原checkpoint/Dev，新增训练更新固定为0；不扩大训练。
+残差/BF16/时间步/通道干预与一个最小修复的预注册见
+[机制诊断设计](docs/role_feature_diagnostics_design.md)。下文保留上一轮实际结果。
+
+机制诊断入口（不训练，GPU子进程由编排器申请UUID租约）：
+
+```bash
+python -m src.inference.feature_diagnostic_study prepare --existing-study <old-study> --output <new-study>
+python -m src.evaluation.feature_encoder_diagnostics --study <new-study> --output <new-cpu.json>
+python -m src.inference.feature_diagnostic_study run --study <new-study> --phase smoke
+python -m src.inference.feature_diagnostic_study run --study <new-study> --phase diagnose
+```
+
+资源预检或执行失败后使用`--attempt 2`等新编号；旧尝试保留，已完成的seed从校验过的
+receipt复用，完整phase禁止覆盖。固定状态回放还校验与原轨迹预测逐元素一致。
+
+语义代理评估与非盲叠图（不生成真人评分）：
+
+```bash
+python -m src.evaluation.feature_diagnostic_analysis --study <new-study> --phase existing \
+  --original-analysis <verified-original-summary.json> --output <new-semantic-analysis>
+python -m src.evaluation.feature_diagnostic_gallery --summary <new-semantic-analysis>/summary.json \
+  --output <new-gallery>
+```
+
+模板位置先用source/target/background校准，弱分离或无可信匹配会弃权。重复候选、
+D阴影创建/移除与暗区IoU、P边缘漂移是合成场景代理，不是人工成功率。
+
+Phase A真实4B smoke、双seed固定状态诊断、最小修复smoke与96图对照已完成。
+弱角色差分及BF16舍入有证据，但居中/能量匹配没有稳定T/D收益，当前修复No-Go，
+不扩大训练。两个seed三人盲评空包已就绪，真实评分0条/pending；Test继续封存。
+选择依据、唯一算子及不变门槛见[修复预注册](docs/role_feature_repair_design.md)，
+实际状态见[诊断报告](docs/role_feature_diagnostics_report.md)。
+
+冻结残差改进（必须先完成Phase A；不训练，不改变默认推理）：
+
+```bash
+python -m src.inference.feature_repair_study prepare --study <new-study>
+python -m src.inference.feature_repair_study run --study <new-study> --phase repair_smoke
+python -m src.inference.feature_repair_study run --study <new-study> --phase compare
+python -m src.evaluation.feature_diagnostic_analysis --study <new-study> --phase compare --output <new-analysis>
+python -m src.evaluation.feature_repair_analysis --study <new-study> --summary <new-analysis>/summary.json \
+  --output <new-analysis>/gates.json
+```
+
+四臂共享每例两次冻结encoder预计算；记录真实GPU残差文件SHA，原缓存必须精确
+复现旧PNG。新run保持原协议并显式声明residual_intervention，人工工具校验实际
+字段、encoder、公式与缓存后才能导出；不会自动填写评分。
+252项本机CPU回归（138.39s）、Ruff、55 CLI通过；修复真实4B smoke110.64s通过，
+96图比较两seed604.64/606.35s，allocated15.598/reserved16.266GiB，实际SHA与门槛复核。
+
+上一轮分支 `feat/role-feature-conditioning` 从正常合并PR #4的main `b73492f`创建。
 独立于Image VAE的角色特征最小试验设计见 [预注册](docs/role_feature_design.md)。
 2026-10-23已完成真实4B前反向/有限梯度/条件置换/零条件/成对重载验收、batch4
 容量及四方法×双seed×20updates训练。232项本机测试、Ruff、43项CLI和依赖检查
