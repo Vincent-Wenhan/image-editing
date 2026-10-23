@@ -3,6 +3,19 @@
 from src.conditioning.features import EncoderConfig
 
 
+def category_inputs(features, normalization: str):
+    """Optional parameter-free preconditioning; statistics never depend on targets."""
+    if normalization == "none":
+        return features
+    if normalization != "channel_rms":
+        raise ValueError("Unknown role feature normalization")
+    import torch
+
+    scale = features.detach().float().square().mean(1, keepdim=True).sqrt()
+    scale = torch.where(scale > 1e-6, scale, torch.ones_like(scale))
+    return features / scale
+
+
 def build_encoder(config: EncoderConfig):
     import torch
     from torch import nn
@@ -46,7 +59,8 @@ def build_encoder(config: EncoderConfig):
                     -1,
                 )
                 f = features.float()
-                hidden = f @ self.categories + self.position(position)[None]
+                content = category_inputs(f, config.normalization) @ self.categories
+                hidden = content + self.position(position)[None]
                 residual = torch.tanh(self.output(torch.nn.functional.silu(self.hidden(hidden))))
                 return residual * config.max_residual * f[..., 4:5]
 

@@ -8,7 +8,7 @@ from pathlib import Path
 
 from src.backends.feature_checkpoint import load_encoder
 from src.backends.feature_probe import difference, rms
-from src.conditioning.feature_encoder import build_encoder
+from src.conditioning.feature_encoder import build_encoder, category_inputs
 from src.conditioning.feature_interventions import intervene
 from src.conditioning.features import EncoderConfig
 from src.core.io import read_rows, write_json
@@ -30,7 +30,7 @@ def input_components(encoder, tokens, grid):
         residual = encoder(tokens, grid)
     finally:
         handle.remove()
-    category = tokens @ encoder.categories
+    category = category_inputs(tokens, encoder.config.normalization) @ encoder.categories
     return residual, category, captured["hidden"] - category
 
 

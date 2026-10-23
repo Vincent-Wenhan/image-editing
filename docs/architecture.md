@@ -19,6 +19,11 @@ T/D/P/ignore梯度，不改训练器目标。`learnability_diagnostic_smoke.py`�
 学习曲线与门槛。Train/Dev画廊显式绑定canonical manifest，拒绝封存Test。
 `learnability_training.py`校验每次完整Train曝光并汇总真实loss/输入幅度；机制输出
 保留case、timestep及CFG分支范围，区域梯度范数不归一化为“贡献比例”。
+唯一修复为`EncoderConfig.normalization=channel_rms`：既有类别输入的空间RMS
+预条件化，统计stop-gradient，仍用原valid门控和输出上界。默认none不增加运算，
+序列化省略默认项以兼容旧checkpoint。study CLI只覆盖这个显式选项，预算不复制。
+`learnability_comparison.py`复核两study除该选项外的实际初始化、样本/噪声、容量、
+优化配置和预算相等，再做原/新Full的配对比较及固定门槛验收。
 成对快照从network.save_weights实际写入处绑定，不使用传回optimizer.pt的上游
 post_save_hook。保留上界按LoRA+encoder双倍计算，完成验收逐一复核全部历史对。
 

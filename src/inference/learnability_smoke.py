@@ -66,6 +66,9 @@ def run(study: Path, output: Path):
             trained["feature_checkpoint"]["path"],
         )
         model, encoder = backend.base.pipe.transformer, backend.encoder
+        if encoder.config.as_dict() != plan["protocol"]["encoder"]:
+            raise ValueError("Smoke checkpoint has a different feature normalization/config")
+        report["encoder_config"] = encoder.config.as_dict()
         tokens = torch.from_numpy(field.tokens())[None].to("cuda")
         grid = field.size[1] // 16, field.size[0] // 16
         captured = {}

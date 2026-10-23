@@ -1,5 +1,11 @@
 # 实验记录
 
+2026-10-23 Asia/Shanghai channel_rms实现：仅类别输入空间RMS、stop-gradient统计，
+不改结构/loss/valid门控；默认计算与旧metadata保持兼容。20 tests/35.55s通过，
+计划沿用同一6例/四方法/双seed/120步，GPU smoke通过后才启动有界对照。
+新增跨study实际trace/初始化/容量一致性与固定收益门槛验收，尚无修复有效性结论。
+5项归一化/metadata/收益门槛测试20.49s通过；基线完整356图矩阵及八份推理来源校验完成。
+
 2026-10-23 Asia/Shanghai 唯一修改预注册：基于seed307已完成Train6例的contrast约1、
 稀疏Old/New/D参数梯度小于P/valid、实际BF16差分丢失，提出逐通道空间RMS
 预条件化；仅输入尺度，不新增参数/模型或改变loss。最多追加四组双seed各120步。

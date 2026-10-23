@@ -40,12 +40,21 @@ def verify_protocol(p):
         raise ValueError("Use the preregistered bounded Train-overfit protocol")
 
 
-def prepare(data: Path, cohort: Path, output: Path, protocol: Path):
+def resolve_protocol(protocol: Path, normalization: str = "none"):
+    if normalization not in {"none", "channel_rms"}:
+        raise ValueError("Use the registered role normalization option")
+    p = load_yaml(protocol)
+    if normalization != "none":
+        p["encoder"]["normalization"] = normalization
+    verify_protocol(p)
+    return p
+
+
+def prepare(data: Path, cohort: Path, output: Path, protocol: Path, normalization: str = "none"):
     if output.exists():
         raise FileExistsError(output)
     require_dev(data, cohort)
-    validation, p = validate_scene_dataset(data), load_yaml(protocol)
-    verify_protocol(p)
+    validation, p = validate_scene_dataset(data), resolve_protocol(protocol, normalization)
     output.mkdir(parents=True)
     write_json(output / "protocol.json", p)
     template = load_yaml(CONFIG_ROOT / "flux2_edit_lora.yaml")
@@ -62,6 +71,7 @@ def prepare(data: Path, cohort: Path, output: Path, protocol: Path):
         protocol=p,
         protocol_path=str(protocol.resolve()),
         protocol_sha256=sha256(protocol),
+        normalization=normalization,
         validation=validation,
         jobs=[],
     )
@@ -140,6 +150,7 @@ def load_plan(study: Path):
         or sha256(plan["protocol_path"]) != plan["protocol_sha256"]
         or p != json.loads((study / "protocol.json").read_text())
         or sha256(plan["cohort"]) != plan["cohort_sha256"]
+        or p != resolve_protocol(Path(plan["protocol_path"]), plan.get("normalization", "none"))
     ):
         raise ValueError("Prepared overfit protocol or cohort changed")
     require_dev(Path(plan["data"]), Path(plan["cohort"]))
@@ -277,12 +288,13 @@ def main():
     p.add_argument(
         "--protocol", type=Path, default=CONFIG_ROOT / "experiments/role_learnability.yaml"
     )
+    p.add_argument("--normalization", choices=["none", "channel_rms"], default="none")
     p = actions.add_parser("run")
     p.add_argument("--study", type=Path, required=True)
     p.add_argument("--phase", choices=["smoke", "capacity", "train", "infer"], required=True)
     args = parser.parse_args()
     if args.action == "prepare":
-        prepare(args.data, args.cohort, args.output, args.protocol)
+        prepare(args.data, args.cohort, args.output, args.protocol, args.normalization)
     else:
         run(args.study, args.phase)
 

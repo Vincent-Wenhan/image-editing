@@ -11,6 +11,8 @@ PR #6已正常合并main `8b261bb`，当前研究分支`feat/role-learnability`�
 
 唯一候选修改先预注册于[通道预条件设计](docs/role_learnability_repair_design.md)：
 现有编码器内逐通道空间RMS归一化，不增加参数、不改loss；实现与验证状态见报告。
+新研究视图可显式指定`prepare ... --normalization channel_rms`，默认none保留旧计算。
+原始字段仍是[0,1]，checkpoint记录归一化选项；新配置仅复用同一预算YAML。
 
 ```bash
 python -m src.training.learnability_study prepare --data <existing-scenes> --cohort <existing-cohort.json> --output <new-study>
@@ -22,6 +24,7 @@ image-edit gpu -- python -m src.inference.learnability_diagnostic_smoke --study 
 python -m src.training.learnability_study run --study <new-study> --phase infer
 python -m src.evaluation.learnability_analysis --study <new-study> --output <new-analysis>
 python -m src.evaluation.feature_diagnostic_gallery --summary <new-analysis>/train_summary.json --output <new-train-gallery>
+python -m src.evaluation.learnability_comparison --study <original-study> --baseline <original-analysis>/summary.json --normalized-study <normalized-study> --normalized <normalized-analysis>/summary.json --output <new-comparison.json>
 ```
 
 Train视图复制选定6例到新目录以隔离缓存，canonical manifest与数据不修改。

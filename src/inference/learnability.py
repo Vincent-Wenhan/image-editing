@@ -188,8 +188,8 @@ def run(args):
                 Path(pair["encoder"]["path"]), Path(pair["lora"]), device="cuda"
             )
             encoder.eval().requires_grad_(False)
-            if metadata["mode"] != job["method"]:
-                raise ValueError("Overfit mode differs from its actual encoder")
+            if metadata["mode"] != job["method"] or metadata["encoder"] != p["encoder"]:
+                raise ValueError("Overfit mode/config differs from its actual encoder")
             chosen = (
                 rows
                 if pair["update"] in {0, p["steps"]}

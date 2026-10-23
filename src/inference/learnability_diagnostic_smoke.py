@@ -69,6 +69,9 @@ def run(study: Path, output: Path):
             trained["feature_checkpoint"]["path"],
         )
         encoder, model = backend.encoder, backend.base.pipe.transformer
+        if encoder.config.as_dict() != p["encoder"]:
+            raise ValueError("Diagnostic checkpoint feature config differs from the protocol")
+        report["encoder_config"] = encoder.config.as_dict()
         encoder.eval().requires_grad_(False)
         model.requires_grad_(False)
         tokens = torch.from_numpy(field.tokens())[None].to("cuda")
