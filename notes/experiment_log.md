@@ -1,5 +1,13 @@
 # 实验记录
 
+2026-10-23 UTC Phase A真实GPU收尾：冻结d35b4c1，smoke127.30s，两seed诊断
+527.55/527.45s，allocated15.594/reserved16.299GiB；6张旧baseline精确重现，
+固定轨迹输出回放及零/禁用等价通过。所有旧权重与Test保持不变。CPU面积校正后
+identity差分仍仅2.854%/2.211%，Old/New真实BF16差分91%–95%被舍入；单纯FP32
+求和再cast改善极小，CFG抵消未获证据。先预注册identity居中/能量匹配的唯一算子，
+original/zero/centered/valid内置乱四臂，0训练；实现、GPU smoke和96图对照尚未运行。
+见docs/role_feature_repair_design.md。原尝试失败保留，真人0评分/pending。
+
 2026-10-23 UTC新阶段：PR #5正常合并676242b，合并审计232项/192.17s、43 CLI、
 23模型文件/80.31s通过，旧No-Go复算一致（5个全样本归约值仅1e-17差）。
 新分支feat/role-feature-diagnostics先写role_feature_diagnostics_design：冻结已有

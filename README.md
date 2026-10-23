@@ -29,8 +29,9 @@ python -m src.evaluation.feature_diagnostic_gallery --summary <new-semantic-anal
 模板位置先用source/target/background校准，弱分离或无可信匹配会弃权。重复候选、
 D阴影创建/移除与暗区IoU、P边缘漂移是合成场景代理，不是人工成功率。
 
-观测/干预与固定CFG状态回放已实现，CPU检查通过；本阶段真实GPU及改进收益尚未
-验证，状态见[诊断报告](docs/role_feature_diagnostics_report.md)。
+Phase A真实4B smoke和双seed固定状态诊断已完成；最小修复尚未验证。
+选择依据、唯一算子及不变门槛见[修复预注册](docs/role_feature_repair_design.md)，
+实际状态见[诊断报告](docs/role_feature_diagnostics_report.md)。
 
 当前分支 `feat/role-feature-conditioning` 从正常合并PR #4的main `b73492f`创建。
 独立于Image VAE的角色特征最小试验设计见 [预注册](docs/role_feature_design.md)。

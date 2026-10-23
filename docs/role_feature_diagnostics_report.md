@@ -1,7 +1,7 @@
 # Independent Role Feature Conditioning：机制诊断实际报告
 
-2026-10-23 UTC。当前仅完成PR #5合并审计、预注册和Phase A工具/CPU检查；本阶段
-GPU诊断、机制结论、最小改进及公平对照未运行，不能宣称改进有效。旧受限No-Go
+2026-10-23 UTC。PR #5合并审计、Phase A CPU与真实GPU诊断已完成；最小改进及
+公平对照尚未运行，不能宣称改进有效。旧受限No-Go
 与全部历史资产保留，见role_feature_report.md。
 
 PR #5正常merge为main 676242b，main CI39892792936通过。合并前本机232 tests/
@@ -24,7 +24,13 @@ RMS的.7042%/.5258%；原残差RMS为.00607766/.00594360。这是弱角色变化
 
 首次正常GPU租约被8卡计算进程/约44GiB占用拒绝，未加载模型，不是训练/OOM失败。
 保留study_01/smoke_211_execution及原trace；attempt重试输出隔离，成功任务复用。
-当前真实GPU状态/速度敏感性和改进质量仍pending。
+后续attempt02正常租约成功：smoke127.30s，两seed完整诊断527.55/527.45s，
+峰值allocated15.594/reserved16.299GiB，执行源码d35b4c1。6个原20-step PNG精确
+复现、真实轨迹固定状态预测回放精确、零条件/禁用等价均通过。
+
+CPU面积校正后identity差分在变化token内相对RMS为2.854%/2.211%；真实BF16
+Old/New交换差分约91%–95%被舍入。FP32相加再cast改善极小，未发现CFG公共项
+抵消的有力证据。具体最小修复预注册见role_feature_repair_design.md；尚未验证。
 
 位置模板仅用已知source/target/background校准，低对比/参考定位失败或无匹配弃权；
 重复模板候选不等于物体计数。D分阴影创建/移除和有向变化，P分边缘保持。

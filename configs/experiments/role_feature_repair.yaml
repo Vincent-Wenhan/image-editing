@@ -1,0 +1,6 @@
+schema_version: 1
+study: frozen_centered_role_residual_v1
+training_updates: 0
+variants: [original, zero, centered, centered_shuffled]
+smoke_samples: [dev_2026102201_000_s000, dev_2026102201_000_s001]
+# Sampling, seeds, shuffle seed, cap and acceptance gates inherit the frozen study/checkpoint.

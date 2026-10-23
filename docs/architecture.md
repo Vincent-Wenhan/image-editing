@@ -14,6 +14,8 @@
 `feature_diagnostic_analysis.py`绑定原PNG SHA、分列T/D/P/位置与覆盖，
 `feature_diagnostic_gallery.py`只生成非盲研究叠图，目标/背景只在evaluation读取。
 CPU encoder诊断另外报告变化token内响应及单位高斯CPU噪声量化，后者不是扩散轨迹。
+Phase A真实GPU已完成。下一步仅验证冻结权重的identity居中/能量匹配残差算子，
+不增加参数/token/训练；设计与对照见[修复预注册](role_feature_repair_design.md)。
 
 独立Role Feature试验沿用现有模块边界，见 [设计](role_feature_design.md)。
 conditioning定义非RGB特征契约/编码，datasets只加载占据和角色，backends实现
