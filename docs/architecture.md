@@ -14,7 +14,7 @@
 `feature_diagnostic_analysis.py`绑定原PNG SHA、分列T/D/P/位置与覆盖，
 `feature_diagnostic_gallery.py`只生成非盲研究叠图，目标/背景只在evaluation读取。
 CPU encoder诊断另外报告变化token内响应及单位高斯CPU噪声量化，后者不是扩散轨迹。
-Phase A真实GPU已完成。下一步仅验证冻结权重的identity居中/能量匹配残差算子，
+Phase A真实GPU及冻结权重的identity居中/能量匹配残差算子四臂比较已完成，
 不增加参数/token/训练；设计与对照见[修复预注册](role_feature_repair_design.md)。
 `conditioning/feature_residuals.py`仅操作冻结encoder输出，不读target；四臂共享两次
 预计算，缓存绑定完整输入/grid，置乱保持pooled-valid分层。`inference/feature_repair_study.py`
@@ -24,6 +24,9 @@ Phase A真实GPU已完成。下一步仅验证冻结权重的identity居中/能�
 compare评估先复核四臂完整Dev矩阵、实际run/条件数组/checkpoint/预算，再计算指标。
 `evaluation/feature_repair_analysis.py`只应用预注册门槛与场景配对bootstrap，不将
 数值通过直接标为研究Go；视觉和真人状态单独保持，缺少真实评分不生成区间。
+双seed各48张Dev、原始缓存24图精确复现；修复T/D门槛失败，当前No-Go，不进入
+扩大训练或Predictor。人工空包与非盲观察分开，Test封存，完整证据见
+[诊断实际报告](role_feature_diagnostics_report.md)。252本机测试/55 CLI与真实GPU smoke通过。
 
 独立Role Feature试验沿用现有模块边界，见 [设计](role_feature_design.md)。
 conditioning定义非RGB特征契约/编码，datasets只加载占据和角色，backends实现

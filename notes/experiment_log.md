@@ -1,5 +1,21 @@
 # 实验记录
 
+2026-10-23 UTC 机制诊断完成：PR #5正常merge676242b，从最新main建新诊断分支。
+Phase A冻结d35b4c1；修复GPU冻结ecfe773、CPU评估冻结fbd385f。双seed四臂96图
+全部完成604.64/606.35s，peak allocated15.598/reserved16.266GiB；24张原始臂与
+旧PNG精确一致，8例身份候选/zero一致，原权重、数据与所有历史输出保持。
+CPU实际残差/字段/公式/SHA/预算复核62.84s，门槛3.59s、24张联系图8.67s。
+211候选T改善0.243%、D恶化0.991%；223 T恶化1.090%、D改善0.663%，均未达到
+预定1%且未优于zero/置乱，P/身份通过。当前冻结修复No-Go，不扩大原注入训练。
+BF16/弱差分有证据，但数值改善不是角色语义收益；位置错误、阴影过宽和主体截断
+仍在，模板重复候选不冒充物体计数。七例非盲观察独立存inspection_01，不是人评。
+human_repair_01两seed各48任务/人×三人空表真实导出，0真实评分/pending。Test
+只核完整性，不推理、不选型。252 passed/138.39s、Ruff185文件、55 CLI、pip通过；
+评估CI39905206592为229 passed/23 skipped（无Torch），真实GPU另有完整记录。
+所有新资产位于outputs/role_feature_diagnostics_20261023，无新checkpoint或第三方修改。
+报告详见docs/role_feature_diagnostics_report.md；保留T/D/P数据/诊断研究，性能方法
+暂不推进，下一步先真人评分和预注册条件方向归因，不做Predictor/Qwen/大训练。
+
 2026-10-23 UTC 修复工程验收：完整252 passed/138.39s，Ruff通过；新增严格四臂
 矩阵/run/预算校验、预定1%门槛及场景配对区间，真人状态保持pending。
 冻结ecfe773真实4B repair_smoke完成110.64s：两例8张，缓存/实时encoder精确、

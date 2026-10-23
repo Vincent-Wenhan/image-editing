@@ -29,7 +29,9 @@ python -m src.evaluation.feature_diagnostic_gallery --summary <new-semantic-anal
 模板位置先用source/target/background校准，弱分离或无可信匹配会弃权。重复候选、
 D阴影创建/移除与暗区IoU、P边缘漂移是合成场景代理，不是人工成功率。
 
-Phase A真实4B smoke和双seed固定状态诊断已完成；最小修复尚未验证。
+Phase A真实4B smoke、双seed固定状态诊断、最小修复smoke与96图对照已完成。
+弱角色差分及BF16舍入有证据，但居中/能量匹配没有稳定T/D收益，当前修复No-Go，
+不扩大训练。两个seed三人盲评空包已就绪，真实评分0条/pending；Test继续封存。
 选择依据、唯一算子及不变门槛见[修复预注册](docs/role_feature_repair_design.md)，
 实际状态见[诊断报告](docs/role_feature_diagnostics_report.md)。
 
@@ -47,9 +49,10 @@ python -m src.evaluation.feature_repair_analysis --study <new-study> --summary <
 四臂共享每例两次冻结encoder预计算；记录真实GPU残差文件SHA，原缓存必须精确
 复现旧PNG。新run保持原协议并显式声明residual_intervention，人工工具校验实际
 字段、encoder、公式与缓存后才能导出；不会自动填写评分。
-252项本机CPU回归（138.39s）已通过；修复真实4B smoke110.64s通过，96图比较运行中。
+252项本机CPU回归（138.39s）、Ruff、55 CLI通过；修复真实4B smoke110.64s通过，
+96图比较两seed604.64/606.35s，allocated15.598/reserved16.266GiB，实际SHA与门槛复核。
 
-当前分支 `feat/role-feature-conditioning` 从正常合并PR #4的main `b73492f`创建。
+上一轮分支 `feat/role-feature-conditioning` 从正常合并PR #4的main `b73492f`创建。
 独立于Image VAE的角色特征最小试验设计见 [预注册](docs/role_feature_design.md)。
 2026-10-23已完成真实4B前反向/有限梯度/条件置换/零条件/成对重载验收、batch4
 容量及四方法×双seed×20updates训练。232项本机测试、Ruff、43项CLI和依赖检查
