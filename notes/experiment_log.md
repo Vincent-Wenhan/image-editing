@@ -1,5 +1,11 @@
 # 实验记录
 
+2026-10-23 Asia/Shanghai 首轮真实GPU边界失败：冻结d6026cd，smoke在
+AcceleratedOptimizer.register_step_pre_hook缺少内部hook字典时AttributeError；
+0 batch/0更新，初始成对权重和原始trace/显存保留study_01。修复仅沿optimizer
+包装链注册到实际PyTorch optimizer，补模拟相同继承布局的回归；新study_02重试。
+不改loss、训练预算、父数据或第三方。可学习性仍未验证，真人pending。
+
 2026-10-23 Asia/Shanghai 可学习性工程：新增不可覆盖的6例Train视图，共同caption与
 父manifest/源图/目标实际SHA绑定，训练缓存独立。固定trainer观测hook记录实际loss、
 通道/类别/位置/层梯度、原始初始化SHA及真实update编号的成对checkpoint；loss不变。

@@ -157,3 +157,29 @@ def test_overfit_budget_is_bounded_and_test_cannot_be_declared():
         wrong[key] = value
         with pytest.raises(ValueError, match="preregistered"):
             verify_protocol(wrong)
+
+
+def test_step_observer_unwraps_accelerated_optimizer_without_changing_step():
+    torch = pytest.importorskip("torch")
+    from src.training.feature_observer import step_hook_optimizer
+
+    class Wrapped(torch.optim.Optimizer):
+        def __init__(self, optimizer):
+            self.optimizer = (
+                optimizer  # Accelerate does not initialize Optimizer hook dictionaries.
+            )
+
+        def step(self):
+            return self.optimizer.step()
+
+    parameter = torch.nn.Parameter(torch.tensor(1.0))
+    raw = torch.optim.SGD([parameter], lr=0.1)
+    wrapped = Wrapped(raw)
+    observed = []
+    handle = step_hook_optimizer(wrapped).register_step_pre_hook(
+        lambda *args: observed.append(float(parameter.grad))
+    )
+    parameter.square().backward()
+    wrapped.step()
+    handle.remove()
+    assert observed == [2.0] and torch.allclose(parameter.detach(), torch.tensor(0.8))

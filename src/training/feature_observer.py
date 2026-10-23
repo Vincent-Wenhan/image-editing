@@ -15,6 +15,17 @@ def norm(value):
     return float(value.detach().float().square().mean().sqrt())
 
 
+def step_hook_optimizer(optimizer):
+    """Accelerate's Optimizer subclass stores step hooks on its inner optimizer."""
+    seen = set()
+    while hasattr(optimizer, "optimizer"):
+        if id(optimizer) in seen:
+            raise ValueError("Cyclic optimizer wrapper")
+        seen.add(id(optimizer))
+        optimizer = optimizer.optimizer
+    return optimizer
+
+
 class TrainingObserver:
     def __init__(self, state):
         import torch
@@ -206,7 +217,7 @@ def install_observer(state, trainer_type):
         def wrapper(process, *args, __name=name, __original=original, **kwargs):
             if __name == "hook_train_loop":
                 observer.begin()
-                handle = process.optimizer.register_step_pre_hook(
+                handle = step_hook_optimizer(process.optimizer).register_step_pre_hook(
                     lambda opt, a, kw: observer.gradients(process)
                 )
                 try:

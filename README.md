@@ -17,6 +17,8 @@ python -m src.training.learnability_study run --study <new-study> --phase train
 
 Train视图复制选定6例到新目录以隔离缓存，canonical manifest与数据不修改。
 观测复用原loss与optimizer；checkpoint按真实update0/每20/final成对保存，不自动删旧权重。
+首轮真实smoke在Accelerate优化器观测边界失败（0更新），原study_01保留；修复仅
+解包step-hook注册，训练目标不变，使用新目录重试，状态见可学习性报告。
 
 PR #5已正常合并main `676242b`。新分支feat/role-feature-diagnostics先诊断独立特征
 为何没有稳定收益，复用原checkpoint/Dev，新增训练更新固定为0；不扩大训练。

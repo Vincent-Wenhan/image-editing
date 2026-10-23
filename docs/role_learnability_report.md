@@ -5,6 +5,10 @@
 证据保存在role-feature-diagnostics worktree的outputs/pr6_merge_audit_20261023。
 历史No-Go和全部数据、checkpoint、失败/真人包保留。
 
-本阶段已预注册两Train场景6例、四方法双seed各120updates、共享中性指令与同组
-初始噪声、梯度/层/teacher与生成分离验收。当前尚未实现/运行新实验，不宣称
-T/D/P可学、不可学或注入修复成功；真人仍0条/pending，Test继续封存。
+本阶段已预注册并实现两Train场景6例、四方法双seed各120updates、共享中性指令
+与同组初始噪声、梯度/层观测。17项相关CPU测试102.83s通过。
+首次真实GPU smoke冻结d6026cd，在AcceleratedOptimizer注册step hook时报
+AttributeError，0个batch/0训练更新；初始成对checkpoint、traceback和显存报告
+保留study_01，不是模型质量结果。自有代码将hook注册到包装器内部optimizer，
+补真实继承布局回归后用study_02重试，不修改第三方或覆盖旧目录。
+当前可学习性/注入改进均未验证；真人0条/pending，Test继续封存。
