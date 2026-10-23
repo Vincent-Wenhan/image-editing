@@ -56,37 +56,79 @@ def direction(delta, desired, weight, floor):
 
 
 def score(velocity, identity, zero, original, drop_d, x, anchor, target, masks, time, floor):
-    """Negative dt makes anchor-target the correct editing velocity sign."""
-    if not 0 < time <= 1 or masks.shape != (3, x.shape[0]):
-        raise ValueError("Direction scoring requires a positive model time and T/D/P areas")
-    desired = (anchor.astype(np.float64) - target) / time
-    endpoint = x.astype(np.float64) - time * velocity
-    zero_endpoint = x.astype(np.float64) - time * zero
-    original_endpoint = x.astype(np.float64) - time * original
-    drop_endpoint = x.astype(np.float64) - time * drop_d
-    result = {}
-    for name, weight in zip(REGIONS, masks, strict=True):
-        reference = anchor if name == "p" else target
-        error = inner(endpoint - reference, endpoint - reference, weight)
-        baseline = inner(zero_endpoint - reference, zero_endpoint - reference, weight)
-        causal = direction(original - drop_d, desired, weight, floor)
-        energy = inner(anchor - target, anchor - target, weight)
-        drop_error = inner(drop_endpoint - reference, drop_endpoint - reference, weight)
-        original_error = inner(original_endpoint - reference, original_endpoint - reference, weight)
-        result[name] = dict(
-            **direction(velocity - identity, desired, weight, floor),
-            endpoint_mse=error,
-            zero_endpoint_mse=baseline,
-            conditional_gain=(baseline - error) / baseline
-            if baseline is not None and baseline > floor
+    """Score all regional weighted products together; preserve the scalar definitions."""
+    values = [
+        np.asarray(v, np.float64)
+        for v in [velocity, identity, zero, original, drop_d, x, anchor, target]
+    ]
+    velocity, identity, zero, original, drop_d, x, anchor, target = values
+    masks = np.asarray(masks, np.float64)
+    if (
+        not 0 < time <= 1
+        or x.ndim != 2
+        or masks.shape != (3, x.shape[0])
+        or any(v.shape != x.shape or not np.isfinite(v).all() for v in values)
+        or not np.isfinite(masks).all()
+        or (masks < 0).any()
+        or (masks > 1).any()
+    ):
+        raise ValueError(
+            "Direction scoring requires finite aligned velocities, time and unit areas"
+        )
+    area = masks.sum(1)
+
+    def products(a, b):
+        return np.divide(masks @ (a * b).mean(1), area, out=np.zeros(3), where=area > 0)
+
+    desired = (anchor - target) / time
+    energy = products(desired, desired)
+
+    def directions(delta):
+        power, dot = products(delta, delta), products(delta, desired)
+        return [
+            dict(
+                cosine=float(dot[i] / np.sqrt(power[i] * energy[i]))
+                if area[i] > 0 and power[i] > floor and energy[i] > floor
+                else None,
+                projection=float(dot[i] / energy[i]) if area[i] > 0 and energy[i] > floor else None,
+                contrast_gain=float((2 * dot[i] - power[i]) / energy[i])
+                if area[i] > 0 and energy[i] > floor
+                else None,
+                delta_rms=float(np.sqrt(power[i])) if area[i] > 0 else None,
+                energy=float(energy[i]) if area[i] > 0 else None,
+            )
+            for i in range(3)
+        ]
+
+    def errors(v):
+        endpoint = x - time * v
+        result = products(endpoint - target, endpoint - target)
+        result[2] = products(endpoint - anchor, endpoint - anchor)[2]
+        return result
+
+    error, baseline, original_error, drop_error = [
+        errors(v) for v in [velocity, zero, original, drop_d]
+    ]
+    edit, zero_delta, causal = [
+        directions(v) for v in [velocity - identity, velocity - zero, original - drop_d]
+    ]
+    clean_energy = products(anchor - target, anchor - target)
+    return {
+        name: dict(
+            **edit[i],
+            endpoint_mse=float(error[i]) if area[i] > 0 else None,
+            zero_endpoint_mse=float(baseline[i]) if area[i] > 0 else None,
+            conditional_gain=float((baseline[i] - error[i]) / baseline[i])
+            if area[i] > 0 and baseline[i] > floor
             else None,
-            zero_direction=direction(velocity - zero, desired, weight, floor),
-            drop_d_direction=causal,
-            drop_d_gain=(drop_error - original_error) / energy
-            if energy is not None and energy > floor
+            zero_direction=zero_delta[i],
+            drop_d_direction=causal[i],
+            drop_d_gain=float((drop_error[i] - original_error[i]) / clean_energy[i])
+            if area[i] > 0 and clean_energy[i] > floor
             else None,
         )
-    return result
+        for i, name in enumerate(REGIONS)
+    }
 
 
 def cfg_effect(positive_delta, negative_delta, native_delta, fp32_delta, floor):

@@ -3,7 +3,8 @@
 PR #7已正常合并main `1d3986b`。新分支`feat/role-direction-diagnostics`只用既有
 原版/channel_rms checkpoint做纯噪声条件方向诊断，训练更新固定0。
 先预注册共同状态、flow方向符号、CFG/BF16与下一步Go/No-Go门槛，见
-[方向诊断设计](docs/role_direction_design.md)。尚未实现或运行本轮GPU，不预设角色有效。
+[方向诊断设计](docs/role_direction_design.md)。真实4B/512² smoke已通过（186.54s，
+峰值allocated/reserved 15.59/16.27 GiB）；完整方向矩阵正在运行，研究结论待分析。
 target只用于独立评分，Test封存，真人评分保持pending；历史研究记录如下。
 
 冻结权重诊断入口（编排器为每个GPU子进程申请正常UUID租约）：
@@ -12,10 +13,15 @@ target只用于独立评分，Test封存，真人评分保持pending；历史研
 python -m src.inference.direction_study prepare --original-study <PR7-original-study> --normalized-study <PR7-channel-rms-study> --output <new-direction-study>
 python -m src.inference.direction_study run --study <new-direction-study> --phase smoke
 python -m src.inference.direction_study run --study <new-direction-study> --phase diagnose
+python -m src.evaluation.direction_analysis --study <new-direction-study> --output <new-analysis>
+python -m src.evaluation.direction_visualization --study <new-direction-study> --analysis <new-analysis>/summary.json --output <new-gallery>
 ```
 
 预测BF16 bits、实际融合数组与监督分开保存，重复条件按实际token SHA复用，
 不重复模型计算或覆盖旧目录。失败使用新`--attempt`，原异常/日志/显存保留。
+CPU分析重新核验实际数组、条件干预、空间坐标和跨checkpoint共同状态；native与
+FP32 CFG分别验收，noise-only辅助扫描不进入Go门槛。可视化依赖可通过
+`pip install -e '.[plots]'`安装；图片/自动失败类别不是真人评价，也不作为新生成结果。
 
 PR #6已正常合并main `8b261bb`，当前研究分支`feat/role-learnability`。
 本阶段检验少样本可学习性与角色注入失效：先预注册6个Train样本、四方法双seed

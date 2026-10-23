@@ -7,7 +7,13 @@
 target-free状态、检验zero/disabled与空间ID，记录实际残差及BF16加法结果。
 `evaluation/direction_supervision.py`只在预测后编码target；`direction_metrics.py`
 独立计算正确符号的flow端点方向、角色增量与T/D/P代理，不改变模型或loss。
-设计及冻结Go/No-Go门槛见[方向诊断预注册](role_direction_design.md)；本轮GPU尚待执行。
+`direction_provenance.py`在CPU重验实际BF16 bits、native CFG、source-only状态、
+角色干预与反事实区域SHA；`direction_analysis.py`逐scene配对，分别汇总四分支，
+主source bridge与分布外noise-only扫描分开，执行冻结门槛。
+`direction_visualization.py`导出时间曲线、全scene方向热图及明确标记的自动失败类别，
+只复用PR #7既有生成图，不生成真人评分。可选plots依赖固定Matplotlib版本。
+设计及冻结Go/No-Go门槛见[方向诊断预注册](role_direction_design.md)；真实GPU smoke
+已通过，完整16组运行中，不能将工程门禁成功等同于正确语义。
 
 2026-10-23可学习性阶段沿用现有边界：datasets建立只含选定Train资产的实验视图，
 training复用固定trainer与观测hook，backends只测特征/梯度，evaluation隔离监督

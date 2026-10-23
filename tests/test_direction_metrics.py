@@ -88,6 +88,31 @@ def test_bf16_archive_is_exact_and_not_float16():
     assert np.array_equal(rows["cfg_fp32"], [1, -1, 2])
 
 
+def test_vectorized_regions_match_independent_scalar_definitions():
+    rng = np.random.default_rng(132)
+    v, identity, zero, original, drop, x, anchor, target = rng.normal(size=(8, 16, 4))
+    masks = rng.uniform(size=(3, 16))
+    masks[2] = 0
+    result = score(v, identity, zero, original, drop, x, anchor, target, masks, 0.9, 1e-12)
+    desired = (anchor - target) / 0.9
+    for i, name in enumerate(["t", "d", "p"]):
+        expected = direction(v - identity, desired, masks[i], 1e-12)
+        for key, value in expected.items():
+            assert (
+                result[name][key] == pytest.approx(value)
+                if value is not None
+                else result[name][key] is None
+            )
+        reference = anchor if name == "p" else target
+        endpoint = x - 0.9 * v
+        expected_mse = inner(endpoint - reference, endpoint - reference, masks[i])
+        assert (
+            result[name]["endpoint_mse"] == pytest.approx(expected_mse)
+            if expected_mse is not None
+            else result[name]["endpoint_mse"] is None
+        )
+
+
 def test_native_cfg_preserves_torch_rounding_instead_of_premature_float():
     torch = pytest.importorskip("torch")
     from src.backends.direction_probe import native_cfg
