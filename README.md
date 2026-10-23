@@ -6,6 +6,17 @@ PR #7已正常合并main `1d3986b`。新分支`feat/role-direction-diagnostics`�
 [方向诊断设计](docs/role_direction_design.md)。尚未实现或运行本轮GPU，不预设角色有效。
 target只用于独立评分，Test封存，真人评分保持pending；历史研究记录如下。
 
+冻结权重诊断入口（编排器为每个GPU子进程申请正常UUID租约）：
+
+```bash
+python -m src.inference.direction_study prepare --original-study <PR7-original-study> --normalized-study <PR7-channel-rms-study> --output <new-direction-study>
+python -m src.inference.direction_study run --study <new-direction-study> --phase smoke
+python -m src.inference.direction_study run --study <new-direction-study> --phase diagnose
+```
+
+预测BF16 bits、实际融合数组与监督分开保存，重复条件按实际token SHA复用，
+不重复模型计算或覆盖旧目录。失败使用新`--attempt`，原异常/日志/显存保留。
+
 PR #6已正常合并main `8b261bb`，当前研究分支`feat/role-learnability`。
 本阶段检验少样本可学习性与角色注入失效：先预注册6个Train样本、四方法双seed
 同预算过拟合及梯度/层诊断，不用封存Test，不把记忆训练样本当作泛化。

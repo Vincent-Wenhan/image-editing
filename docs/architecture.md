@@ -1,5 +1,14 @@
 # 工程架构重构
 
+纯噪声方向阶段不改既有训练或后端路径。`inference/direction_study.py`绑定PR #7
+两个study的最终权重、继承原预算/指令/seed，只允许0训练；`direction_worker.py`
+在正常GPU租约下保存共同状态与实际BF16预测，随后才导出独立监督。
+`backends/direction_probe.py`捕获真实正/负分支与scheduler的native CFG，构造
+target-free状态、检验zero/disabled与空间ID，记录实际残差及BF16加法结果。
+`evaluation/direction_supervision.py`只在预测后编码target；`direction_metrics.py`
+独立计算正确符号的flow端点方向、角色增量与T/D/P代理，不改变模型或loss。
+设计及冻结Go/No-Go门槛见[方向诊断预注册](role_direction_design.md)；本轮GPU尚待执行。
+
 2026-10-23可学习性阶段沿用现有边界：datasets建立只含选定Train资产的实验视图，
 training复用固定trainer与观测hook，backends只测特征/梯度，evaluation隔离监督
 teacher诊断与source-only生成。设计先行，见role_learnability_design.md；不重构目录。

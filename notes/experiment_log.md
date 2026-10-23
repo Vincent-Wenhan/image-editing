@@ -1,5 +1,14 @@
 # 实验记录
 
+2026-10-23 Asia/Shanghai 新增2项方向推进门槛/scene等权测试0.21s、3项状态回归
+27.14s通过；原22项CPU验证保留。门槛拒绝方向反转、缺失方向、无独立D、无时间差
+及P损伤；native CFG/FP32 CFG分别验收。接下来冻结代码，先真实单卡smoke再全矩阵。
+
+2026-10-23 Asia/Shanghai 已实现零更新study绑定、共同状态、native CFG与实际BF16
+融合数组保存、分离监督及方向指标。首轮22 CPU tests/24.88s通过，覆盖flow符号、
+反向/正交/零信号、source-only状态、空间排列、hook清理、CFG公式和配置/权重篡改拒绝。
+真实GPU尚待smoke；不将CPU成功当作角色方向正确或性能收益。
+
 2026-10-23 Asia/Shanghai PR #7最终审查：ff4fd8a两项CI成功，原276 tests/324.77s、
 67 CLI exact-head记录一致，Ruff重过；712实际PNG、16最终成对权重、50报告及No-Go
 门槛重算、109个text blob审计通过。正常merge1d3986b，从最新main创建

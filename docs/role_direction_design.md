@@ -86,7 +86,7 @@ native CFG和FP32 CFG都须满足，两个独立seed、Train和Dev均须通过�
 3. Full D contrast_gain比Binary和Old/New各高≥.005；T不比Old/New低超过.005。
 4. Full相对同权重drop_d的D cosine≥.10、projection≥.02，端点误差减少至少
    正确编辑latent能量的.005；必须有独立D证据。
-5. Full P及identity端点误差相对zero恶化≤max(1% zero误差,1e-6)。
+5. 四个主时间平均的Full P及identity端点误差相对zero恶化≤max(1% zero误差,1e-6)。
 6. Full T/D的mid/low contrast_gain比high至少高.01，Dev配对scene区间下界>0。
 
 若某个预定版本两seed满足全部条件，只给该版本Go“值得预注册仅改变高噪声采样
