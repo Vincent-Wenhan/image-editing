@@ -9,6 +9,9 @@ PR #6已正常合并main `8b261bb`，当前研究分支`feat/role-learnability`�
 23个模型文件实际SHA审计通过。正式四组双seed训练/评估运行中，机制结论尚未产生。
 下文历史诊断与全部资产保留。
 
+唯一候选修改先预注册于[通道预条件设计](docs/role_learnability_repair_design.md)：
+现有编码器内逐通道空间RMS归一化，不增加参数、不改loss；实现与验证状态见报告。
+
 ```bash
 python -m src.training.learnability_study prepare --data <existing-scenes> --cohort <existing-cohort.json> --output <new-study>
 python -m src.training.learnability_study run --study <new-study> --phase smoke
