@@ -3,6 +3,11 @@
 2026-10-23机制诊断复用conditioning/backends/inference/evaluation边界，仅增加观测
 和显式推理干预，不改目录或默认路径。权重冻结，新增训练0步；先测量再选一个
 改进，见[机制诊断预注册](role_feature_diagnostics_design.md)。
+`conditioning/feature_interventions.py`仅变换既有五通道token，不读取监督；
+`backends/feature_probe.py`在原fusion前后观测并配对回放CFG状态，不复制模型实现。
+`inference/feature_diagnostic_study.py`引用旧checkpoint并锁定0训练预算，
+`feature_diagnostics.py`复用原backend/UUID租约；`evaluation/feature_encoder_diagnostics.py`
+在CPU分离类别/位置项与实际输出，不把归因指标称为质量提升。
 
 独立Role Feature试验沿用现有模块边界，见 [设计](role_feature_design.md)。
 conditioning定义非RGB特征契约/编码，datasets只加载占据和角色，backends实现

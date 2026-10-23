@@ -5,6 +5,9 @@
 新分支feat/role-feature-diagnostics先写role_feature_diagnostics_design：冻结已有
 四方法/双seed权重，新增训练0步，仅Dev机制诊断；之后选一个最小改进做smoke和
 同权重/预算对照。新GPU和质量结果尚未产生，不预设主因；真人pending，Test封存。
+Phase A已实现五通道干预、BF16实际加法/FP32相加反事实、x_embedder/CFG固定状态
+回放、CPU encoder分解与冻结矩阵校验。相关14项/136.56s通过，新增漂移回归日志
+另存probe_guard_tests.log。下一步冻结代码后测真实checkpoint/GPU smoke，未选择修复。
 
 时间以 Asia/Shanghai 为准。每条记录说明配置、输入、产物、实际结果与限制。
 

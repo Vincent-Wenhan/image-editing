@@ -5,6 +5,18 @@ PR #5已正常合并main `676242b`。新分支feat/role-feature-diagnostics先�
 残差/BF16/时间步/通道干预与一个最小修复的预注册见
 [机制诊断设计](docs/role_feature_diagnostics_design.md)。下文保留上一轮实际结果。
 
+机制诊断入口（不训练，GPU子进程由编排器申请UUID租约）：
+
+```bash
+python -m src.inference.feature_diagnostic_study prepare --existing-study <old-study> --output <new-study>
+python -m src.evaluation.feature_encoder_diagnostics --study <new-study> --output <new-cpu.json>
+python -m src.inference.feature_diagnostic_study run --study <new-study> --phase smoke
+python -m src.inference.feature_diagnostic_study run --study <new-study> --phase diagnose
+```
+
+观测/干预与固定CFG状态回放已实现，CPU检查通过；本阶段真实GPU及改进收益尚未
+验证，状态见[诊断报告](docs/role_feature_diagnostics_report.md)。
+
 当前分支 `feat/role-feature-conditioning` 从正常合并PR #4的main `b73492f`创建。
 独立于Image VAE的角色特征最小试验设计见 [预注册](docs/role_feature_design.md)。
 2026-10-23已完成真实4B前反向/有限梯度/条件置换/零条件/成对重载验收、batch4
