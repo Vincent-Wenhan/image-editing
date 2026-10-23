@@ -10,6 +10,10 @@
 在CPU分离类别/位置项与实际输出，不把归因指标称为质量提升。
 诊断phase/逐seed receipt绑定实际输出目录、report SHA和执行源码；失败用新attempt，
 成功同级任务复用。StateCapture保存实际正负分支预测，回放必须精确复现后再作归因。
+`evaluation/scene_semantics.py`提供GT校准/可弃权的平移模板与阴影方向代理，
+`feature_diagnostic_analysis.py`绑定原PNG SHA、分列T/D/P/位置与覆盖，
+`feature_diagnostic_gallery.py`只生成非盲研究叠图，目标/背景只在evaluation读取。
+CPU encoder诊断另外报告变化token内响应及单位高斯CPU噪声量化，后者不是扩散轨迹。
 
 独立Role Feature试验沿用现有模块边界，见 [设计](role_feature_design.md)。
 conditioning定义非RGB特征契约/编码，datasets只加载占据和角色，backends实现

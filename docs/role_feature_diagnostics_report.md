@@ -15,3 +15,18 @@ checkpoint复核支持原No-Go。5个全样本归约值仅约1e-17差，不影�
 新增协议/资产漂移与数值回归日志另存probe_guard_tests.log。
 新输出仅outputs/role_feature_diagnostics_20261023，新增训练0步；Test封存，
 真人0评分/pending，不自动填写。
+
+Phase A真实CPU测量已完成（encoder_analysis_01.json，9.20s，执行源码dcc9a1e）：
+所有encoder都重构原seed初始化并核对原始SHA，参数确有更新，非“梯度没到”。
+两个Full seed的类别/位置输入RMS比.06614/.06932，identity参考全局响应仅占原残差
+RMS的.7042%/.5258%；原残差RMS为.00607766/.00594360。这是弱角色变化的线索，
+还需校正编辑面积、数值分辨性及时间步，不是已确认的唯一原因。
+
+首次正常GPU租约被8卡计算进程/约44GiB占用拒绝，未加载模型，不是训练/OOM失败。
+保留study_01/smoke_211_execution及原trace；attempt重试输出隔离，成功任务复用。
+当前真实GPU状态/速度敏感性和改进质量仍pending。
+
+位置模板仅用已知source/target/background校准，低对比/参考定位失败或无匹配弃权；
+重复模板候选不等于物体计数。D分阴影创建/移除和有向变化，P分边缘保持。
+CPU增加变化token内响应与单位高斯BF16边界测量，明确不是实际GPU扩散输入。
+相关数值/重试/语义/角色回归15 passed/13.79s，所有原始日志保留。

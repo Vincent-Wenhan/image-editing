@@ -12,6 +12,7 @@ from src.conditioning.feature_encoder import build_encoder
 from src.conditioning.feature_interventions import intervene
 from src.conditioning.features import EncoderConfig
 from src.core.io import read_rows, write_json
+from src.core.random import sample_seed
 from src.datasets.features import load_features
 from src.inference.feature_diagnostic_study import load_plan
 from src.infra.experiment import source_snapshot
@@ -26,7 +27,13 @@ def analyze(study: Path, output: Path):
     started = time.perf_counter()
     torch.set_num_threads(2)
     root, p = Path(plan["data"]), plan["protocol"]
-    result = dict(status="running", source=source_snapshot(), training_updates=0, encoders=[])
+    result = dict(
+        status="running",
+        source=source_snapshot(),
+        training_updates=0,
+        encoders=[],
+        precision_scope="Controlled unit Gaussian CPU noise; not real diffusion/GPU states",
+    )
     for ckpt in plan["checkpoints"]:
         encoder, metadata = load_encoder(Path(ckpt["encoder"]), Path(ckpt["lora"]))
         encoder.eval().requires_grad_(False)
@@ -65,6 +72,11 @@ def analyze(study: Path, output: Path):
                     handle.remove()
                 category = tokens @ encoder.categories
                 position = captured["hidden_input"] - category
+                generator = torch.Generator(device="cpu").manual_seed(
+                    sample_seed(p["inference"]["seed"], row["id"])
+                )
+                controlled_noise = torch.randn(original.shape, generator=generator).bfloat16()
+                original_rounded = (controlled_noise + original.bfloat16()).float()
                 variants = {}
                 for name in p["variants"]:
                     values = intervene(
@@ -72,13 +84,21 @@ def analyze(study: Path, output: Path):
                     )
                     residual = encoder(values, grid)
                     record = dict(output_rms=rms(residual), **difference(residual, original))
-                    if name.startswith("drop_"):
-                        channel = {"drop_old": 0, "drop_new": 1, "drop_d": 2, "drop_p": 3}[name]
-                        selected = tokens[..., channel] > 0
-                        record["active_token_fraction"] = float(selected.float().mean())
-                        record["local_delta_rms"] = (
-                            rms((residual - original)[selected]) if selected.any() else None
-                        )
+                    selected = (values - tokens).abs().amax(-1) > 1e-8
+                    local = rms((residual - original)[selected]) if selected.any() else None
+                    reference = rms(original[selected]) if selected.any() else None
+                    record.update(
+                        active_token_fraction=float(selected.float().mean()),
+                        local_delta_rms=local,
+                        local_relative_rms=local / reference if reference else None,
+                    )
+                    support = (residual - original).abs() > 1e-12
+                    rounded = (controlled_noise + residual.bfloat16()).float()
+                    record["synthetic_bf16_role_difference_lost_fraction"] = (
+                        float((rounded[support] == original_rounded[support]).float().mean())
+                        if support.any()
+                        else None
+                    )
                     variants[name] = record
                 samples.append(
                     dict(
