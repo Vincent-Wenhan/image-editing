@@ -1,5 +1,47 @@
 # 实验记录
 
+2026-10-23 Asia/Shanghai 报告审阅明确跨方法是相同参数容量/预算而非相同已训练权重；
+通道归因仍要求同checkpoint对照。只澄清研究边界，不改变分数、门槛、源码或任何实验资产。
+
+2026-10-23 Asia/Shanghai 纯噪声方向收尾：PR #7正常merge1d3986b且main CI成功，
+新分支feat/role-direction-diagnostics复用16对最终权重；GPU源码444ac6b、CPU daa8bf7。
+16/16组、2016 case-state完成，0更新/0失败；完整GPU编排1987.24s，worker累计
+6334.82s，峰值allocated/reserved15.614/16.268 GiB；lease释放，未触碰他人GPU。
+CPU分析412.55s、画廊72.96s，48,384分支分数/12,096机制观测；6216去重BF16归档、
+288监督归档分离，32权重实际SHA及两Git源码逐文件重验，64图表实际SHA通过。
+原版/RMS全部16 gate切片失败：Full无稳定超越Binary/Old-New的方向，Old/New
+Swap不稳定、独立D弱/反向，Dev P/identity相对zero多2.85–3.87%/2.68–4.10%误差。
+RMS Full角色交换融合丢失83.23%→30.85%仍未获得正确方向；native/FP32 CFG
+均No-Go，不把数值存活/通用端点改善当语义成功。不能区分曝光不足与表示/注入限制，
+不启动下一轮timestep采样训练。303 tests/222.52s、73 CLI/110.01s、Ruff224文件、
+pip/安装/仓库检查通过（最终format含报告225文件），代码CI39966675465为264 passed/39无Torch skipped。
+全scene曲线/热图及四个非盲agent观察明确区别真人；6原表SHA未变、288空白、0评分，
+Test封存。详见docs/role_direction_report.md及outputs/role_direction_20261023。
+
+2026-10-23 Asia/Shanghai 冻结GPU源码444ac6b，真实4B/512²方向smoke通过：
+186.54s，峰值allocated/reserved 15.595/16.268 GiB，14共同状态案例、六种条件，
+native CFG与实际scheduler精确一致，zero/disabled等价，冻结权重SHA不变，0更新。
+正常空闲UUID租约下四任务并行运行完整16组，尚未完成科学分析。
+CPU分析/可视化已实现：实际SHA/BF16/字段/空间重验，配对scene统计与冻结门槛，
+全scene热图复用历史20-step生成图，自动类别显式区别真人。向量化区域内积保持
+原标量公式，12项metrics回归19.80s、含两项归档/配对分析共14项40.46s通过。
+真实smoke归档CPU重验通过；完整测试与最终质量判断另记，不提前宣称方向有效。
+
+2026-10-23 Asia/Shanghai 新增2项方向推进门槛/scene等权测试0.21s、3项状态回归
+27.14s通过；原22项CPU验证保留。门槛拒绝方向反转、缺失方向、无独立D、无时间差
+及P损伤；native CFG/FP32 CFG分别验收。接下来冻结代码，先真实单卡smoke再全矩阵。
+
+2026-10-23 Asia/Shanghai 已实现零更新study绑定、共同状态、native CFG与实际BF16
+融合数组保存、分离监督及方向指标。首轮22 CPU tests/24.88s通过，覆盖flow符号、
+反向/正交/零信号、source-only状态、空间排列、hook清理、CFG公式和配置/权重篡改拒绝。
+真实GPU尚待smoke；不将CPU成功当作角色方向正确或性能收益。
+
+2026-10-23 Asia/Shanghai PR #7最终审查：ff4fd8a两项CI成功，原276 tests/324.77s、
+67 CLI exact-head记录一致，Ruff重过；712实际PNG、16最终成对权重、50报告及No-Go
+门槛重算、109个text blob审计通过。正常merge1d3986b，从最新main创建
+feat/role-direction-diagnostics。先登记纯噪声/target-free source bridge、CFG/BF16、
+有向增量与固定Go/No-Go门槛；0训练，不改权重。尚未实现/运行，不将曝光差异判为主因。
+
 2026-10-23 Asia/Shanghai 本轮收尾：原注入与唯一channel_rms的四方法×双seed均完成，
 正式1920updates、712图、112对checkpoint保留，两个版本均未通过fit/角色利用/D增量。
 RMS使固定Train Old/New BF16差分丢失从79.8–86.0%降到25.2–38.5%，仍未形成正确

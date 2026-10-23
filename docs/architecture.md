@@ -1,5 +1,23 @@
 # 工程架构重构
 
+纯噪声方向阶段不改既有训练或后端路径。`inference/direction_study.py`绑定PR #7
+两个study的最终权重、继承原预算/指令/seed，只允许0训练；`direction_worker.py`
+在正常GPU租约下保存共同状态与实际BF16预测，随后才导出独立监督。
+`backends/direction_probe.py`捕获真实正/负分支与scheduler的native CFG，构造
+target-free状态、检验zero/disabled与空间ID，记录实际残差及BF16加法结果。
+`evaluation/direction_supervision.py`只在预测后编码target；`direction_metrics.py`
+独立计算正确符号的flow端点方向、角色增量与T/D/P代理，不改变模型或loss。
+`direction_provenance.py`在CPU重验实际BF16 bits、native CFG、source-only状态、
+角色干预与反事实区域SHA；`direction_analysis.py`逐scene配对，分别汇总四分支，
+主source bridge与分布外noise-only扫描分开，执行冻结门槛。
+`direction_visualization.py`导出时间曲线、全scene方向热图及明确标记的自动失败类别，
+只复用PR #7既有生成图，不生成真人评分。可选plots依赖固定Matplotlib版本。
+设计及冻结Go/No-Go门槛见[方向诊断预注册](role_direction_design.md)；真实GPU smoke
+及完整16组已完成，target/source-only与空间/数值审计通过，权重不变。
+[实际报告](role_direction_report.md)记录48,384条分支分数和16个失败门槛切片：
+机械信号进入网络仍未形成可靠有向T/D收益，P额外漂移；不启动高噪声采样训练。
+保留低时间source bridge与分布内训练轨迹的区别，不将曝光差异误判为已证实主因。
+
 2026-10-23可学习性阶段沿用现有边界：datasets建立只含选定Train资产的实验视图，
 training复用固定trainer与观测hook，backends只测特征/梯度，evaluation隔离监督
 teacher诊断与source-only生成。设计先行，见role_learnability_design.md；不重构目录。
