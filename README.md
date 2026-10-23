@@ -21,6 +21,8 @@ Train视图复制选定6例到新目录以隔离缓存，canonical manifest与�
 解包step-hook注册，训练目标不变，使用新目录重试，状态见可学习性报告。
 第二次两步训练后发现上游保存回调传入optimizer路径，错误绑定已拒绝；改为
 观测实际LoRA写入边界。study_01/02失败资产保留，新study_03重试。
+保留数量按成对快照上界计算，完成验收逐一检查0/中间/final的实际文件SHA，防止
+上游将encoder也计入自动清理后误删初始或中间权重。
 
 PR #5已正常合并main `676242b`。新分支feat/role-feature-diagnostics先诊断独立特征
 为何没有稳定收益，复用原checkpoint/Dev，新增训练更新固定为0；不扩大训练。

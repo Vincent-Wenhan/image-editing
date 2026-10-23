@@ -218,3 +218,46 @@ def test_checkpoint_pair_uses_actual_lora_write_not_optimizer_callback(tmp_path)
     owner, name, saved = state.restore.pop()
     setattr(owner, name, saved)
     assert network.save_weights == original
+
+
+def test_completion_requires_all_historical_checkpoint_pairs(tmp_path):
+    import yaml
+
+    from src.training.learnability_study import completed
+
+    pairs = []
+    for step in [0, 2]:
+        lora, feature = (
+            tmp_path / f"step{step}.safetensors",
+            tmp_path / f"step{step}.features.safetensors",
+        )
+        lora.write_bytes(b"LoRA metadata unit fixture")
+        feature.write_bytes(b"encoder metadata unit fixture")
+        pairs.append(
+            dict(
+                update=step,
+                lora=str(lora),
+                lora_sha256=sha256(lora),
+                encoder=dict(path=str(feature), sha256=sha256(feature)),
+            )
+        )
+    config = tmp_path / "train.yaml"
+    config.write_text(
+        yaml.safe_dump(dict(meta=dict(role_features=dict(observation=dict(save_every=20)))))
+    )
+    job = dict(directory=str(tmp_path), config_sha256=sha256(config))
+    report = dict(
+        status="complete",
+        config_sha256=sha256(config),
+        checkpoint=str(lora),
+        checkpoint_sha256=sha256(lora),
+        feature_checkpoint=pairs[-1]["encoder"],
+        steps=2,
+        feature_statistics=dict(batches=2, observation=dict(loss=[{}, {}], checkpoints=pairs)),
+    )
+    write_json(tmp_path / "train_report.json", report)
+    assert completed(job)["steps"] == 2
+    report["feature_statistics"]["observation"]["checkpoints"] = pairs[1:]
+    write_json(tmp_path / "train_report.json", report)
+    with pytest.raises(ValueError, match="snapshots"):
+        completed(job)

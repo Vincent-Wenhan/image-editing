@@ -8,6 +8,8 @@ teacher诊断与source-only生成。设计先行，见role_learnability_design.m
 `feature_observer.py`在固定上游公开hook记录原loss、角色/层梯度及成对快照，不改loss；
 `feature_adapter.py`只在显式view元数据下启用，旧配置路径与目标保持兼容。
 `inference/learnability_smoke.py`复用已验证的真实4B前反向/zero/位置/重载探针。
+成对快照从network.save_weights实际写入处绑定，不使用传回optimizer.pt的上游
+post_save_hook。保留上界按LoRA+encoder双倍计算，完成验收逐一复核全部历史对。
 
 2026-10-23机制诊断复用conditioning/backends/inference/evaluation边界，仅增加观测
 和显式推理干预，不改目录或默认路径。权重冻结，新增训练0步；先测量再选一个

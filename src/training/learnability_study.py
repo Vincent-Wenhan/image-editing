@@ -105,7 +105,9 @@ def prepare(data: Path, cohort: Path, output: Path, protocol: Path):
         process = config["config"]["process"][0]
         process["train"]["seed"] = seed
         # Own end-step hook saves exact update numbers; upstream save_every is zero-based.
-        process["save"].update(save_every=0, max_step_saves_to_keep=10)
+        # Upstream cleanup also matches our paired *.features.safetensors files.
+        retain = 2 * (p["steps"] // p["save_every"] + 2)
+        process["save"].update(save_every=0, max_step_saves_to_keep=retain)
         process["datasets"][0].update(
             folder_path=str((view / "target").resolve()),
             control_path=[str((view / "reference").resolve())],
@@ -167,6 +169,8 @@ def load_plan(study: Path):
             or meta["encoder"] != p["encoder"]
             or process["network"]["linear"] != p["rank"]
             or view["groups"] != p["train_groups"]
+            or process["save"]["save_every"] != 0
+            or process["save"]["max_step_saves_to_keep"] < 2 * (p["steps"] // p["save_every"] + 2)
         ):
             raise ValueError("Overfit job differs from its fixed matched budget")
     return plan
@@ -184,6 +188,19 @@ def completed(job):
         or report["feature_statistics"]["batches"] != report["steps"]
     ):
         raise ValueError("Incomplete, skipped or changed overfit training")
+    observation = report["feature_statistics"]["observation"]
+    config = load_yaml(Path(job["directory"]) / "train.yaml")
+    interval = config["meta"]["role_features"]["observation"]["save_every"]
+    expected = {0, report["steps"], *range(interval, report["steps"], interval)}
+    saved = observation["checkpoints"]
+    if {s["update"] for s in saved} != expected or len(saved) != len(expected):
+        raise ValueError("Missing or duplicate actual-update checkpoint snapshots")
+    for pair in saved:
+        if (
+            sha256(pair["lora"]) != pair["lora_sha256"]
+            or sha256(pair["encoder"]["path"]) != pair["encoder"]["sha256"]
+        ):
+            raise ValueError("Historical checkpoint snapshots changed or were removed")
     return report
 
 

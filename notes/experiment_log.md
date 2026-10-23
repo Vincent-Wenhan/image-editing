@@ -1,5 +1,9 @@
 # 实验记录
 
+2026-10-23 Asia/Shanghai 快照保留守卫：固定上游cleanup会把*.features.safetensors
+一并计数，保存上界按成对快照数计算，完成验收检查0/每20/final各对实际SHA，
+防止初始/中间权重被自动删除。未运行新的训练，等待study_03真实验收。
+
 2026-10-23 Asia/Shanghai 第二次GPU重试：冻结fd15882完成2updates/211.53s，
 peak15.022/15.037GiB；最终保存失败，因为固定上游post_save_hook实际传入
 optimizer.pt，初始encoder被错误绑定、最终重复路径被拒。两次失败中的该encoder
