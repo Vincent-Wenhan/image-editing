@@ -1,5 +1,11 @@
 # Image Editing Research
 
+PR #7已正常合并main `1d3986b`。新分支`feat/role-direction-diagnostics`只用既有
+原版/channel_rms checkpoint做纯噪声条件方向诊断，训练更新固定0。
+先预注册共同状态、flow方向符号、CFG/BF16与下一步Go/No-Go门槛，见
+[方向诊断设计](docs/role_direction_design.md)。尚未实现或运行本轮GPU，不预设角色有效。
+target只用于独立评分，Test封存，真人评分保持pending；历史研究记录如下。
+
 PR #6已正常合并main `8b261bb`，当前研究分支`feat/role-learnability`。
 本阶段检验少样本可学习性与角色注入失效：先预注册6个Train样本、四方法双seed
 同预算过拟合及梯度/层诊断，不用封存Test，不把记忆训练样本当作泛化。

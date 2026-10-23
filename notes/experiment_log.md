@@ -1,5 +1,11 @@
 # 实验记录
 
+2026-10-23 Asia/Shanghai PR #7最终审查：ff4fd8a两项CI成功，原276 tests/324.77s、
+67 CLI exact-head记录一致，Ruff重过；712实际PNG、16最终成对权重、50报告及No-Go
+门槛重算、109个text blob审计通过。正常merge1d3986b，从最新main创建
+feat/role-direction-diagnostics。先登记纯噪声/target-free source bridge、CFG/BF16、
+有向增量与固定Go/No-Go门槛；0训练，不改权重。尚未实现/运行，不将曝光差异判为主因。
+
 2026-10-23 Asia/Shanghai 本轮收尾：原注入与唯一channel_rms的四方法×双seed均完成，
 正式1920updates、712图、112对checkpoint保留，两个版本均未通过fit/角色利用/D增量。
 RMS使固定Train Old/New BF16差分丢失从79.8–86.0%降到25.2–38.5%，仍未形成正确
