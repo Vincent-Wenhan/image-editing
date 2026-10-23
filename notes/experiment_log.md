@@ -1,5 +1,19 @@
 # 实验记录
 
+2026-10-23 Asia/Shanghai 本轮收尾：原注入与唯一channel_rms的四方法×双seed均完成，
+正式1920updates、712图、112对checkpoint保留，两个版本均未通过fit/角色利用/D增量。
+RMS使固定Train Old/New BF16差分丢失从79.8–86.0%降到25.2–38.5%，仍未形成正确
+目标位移/阴影；相对原Full T只改善2.39%/0.93%、D恶化6.69%/1.73%，No-Go扩大。
+276 passed/324.77s，Ruff209文件、67 CLI及两个更正入口、pip通过；代码CI39949485853
+success（无Torch：241 passed/35 skipped）。监督更正4B smoke263.67s/16.264GiB；
+16组GPU更正408 teacher/8梯度案例完成、0新增训练，source/text/noise与原生成一致。
+旧CPU overlay末位归约拒绝及等待流水线失败保留；最终CPU冻结4362e2e，新03分析、
+比较、172联系图及两套PNG/SVG曲线完成，88组像素/聚合和门槛原值保留。
+50份报告、4个原执行Git源码、712实际PNG和19个最终CPU receipt、16个空闲GPU
+receipt审计通过。四例实际配对图观察独立存comparison_inspection_02，不是人评。
+真人仍0位/0评分，Test封存，第三方tracked源码干净；不再增加第二个改法或训练预算。
+实际报告docs/role_learnability_report.md；最终Git/PR CI验收另存final_acceptance_01。
+
 2026-10-23 Asia/Shanghai overlay仅重算独立teacher汇总，原像素逐例及聚合直接复制；
 新增历史末位差参数化回归及安装/CLI共9 tests通过，完整回归另跑。16组GPU监督
 更正均完成，0新增训练；旧CPU overlay严格归约比较失败的日志保留，新目录继续。

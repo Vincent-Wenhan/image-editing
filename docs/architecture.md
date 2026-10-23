@@ -41,7 +41,7 @@ post_save_hook。保留上界按LoRA+encoder双倍计算，完成验收逐一复
 原注入和唯一RMS候选均未通过预注册角色语义门槛，不据此自动扩大训练。
 BF16差分丢失减少而位置/阴影控制仍失败，数值消费与研究有效性分开验收；
 完整结果与监督预处理勘误见[可学习性报告](role_learnability_report.md)。
-275项本机测试含Torch、67项CLI通过；远端无Torch CI为240 passed/35 skipped。
+276项本机测试含Torch、67项CLI通过；远端无Torch CI为241 passed/35 skipped。
 Train/Dev实际SHA、独立seed及source-only状态绑定；Test不生成、不用于选型。
 
 2026-10-23机制诊断复用conditioning/backends/inference/evaluation边界，仅增加观测

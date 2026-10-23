@@ -4,10 +4,11 @@ PR #6已正常合并main `8b261bb`，当前研究分支`feat/role-learnability`�
 本阶段检验少样本可学习性与角色注入失效：先预注册6个Train样本、四方法双seed
 同预算过拟合及梯度/层诊断，不用封存Test，不把记忆训练样本当作泛化。
 见[设计](docs/role_learnability_design.md)及[实际状态](docs/role_learnability_report.md)。
-已完成原注入四方法×双seed的960updates、356图与实际SHA/噪声配对评估，
-两个seed均未通过fit/角色利用/D增量门槛，原注入在本预算下No-Go。
-本地272 tests、GPU门禁、23个模型文件实际SHA通过；唯一channel_rms候选运行中，
-尚无候选收益结论，真人评分pending，不把少样本拟合或非零梯度当成泛化。
+已完成原注入及唯一channel_rms改进的四方法×双seed对照，共1920updates、712图。
+两版本均未通过fit/角色利用/D增量门槛；通道归一化减少BF16差分丢失，仍无正确的
+位置/阴影控制，当前配方No-Go扩大训练。T/D/P作为反事实数据与诊断仍值得保留。
+本地276 tests、67 CLI、真实GPU门禁及23个模型文件实际SHA通过；真人评分pending，
+不把loss下降、少样本拟合或非零梯度当成角色语义或泛化。
 下文历史诊断与全部资产保留。
 
 唯一候选修改先预注册于[通道预条件设计](docs/role_learnability_repair_design.md)：
