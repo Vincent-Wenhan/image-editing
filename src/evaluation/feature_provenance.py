@@ -28,17 +28,26 @@ def verify_features(root: Path, manifest: Path, record: dict, rows: list[dict]):
     ):
         raise ValueError("Feature checkpoint/cohort/layout provenance changed")
     encoder, actual = load_encoder(encoder_path, Path(config["lora"]))
-    del encoder
     if actual != metadata["checkpoint_metadata"]:
         raise ValueError("Feature checkpoint metadata changed")
     base = load_assets()["models"]["base"]
     if any(record["model"].get(key) != base[key] for key in ("repo_id", "revision")):
         raise ValueError("Feature inference base differs from its paired checkpoint")
+    intervention = config.get("residual_intervention")
+    if bool(intervention) != bool(record.get("residual_intervention")) or (
+        intervention and intervention != record["residual_intervention"]
+    ):
+        raise ValueError("Residual intervention metadata cannot be omitted or changed")
     for row, item in zip(rows, record["results"], strict=True):
-        if item["role_features"] != feature_identity(
-            load_features(root, row, config["feature_mode"])
-        ):
+        field = load_features(root, row, config["feature_mode"])
+        if item["role_features"] != feature_identity(field):
             raise ValueError("Actual oracle feature SHA256 changed")
+        if bool(intervention) != ("residual_condition" in item):
+            raise ValueError("Residual intervention provenance cannot be omitted")
+        if intervention:
+            from src.evaluation.feature_residual_provenance import verify_condition
+
+            verify_condition(item["residual_condition"], encoder, field, intervention)
         if (
             item["fusion"]["tokens"] != metadata["feature_tokens"]
             or item["fusion"]["calls"] < config["steps"]

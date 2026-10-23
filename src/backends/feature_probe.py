@@ -1,16 +1,10 @@
 """Observe the existing fusion and replay identical positive/negative CFG states."""
 
-import hashlib
 from contextlib import nullcontext
 
 from src.backends.feature_fusion import aligned_residual, feature_fusion
 from src.conditioning.feature_interventions import intervention_encoder
-
-
-def tensor_sha(tensor) -> str:
-    data = tensor.detach().float().cpu().contiguous().numpy().tobytes()
-    header = f"{tensor.dtype}:{tuple(tensor.shape)}:".encode()
-    return hashlib.sha256(header + data).hexdigest()
+from src.core.metadata import tensor_sha
 
 
 def rms(value) -> float:
@@ -101,7 +95,7 @@ class StateCapture:
             raise RuntimeError("Actual CFG outputs were not captured with their input states")
 
 
-def replay_branch(model, encoder, tokens, grid, inputs: dict, variants, protocol) -> dict:
+def replay_branch(model, encoder, tokens, grid, inputs: dict, variants, protocol, *, encoders=None):
     import torch
 
     inputs = {
@@ -119,6 +113,8 @@ def replay_branch(model, encoder, tokens, grid, inputs: dict, variants, protocol
         wrapped = (
             None
             if name == "disabled"
+            else encoders[name]
+            if encoders is not None
             else intervention_encoder(
                 encoder, name, shift=protocol["shift_tokens"], seed=protocol["shuffle_seed"]
             )
@@ -189,7 +185,9 @@ def replay_branch(model, encoder, tokens, grid, inputs: dict, variants, protocol
     )
 
 
-def replay_states(model, encoder, tokens, grid, capture: StateCapture, variants, protocol):
+def replay_states(
+    model, encoder, tokens, grid, capture: StateCapture, variants, protocol, *, encoders=None
+):
     import torch
 
     result = []
@@ -207,7 +205,14 @@ def replay_states(model, encoder, tokens, grid, capture: StateCapture, variants,
                 with context:
                     measured.append(
                         replay_branch(
-                            model, encoder, tokens, grid, branches[branch], variants, protocol
+                            model,
+                            encoder,
+                            tokens,
+                            grid,
+                            branches[branch],
+                            variants,
+                            protocol,
+                            encoders=encoders,
                         )
                     )
             positive, negative = measured

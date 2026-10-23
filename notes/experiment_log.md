@@ -1,5 +1,10 @@
 # 实验记录
 
+2026-10-23 UTC 最小修复实现：原/零/identity居中能量匹配/valid分层置乱四臂，
+同encoder参数与token、0训练，真实数组SHA及公式校验复用旧run与盲评协议。
+首轮相关11tests/12.89s通过；修正CPU fixture的fork_rng为devices=[]，避免初始化
+不参与测试的CUDA设备。真实修复GPU smoke和96图比较尚未运行，不能声称质量收益。
+
 2026-10-23 UTC Phase A真实GPU收尾：冻结d35b4c1，smoke127.30s，两seed诊断
 527.55/527.45s，allocated15.594/reserved16.299GiB；6张旧baseline精确重现，
 固定轨迹输出回放及零/禁用等价通过。所有旧权重与Test保持不变。CPU面积校正后

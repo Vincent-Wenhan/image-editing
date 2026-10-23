@@ -153,6 +153,20 @@ def run_phase(study: Path, phase: str, attempt: int = 1):
         if smoke["status"] != "complete" or not smoke["repeat_exact"]:
             raise ValueError("Real diagnostic GPU smoke has not passed")
     seeds = p["train_seeds"][:1] if phase == "smoke" else p["train_seeds"]
+    run_jobs(study, phase, seeds, p["max_parallel"], attempt)
+
+
+def run_jobs(
+    study: Path,
+    phase: str,
+    seeds: list[int],
+    parallel: int,
+    attempt: int,
+    worker_module="src.inference.feature_diagnostics",
+):
+    """Shared bounded UUID-lease launch; completed siblings are immutable and reusable."""
+    if attempt < 1 or (study / f"{phase}_phase.json").exists():
+        raise FileExistsError("Use a fresh attempt only for unfinished phases")
 
     def launch(seed):
         selected = study / f"{phase}_{seed}_receipt.json"
@@ -170,7 +184,7 @@ def run_phase(study: Path, phase: str, attempt: int = 1):
                 "--",
                 sys.executable,
                 "-m",
-                "src.inference.feature_diagnostics",
+                worker_module,
                 "--study",
                 str(study.resolve()),
                 "--phase",
@@ -191,7 +205,7 @@ def run_phase(study: Path, phase: str, attempt: int = 1):
         write_json(selected, receipt)
         return receipt
 
-    with ThreadPoolExecutor(max_workers=p["max_parallel"]) as pool:
+    with ThreadPoolExecutor(max_workers=parallel) as pool:
         futures = {pool.submit(launch, seed): seed for seed in seeds}
         result = {str(futures[f]): f.result() for f in as_completed(futures)}
     write_json(study / f"{phase}_phase.json", result)

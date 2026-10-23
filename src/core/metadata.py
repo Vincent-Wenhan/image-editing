@@ -16,6 +16,13 @@ def config_digest(value: dict) -> str:
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
+def tensor_sha(tensor) -> str:
+    """Diagnostic tensor identity, preserving dtype/shape and canonical FP32 bytes."""
+    data = tensor.detach().float().cpu().contiguous().numpy().tobytes()
+    header = f"{tensor.dtype}:{tuple(tensor.shape)}:".encode()
+    return hashlib.sha256(header + data).hexdigest()
+
+
 def now() -> str:
     return datetime.now(ZoneInfo("Asia/Shanghai")).isoformat(timespec="seconds")
 

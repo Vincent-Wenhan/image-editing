@@ -16,6 +16,11 @@
 CPU encoder诊断另外报告变化token内响应及单位高斯CPU噪声量化，后者不是扩散轨迹。
 Phase A真实GPU已完成。下一步仅验证冻结权重的identity居中/能量匹配残差算子，
 不增加参数/token/训练；设计与对照见[修复预注册](role_feature_repair_design.md)。
+`conditioning/feature_residuals.py`仅操作冻结encoder输出，不读target；四臂共享两次
+预计算，缓存绑定完整输入/grid，置乱保持pooled-valid分层。`inference/feature_repair_study.py`
+冻结Phase A证据与唯一配方，`feature_repair.py`复用原融合、sampler、probes和租约。
+`evaluation/feature_residual_provenance.py`校验实际数组SHA、字段、参数与算子公式，
+跨设备FP32重算容差rtol1e-5/atol1e-7；旧run不携带干预字段时仍走原校验。
 
 独立Role Feature试验沿用现有模块边界，见 [设计](role_feature_design.md)。
 conditioning定义非RGB特征契约/编码，datasets只加载占据和角色，backends实现

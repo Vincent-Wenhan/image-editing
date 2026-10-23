@@ -33,6 +33,19 @@ Phase A真实4B smoke和双seed固定状态诊断已完成；最小修复尚未�
 选择依据、唯一算子及不变门槛见[修复预注册](docs/role_feature_repair_design.md)，
 实际状态见[诊断报告](docs/role_feature_diagnostics_report.md)。
 
+冻结残差改进（必须先完成Phase A；不训练，不改变默认推理）：
+
+```bash
+python -m src.inference.feature_repair_study prepare --study <new-study>
+python -m src.inference.feature_repair_study run --study <new-study> --phase repair_smoke
+python -m src.inference.feature_repair_study run --study <new-study> --phase compare
+python -m src.evaluation.feature_diagnostic_analysis --study <new-study> --phase compare --output <new-analysis>
+```
+
+四臂共享每例两次冻结encoder预计算；记录真实GPU残差文件SHA，原缓存必须精确
+复现旧PNG。新run保持原协议并显式声明residual_intervention，人工工具校验实际
+字段、encoder、公式与缓存后才能导出；不会自动填写评分。
+
 当前分支 `feat/role-feature-conditioning` 从正常合并PR #4的main `b73492f`创建。
 独立于Image VAE的角色特征最小试验设计见 [预注册](docs/role_feature_design.md)。
 2026-10-23已完成真实4B前反向/有限梯度/条件置换/零条件/成对重载验收、batch4
