@@ -1,5 +1,16 @@
 # 实验记录
 
+2026-10-23 Asia/Shanghai 时间/更新诊断：以真实BF16转换核对训练及采样时间，
+t≥0.9训练为307的5/720、311的18/720，采样9/20；t≥0.95为0/1次，采样6/20。
+仅作暴露统计，未做第二个采样改法。实际Old/New/D参数均明显更新，AdamW尺度
+自适应及valid门控使原始梯度大小不能直接当作语义重要性；审计JSON保留。
+
+2026-10-23 Asia/Shanghai 原/新正式训练全部完成，合计1920updates；八组跨版本
+实际初始化、每step ID/noisy latent/timestep和容量逐项一致，归一化完整推理/评估继续。
+Constant初始张量一致，update20 LoRA重训仍有linf0.0009765625；来源未逐核定位。
+真实GPU同权重Constant算子前向及参数/输入梯度逐元素相同（0.708s）；这是轻量
+编码器复核，不冒称4B smoke。首次指定卡预检拒绝无GPU启动，两个attempt均保留。
+
 2026-10-23 Asia/Shanghai 基线跨update/方法/seed的6组source/text/noise和54组teacher
 输入逐一匹配，fixed_state_audit_01保存实际报告SHA；65项CLI通过。
 归一化新增梯度GPU诊断176.71s/16.281GiB通过，正式训练正常租约GPU1–4，跳过忙GPU0。
