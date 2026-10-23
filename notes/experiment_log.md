@@ -1,5 +1,11 @@
 # 实验记录
 
+2026-10-23 Asia/Shanghai 可学习性工程：新增不可覆盖的6例Train视图，共同caption与
+父manifest/源图/目标实际SHA绑定，训练缓存独立。固定trainer观测hook记录实际loss、
+通道/类别/位置/层梯度、原始初始化SHA及真实update编号的成对checkpoint；loss不变。
+首轮16项CPU回归46.80s通过，包含观测前后loss/梯度/RNG精确一致、无Dev/Test进入
+训练视图、caption与配对篡改拒绝。真实GPU训练/可学习性结论尚未产生。
+
 2026-10-23 14:39 Asia/Shanghai：PR #6复核252 passed/218.67s、Ruff/55 CLI、96图
 实际指标/区间、checkpoint/data SHA和六份空白盲评包后正常merge8b261bb。
 新分支feat/role-learnability从最新main创建，先登记6 Train样本、四方法×双seed

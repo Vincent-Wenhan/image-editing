@@ -4,7 +4,19 @@ PR #6已正常合并main `8b261bb`，当前研究分支`feat/role-learnability`�
 本阶段检验少样本可学习性与角色注入失效：先预注册6个Train样本、四方法双seed
 同预算过拟合及梯度/层诊断，不用封存Test，不把记忆训练样本当作泛化。
 见[设计](docs/role_learnability_design.md)及[实际状态](docs/role_learnability_report.md)。
-目前只有预注册，新训练/机制结论尚未产生；下文历史诊断与全部资产保留。
+已实现Train视图与固定trainer观测接口，相关CPU检查通过；新GPU训练/机制结论
+尚未产生。下文历史诊断与全部资产保留。
+
+```bash
+python -m src.training.learnability_study prepare --data <existing-scenes> --cohort <existing-cohort.json> --output <new-study>
+python -m src.training.learnability_study run --study <new-study> --phase smoke
+image-edit gpu -- python -m src.inference.learnability_smoke --study <new-study> --output <new-study>/gpu_smoke
+python -m src.training.learnability_study run --study <new-study> --phase capacity
+python -m src.training.learnability_study run --study <new-study> --phase train
+```
+
+Train视图复制选定6例到新目录以隔离缓存，canonical manifest与数据不修改。
+观测复用原loss与optimizer；checkpoint按真实update0/每20/final成对保存，不自动删旧权重。
 
 PR #5已正常合并main `676242b`。新分支feat/role-feature-diagnostics先诊断独立特征
 为何没有稳定收益，复用原checkpoint/Dev，新增训练更新固定为0；不扩大训练。
