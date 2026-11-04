@@ -1,5 +1,17 @@
 # 实验记录
 
+2026-11-05 Asia/Shanghai 评估完整性维护与方向调整：
+
+- 计划：修复 gallery 的 run/路径/控制类型校验，补强执行 provenance 和 Torch CPU CI，
+  并登记 occupancy-only 有向几何场作为下一轮 target-free 机制候选。
+- 已实现：维护设计见 `docs/maintenance_and_direction_design.md`；gallery、评估模式、
+  provenance、完整 seal 字段校验、Torch CPU CI 和 geometry direction contract 已落地，
+  未改变外部源码、原 loss、历史 checkpoint 或封存 Test。
+- 已运行：284 passed/541.57s，Ruff/format、compileall、CLI help、pip check 和仓库卫生
+  通过；新增方向只做契约和 CPU 验收，未启动 GPU，不把代理指标写成质量结论。
+- 研究结论：原始残差注入与 `channel_rms` 已有 No-Go 证据，本轮不扩大同一配方；
+  有向几何场必须经过独立预注册方向、identity/P 和 zero/shuffle 门槛后才可训练。
+
 2026-10-23 Asia/Shanghai 本轮收尾：原注入与唯一channel_rms的四方法×双seed均完成，
 正式1920updates、712图、112对checkpoint保留，两个版本均未通过fit/角色利用/D增量。
 RMS使固定Train Old/New BF16差分丢失从79.8–86.0%降到25.2–38.5%，仍未形成正确

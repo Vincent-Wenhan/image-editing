@@ -3,6 +3,7 @@
 import hashlib
 import importlib.metadata
 import json
+import sys
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -28,5 +29,28 @@ def now() -> str:
 
 
 def versions() -> dict[str, str]:
-    packages = ("torch", "diffusers", "transformers", "peft", "datasets", "huggingface-hub")
-    return {name: importlib.metadata.version(name) for name in packages}
+    """Record the runtime packages that affect training, inference and evaluation."""
+    packages = (
+        "torch",
+        "torchvision",
+        "diffusers",
+        "transformers",
+        "accelerate",
+        "peft",
+        "datasets",
+        "huggingface-hub",
+        "safetensors",
+        "numpy",
+        "Pillow",
+        "PyYAML",
+        "pyarrow",
+        "pandas",
+        "sentencepiece",
+    )
+    result = {"python": sys.version.split()[0]}
+    for name in packages:
+        try:
+            result[name] = importlib.metadata.version(name)
+        except importlib.metadata.PackageNotFoundError:
+            result[name] = "missing"
+    return result

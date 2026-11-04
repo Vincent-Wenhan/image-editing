@@ -113,6 +113,22 @@ def test_records_metrics_and_gallery_keep_legacy_format(inference_args, paired_d
     assert "&lt;square&gt;" in page and "&amp;" in page
     assert (tmp_path / "gallery/contact_00.jpg").is_file()
     with pytest.raises(FileExistsError):
+        gallery(
+            build_parser().parse_args(
+                [
+                    "gallery",
+                    "--data-root",
+                    str(paired_data),
+                    "--manifest",
+                    args.manifest,
+                    "--predictions",
+                    str(output),
+                    "--output",
+                    str(tmp_path / "gallery"),
+                ]
+            )
+        )
+    with pytest.raises(FileExistsError):
         runner.run(args, backend_factory=TargetColorBackend)
 
 
@@ -133,3 +149,25 @@ def test_incomplete_legacy_run_cannot_be_evaluated(tmp_path):
     args = build_parser().parse_args(["evaluate", "--predictions", str(tmp_path)])
     with pytest.raises(ValueError, match="incomplete"):
         evaluate(args)
+
+
+def test_incomplete_legacy_run_cannot_be_rendered_as_gallery(paired_data, tmp_path):
+    predictions = tmp_path / "predictions"
+    predictions.mkdir()
+    (predictions / "run.json").write_text('{"status":"failed","results":[]}')
+    args = build_parser().parse_args(
+        [
+            "gallery",
+            "--data-root",
+            str(paired_data),
+            "--manifest",
+            str(paired_data / "dev/manifest.csv"),
+            "--predictions",
+            str(predictions),
+            "--output",
+            str(tmp_path / "gallery"),
+        ]
+    )
+    with pytest.raises(ValueError, match="incomplete"):
+        gallery(args)
+    assert not (tmp_path / "gallery").exists()

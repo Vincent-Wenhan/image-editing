@@ -41,8 +41,13 @@ post_save_hook。保留上界按LoRA+encoder双倍计算，完成验收逐一复
 原注入和唯一RMS候选均未通过预注册角色语义门槛，不据此自动扩大训练。
 BF16差分丢失减少而位置/阴影控制仍失败，数值消费与研究有效性分开验收；
 完整结果与监督预处理勘误见[可学习性报告](role_learnability_report.md)。
-276项本机测试含Torch、67项CLI通过；远端无Torch CI为241 passed/35 skipped。
+本轮284项本机测试含Torch、67项CLI通过；CI新增固定 Torch CPU 检查，GPU 质量实验仍需
+项目 GPU 门禁和独立 receipt。
 Train/Dev实际SHA、独立seed及source-only状态绑定；Test不生成、不用于选型。
+
+当前维护与后续方向见 [maintenance_and_direction_design.md](maintenance_and_direction_design.md)。
+画廊必须先通过统一 run provenance；下一候选是 occupancy-only 的有向几何场，先做
+CPU 契约和冻结权重诊断，未通过门槛前不进入训练。
 
 2026-10-23机制诊断复用conditioning/backends/inference/evaluation边界，仅增加观测
 和显式推理干预，不改目录或默认路径。权重冻结，新增训练0步；先测量再选一个
@@ -178,7 +183,7 @@ Dynamic Binary 依赖真值，也属于显式上界；普通推理不能使用�
 所有split两两查漏。`role_controls.py`只为验证过的合成数据导出Oracle/Dynamic
 Binary索引，消费端分离target并复核实际角色编码，普通推理权限继续收紧。
 
-## 当前开发：评估补强与最小反事实数据
+## 历史阶段：评估补强与最小反事实数据
 
 Stage 1 PR #2 已正常合并 main `a03f168`；本地130项测试及 PR CI 通过，78个新增
 历史blob资产审计通过（最大24,207 bytes）。新分支 `feat/role-data-and-evaluation`

@@ -299,3 +299,67 @@ def test_role_gallery_displays_actual_ground_truth_with_separate_valid_region(
         Image.open(output / "role_truth" / f"{row['id']}.png") as displayed,
     ):
         assert np.array_equal(displayed, role_rgb(truth))
+
+
+def test_oracle_role_gallery_renders_role_control(scene_data, tmp_path, monkeypatch):
+    from src.cli import build_parser, main
+    from src.conditioning.controls import ControlKind
+    from src.core.types import EditOutput
+    from src.datasets.role_controls import export_role_controls
+    from src.inference import runner
+
+    monkeypatch.setattr(runner, "require_lease", lambda: None)
+    monkeypatch.setattr(runner, "versions", lambda: {"test": "cpu"})
+    model = tmp_path / "model"
+    model.mkdir()
+    (model / "download.json").write_text('{"revision":"fixed"}')
+    controls = tmp_path / "oracle_controls"
+    export_role_controls(scene_data, controls, ControlKind.ORACLE_ROLE)
+
+    class Backend:
+        def __init__(self, *args):
+            pass
+
+        def edit_oracle(self, edit, controls, options, *, allow_oracle=False):
+            assert allow_oracle and controls.kind == ControlKind.ORACLE_ROLE
+            return EditOutput(edit.source, 0, 0, 0)
+
+    predictions = tmp_path / "predictions"
+    runner.run(
+        build_parser().parse_args(
+            [
+                "infer",
+                "--data-root",
+                str(scene_data),
+                "--manifest",
+                str(scene_data / "dev/manifest.csv"),
+                "--model",
+                str(model),
+                "--side",
+                "64",
+                "--output",
+                str(predictions),
+                "--control",
+                "oracle_role",
+                "--control-root",
+                str(controls),
+                "--allow-oracle",
+            ]
+        ),
+        backend_factory=Backend,
+    )
+    output = tmp_path / "oracle_gallery"
+    main(
+        [
+            "gallery",
+            "--data-root",
+            str(scene_data),
+            "--manifest",
+            str(scene_data / "dev/manifest.csv"),
+            "--predictions",
+            str(predictions),
+            "--output",
+            str(output),
+        ]
+    )
+    assert "role_input" in (output / "index.html").read_text()

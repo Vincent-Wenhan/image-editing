@@ -1,11 +1,13 @@
 """Analytic interventions and evaluation proxies, never fabricated human ratings."""
 
+import json
+
 import numpy as np
 import pytest
 from PIL import Image
 
 from src.conditioning.controls import ControlBundle, ControlKind
-from src.core.io import sha256, write_json
+from src.core.io import read_rows, sha256, write_json
 from src.datasets.holdout import require_dev
 from src.evaluation.review_page import FAILURES, page
 from src.evaluation.role_failures import geometry_metrics, palette_response
@@ -68,6 +70,29 @@ def test_sealed_test_and_manifest_drift_fail_closed(scene_data, tmp_path):
         require_dev(scene_data, seal, scene_data / "test/manifest.csv")
     (scene_data / "test/manifest.csv").write_text("changed")
     with pytest.raises(ValueError, match="sealed Dev"):
+        require_dev(scene_data, seal)
+
+
+def test_complete_seal_rejects_root_or_dev_identity_drift(scene_data, tmp_path):
+    seal = tmp_path / "cohort.json"
+    write_json(
+        seal,
+        dict(
+            schema_version=1,
+            purpose="dev_only_failure_analysis",
+            test_status="sealed",
+            root=str(scene_data.resolve()),
+            dataset_sha256=sha256(scene_data / "dataset.json"),
+            manifests={s: sha256(scene_data / s / "manifest.csv") for s in ("train", "dev")},
+            dev_ids=[row["id"] for row in read_rows(scene_data / "dev/manifest.csv")],
+            historical=[{"root": "previous"}],
+        ),
+    )
+    require_dev(scene_data, seal)
+    record = json.loads(seal.read_text())
+    record["root"] = str(tmp_path / "different")
+    write_json(seal, record)
+    with pytest.raises(ValueError, match="root, Dev IDs"):
         require_dev(scene_data, seal)
 
 

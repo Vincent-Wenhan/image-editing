@@ -56,13 +56,28 @@ def seal_cohort(root: Path, previous: list[Path], output: Path) -> dict:
 
 def require_dev(root: Path, seal: Path, manifest: Path | None = None) -> dict:
     record = json.loads(seal.read_text())
+    expected_splits = set(dataset_splits(root))
+    declared_splits = set(record.get("manifests", {}))
     if (
         record["schema_version"] != 1
         or record["purpose"] != "dev_only_failure_analysis"
         or record["test_status"] != "sealed"
         or sha256(root / "dataset.json") != record["dataset_sha256"]
+        or declared_splits != expected_splits
         or any(sha256(root / s / "manifest.csv") != h for s, h in record["manifests"].items())
         or (manifest is not None and manifest.resolve() != (root / "dev/manifest.csv").resolve())
     ):
         raise ValueError("Cohort changed or attempted evaluation outside sealed Dev protocol")
+    full_seal = {"root", "dev_ids", "historical"}
+    if full_seal & record.keys() and not full_seal <= record.keys():
+        raise ValueError("Cohort seal is missing its complete provenance fields")
+    if full_seal <= record.keys():
+        actual_dev_ids = [row["id"] for row in read_rows(root / "dev/manifest.csv")]
+        if (
+            Path(record["root"]).resolve() != root.resolve()
+            or record["dev_ids"] != actual_dev_ids
+            or not isinstance(record["historical"], list)
+            or not record["historical"]
+        ):
+            raise ValueError("Cohort seal root, Dev IDs or historical isolation changed")
     return record

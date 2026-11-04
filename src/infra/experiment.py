@@ -13,13 +13,38 @@ from src.infra.process import command
 
 
 def source_snapshot(root: Path = PROJECT_ROOT) -> dict:
-    files = [
-        *root.glob("src/**/*.py"),
-        *root.glob("configs/**/*.yaml"),
-        root / "configs/assets.lock.json",
-    ]
+    patterns = (
+        "src/**/*.py",
+        "scripts/**/*.py",
+        "scripts/**/*.sh",
+        "configs/**/*.yaml",
+        "configs/**/*.yml",
+        "configs/**/*.json",
+        "configs/**/*.csv",
+        "pyproject.toml",
+        "requirements.lock",
+        "requirements-train.in",
+        "environment.yml",
+    )
+    files = {path for pattern in patterns for path in root.glob(pattern) if path.is_file()}
+
+    def repository(path: Path) -> dict:
+        if not (path / ".git").exists():
+            return {}
+        return dict(
+            revision=command(["git", "-C", str(path), "rev-parse", "HEAD"]),
+            status=command(
+                ["git", "-C", str(path), "status", "--porcelain", "--untracked-files=no"]
+            ),
+        )
+
     return dict(
-        revision=command(["git", "-C", str(root), "rev-parse", "HEAD"]),
+        repositories={
+            ".": repository(root),
+            "external/ai-toolkit": repository(root / "external/ai-toolkit"),
+            "external/diffusers": repository(root / "external/diffusers"),
+            "external/Inter-Edit": repository(root / "external/Inter-Edit"),
+        },
         files={str(path.relative_to(root)): sha256(path) for path in sorted(files)},
     )
 

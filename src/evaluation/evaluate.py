@@ -31,8 +31,8 @@ def run(args):
         size = (item["width"], item["height"])
         path = predictions / f"{row['id']}.png"
         with Image.open(path) as prediction_image:
-            if prediction_image.size != size:
-                raise ValueError(f"Prediction dimensions changed: {path}")
+            if prediction_image.mode != "RGB" or prediction_image.size != size:
+                raise ValueError(f"Prediction mode/geometry changed: {path}")
         prediction = load_image(path, size)
         source, target, mask = [
             load_image(data_path(root, row[f"{key}_path"]), size, mode)
