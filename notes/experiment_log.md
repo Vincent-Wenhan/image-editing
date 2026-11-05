@@ -28,6 +28,11 @@ Inter-Edit JSON 的 target-free control bridge、外部 revision/clean-tree 检�
 约 8.6GB 可续传分片。补充显式 `--connections`，后续改用低并发续传；没有写入完成
 `download.json`，没有启动 GPU。
 
+2026-11-05 UTC Qwen 可复现性门禁：发现固定 Inter-Edit trainer 没有项目 seed 参数，新增
+本地 `src.qwen.seeded_train` 包装器，在不修改 external 源码的前提下固定 Python/NumPy/
+Torch/CUDA seed，并把 seed=42 写入 pilot config/receipt。旧未加 seed 的 capacity 目录不复用，
+后续使用新目录重新 prepare。
+
 2026-10-23 Asia/Shanghai 本轮收尾：原注入与唯一channel_rms的四方法×双seed均完成，
 正式1920updates、712图、112对checkpoint保留，两个版本均未通过fit/角色利用/D增量。
 RMS使固定Train Old/New BF16差分丢失从79.8–86.0%降到25.2–38.5%，仍未形成正确

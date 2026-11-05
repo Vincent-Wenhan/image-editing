@@ -64,3 +64,15 @@ def test_qwen_train_refuses_to_start_without_a_gpu_lease(monkeypatch, tmp_path):
     args = type("Args", (), {"run": str(tmp_path), "lock": "configs/assets.lock.json"})()
     with pytest.raises(RuntimeError, match="image-edit gpu"):
         runner.train(args)
+
+
+def test_qwen_seed_wrapper_repeats_cpu_random_state():
+    import torch
+
+    from src.qwen.seeded_train import _seed
+
+    _seed(42)
+    first = torch.rand(4)
+    _seed(42)
+    second = torch.rand(4)
+    assert torch.equal(first, second)

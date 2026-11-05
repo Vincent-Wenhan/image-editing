@@ -81,8 +81,8 @@ VAE，总组件规模约 27.1B。48GB A6000 不应假设能以完整 BF16 训练
 FLUX 不能直接按数字等价，正式结论只在同一基座内部比较；跨基座只报告条件收益、质量
 指标、显存、时间和预算。
 
-当前已实现 `src.qwen` 的 manifest bridge、model/external revision 检查和 leased runner，
-对应协议是 `configs/experiments/qwen_cjt_pilot.yaml`。尚未下载 Qwen 权重或启动 GPU；
+当前已实现 `src.qwen` 的 manifest bridge、model/external revision 检查、固定 seed 包装器和
+leased runner，对应协议是 `configs/experiments/qwen_cjt_pilot.yaml`。尚未启动 GPU；
 后续顺序固定为：下载并校验 receipt，CPU 复核 bridge，实时查询 `nvidia-smi`，通过
 `image-edit gpu -- image-edit qwen train ...` 完成 pilot，再决定是否进入 Q0/Q1 正式矩阵。
 大权重下载遇到限流时只降低传输并发并保留断点分片；传输镜像不改变锁定 revision，

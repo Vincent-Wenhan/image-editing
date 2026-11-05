@@ -337,8 +337,8 @@ Inter-Edit 需要的 JSON，控制顺序固定为 `[original_image_path, mask_im
 
 ```bash
 image-edit download --asset qwen_image_edit_2511 --transport ranges
-image-edit qwen prepare --data-root data/magicbrush --output outputs/qwen_cjt_capacity_pilot
-image-edit qwen verify --run outputs/qwen_cjt_capacity_pilot
+image-edit qwen prepare --data-root data/magicbrush --output outputs/qwen_cjt_capacity_pilot_seeded
+image-edit qwen verify --run outputs/qwen_cjt_capacity_pilot_seeded
 ```
 
 当前协议是 2 个 Train 样本、2 个 Dev 样本、2 个更新的工程 pilot，使用官方 1024 级 VAE
@@ -346,8 +346,8 @@ image-edit qwen verify --run outputs/qwen_cjt_capacity_pilot
 通过实时 GPU 门禁启动：
 
 ```bash
-image-edit qwen verify --run outputs/qwen_cjt_capacity_pilot --require-model
-image-edit gpu -- image-edit qwen train --run outputs/qwen_cjt_capacity_pilot
+image-edit qwen verify --run outputs/qwen_cjt_capacity_pilot_seeded --require-model
+image-edit gpu -- image-edit qwen train --run outputs/qwen_cjt_capacity_pilot_seeded
 ```
 
 训练入口会再次检查模型 receipt、Inter-Edit revision、manifest SHA 和 GPU UUID lease；
