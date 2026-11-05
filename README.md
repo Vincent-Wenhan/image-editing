@@ -368,6 +368,9 @@ image-edit gpu -- image-edit qwen infer \
   --output outputs/qwen_cjt_rank8_pilot_seeded/dev_inference
 ```
 
+推理默认选择该 run 下编号最大的 `checkpoint-N`；如果需要复核中间权重，可显式传入
+`--checkpoint <path-to-pytorch_lora_weights.safetensors>`。
+
 工程 pilot 和 reload 都通过后，Q1 binary-mask 有界对照使用完整 canonical Train/Dev，
 固定 rank8、seed42 和 20 updates：
 

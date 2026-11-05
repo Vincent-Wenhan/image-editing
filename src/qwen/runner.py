@@ -231,6 +231,10 @@ def configure(parser):
     infer_parser = subparsers.add_parser("infer")
     infer_parser.add_argument("--run", required=True)
     infer_parser.add_argument("--output", required=True)
+    infer_parser.add_argument(
+        "--checkpoint",
+        help="LoRA safetensors path; defaults to the latest checkpoint-N in the run",
+    )
     infer_parser.add_argument("--sample-id")
     infer_parser.add_argument("--steps", type=int, default=4)
     infer_parser.add_argument("--seed", type=int, default=42)

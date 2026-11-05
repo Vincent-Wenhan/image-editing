@@ -98,6 +98,19 @@ def test_qwen_runner_uses_current_python_for_accelerate(tmp_path):
     assert command[command.index("--config") + 1] == "/tmp/train.yaml"
 
 
+def test_qwen_inference_selects_latest_checkpoint(tmp_path):
+    from src.qwen.inference import _checkpoint_path
+
+    older = tmp_path / "checkpoints/checkpoint-2/pytorch_lora_weights.safetensors"
+    latest = tmp_path / "checkpoints/checkpoint-20/pytorch_lora_weights.safetensors"
+    ignored = tmp_path / "checkpoints/checkpoint-final/pytorch_lora_weights.safetensors"
+    for path in (older, latest, ignored):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"checkpoint")
+    assert _checkpoint_path(tmp_path) == latest
+    assert _checkpoint_path(tmp_path, str(older)) == older
+
+
 def test_qwen_inference_requires_a_gpu_lease(monkeypatch, tmp_path):
     from src.qwen import inference
 

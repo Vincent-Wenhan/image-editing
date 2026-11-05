@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 from pathlib import Path
 
 from PIL import Image
@@ -23,6 +24,22 @@ def _pipeline_class():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module.QwenImageEditPlusPipeline
+
+
+def _checkpoint_path(run_root: Path, requested: str | None = None) -> Path:
+    if requested is not None:
+        checkpoint = Path(requested).expanduser().resolve()
+        if not checkpoint.is_file():
+            raise FileNotFoundError(f"Missing requested Qwen LoRA checkpoint: {checkpoint}")
+        return checkpoint
+    candidates = []
+    for path in (run_root / "checkpoints").glob("checkpoint-*/pytorch_lora_weights.safetensors"):
+        match = re.fullmatch(r"checkpoint-(\d+)", path.parent.name)
+        if match is not None:
+            candidates.append((int(match.group(1)), path))
+    if not candidates:
+        raise FileNotFoundError(f"No Qwen LoRA checkpoint found under {run_root / 'checkpoints'}")
+    return max(candidates, key=lambda item: item[0])[1]
 
 
 def _row(record: dict, sample_id: str | None) -> dict[str, str]:
@@ -51,9 +68,7 @@ def run(args) -> None:
     root = Path(record["data_root"])
     source_path = data_path(root, row["source_path"])
     mask_path = data_path(root, row["mask_path"])
-    checkpoint = run_root / "checkpoints/checkpoint-2/pytorch_lora_weights.safetensors"
-    if not checkpoint.is_file():
-        raise FileNotFoundError(f"Missing Qwen LoRA checkpoint: {checkpoint}")
+    checkpoint = _checkpoint_path(run_root, getattr(args, "checkpoint", None))
     output = Path(args.output).resolve()
     if output.exists():
         raise FileExistsError(f"Use a new Qwen inference directory: {output}")
