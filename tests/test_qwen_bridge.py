@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from src.core.io import read_rows, sha256, write_json
-from src.qwen.data import verify_manifest, write_manifest
+from src.qwen.data import verify_condition_manifest, verify_manifest, write_manifest
 
 
 def make_dataset_record(root: Path) -> None:
@@ -54,6 +54,15 @@ def test_qwen_manifest_rejects_test_split(paired_data, tmp_path):
     (paired_data / "test").mkdir()
     with pytest.raises(ValueError, match="sealed Test"):
         write_manifest(paired_data, "dev", tmp_path / "dev.json")
+
+
+def test_qwen_condition_verification_never_opens_target(paired_data, tmp_path):
+    make_dataset_record(paired_data)
+    output = tmp_path / "train.json"
+    write_manifest(paired_data, "train", output)
+    row = read_rows(paired_data / "train/manifest.csv")[0]
+    (paired_data / row["target_path"]).unlink()
+    assert verify_condition_manifest(output, root=paired_data)["ids"] == [row["id"]]
 
 
 def test_qwen_train_refuses_to_start_without_a_gpu_lease(monkeypatch, tmp_path):

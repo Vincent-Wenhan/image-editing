@@ -55,6 +55,11 @@ rank8 同预算重试，暂不同时引入量化或双卡改变多个变量。
 `status=complete`。单卡显存约 48.5GiB，仍需先做 CPU-offload checkpoint reload/单例 Dev 推理，
 再决定是否进入 Qwen 条件对照；当前没有质量结论。
 
+2026-11-06 UTC Qwen target isolation audit：发现初版 inference smoke 的 provenance 校验会
+通过完整 manifest validator 打开 target 图像，虽未把 target 传入模型，仍违反推理/监督
+隔离。新增 condition-only manifest verifier，inference 现在只校验/读取 source 与 mask；
+补充删除 target 后仍能通过的回归测试。已有 smoke 产物保留，修复后使用新目录重跑。
+
 2026-11-06 UTC Qwen rank8 reload smoke：通过 GPU1 lease 使用 CPU offload 加载 base+LoRA，
 4-step 单例 Dev `dev_140513_t1` 完成，峰值显存约 42GiB，prediction SHA256 为
 `6b18c1e4e765461872774901f3690c63c5a63c8752006b8bbacccef093f38295`。source/mask/instruction

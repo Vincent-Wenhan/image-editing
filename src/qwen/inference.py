@@ -11,7 +11,7 @@ from PIL import Image
 from src.core.io import read_rows, sha256, write_json
 from src.core.paths import data_path
 from src.infra.gpu import require_lease
-from src.qwen.data import verify_manifest
+from src.qwen.data import verify_condition_manifest
 from src.qwen.provenance import verify_model_download
 
 
@@ -27,7 +27,7 @@ def _pipeline_class():
 
 def _row(record: dict, sample_id: str | None) -> dict[str, str]:
     root = Path(record["data_root"])
-    verify_manifest(record["dev_manifest"], root=root)
+    verify_condition_manifest(record["dev_manifest"], root=root)
     rows = read_rows(root / "dev/manifest.csv")
     if sample_id is None:
         return rows[0]

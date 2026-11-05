@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from PIL import Image
+
 from src.core.config import load_assets
 from src.core.io import read_rows, sha256, write_json
 from src.core.paths import data_path
@@ -17,13 +19,21 @@ SUPPORTED_SPLITS = ("train", "dev")
 CONTROL_ORDER = ("original_image_path", "mask_image_path")
 
 
-def _rows(root: Path, split: str, limit: int | None) -> list[dict[str, str]]:
+def _rows(
+    root: Path,
+    split: str,
+    limit: int | None,
+    *,
+    validate_dataset: bool = True,
+    include_target: bool = True,
+) -> list[dict[str, str]]:
     root = root.resolve()
     if split not in SUPPORTED_SPLITS:
         raise ValueError("Qwen training and validation manifests may only use train or dev")
     if "test" in dataset_splits(root):
         raise ValueError("Qwen pilot refuses a dataset that exposes the sealed Test split")
-    validate(root)
+    if validate_dataset:
+        validate(root)
     rows = read_rows(root / split / "manifest.csv")
     if limit is not None and (limit < 1 or limit > len(rows)):
         raise ValueError(f"limit must be in [1, {len(rows)}]")
@@ -31,12 +41,26 @@ def _rows(root: Path, split: str, limit: int | None) -> list[dict[str, str]]:
     for row in selected:
         if row["split"] != split:
             raise ValueError(f"Manifest row {row['id']} is assigned to {row['split']}")
-        verify_images(root, row)
+        if include_target:
+            verify_images(root, row)
+        else:
+            _verify_condition_images(root, row)
         caption = root / split / "target" / f"{row['id']}.txt"
         if caption.read_text(encoding="utf-8").strip() != row["instruction"].strip():
             raise ValueError(f"Caption mismatch: {caption}")
         _check_paths(root, row)
     return selected
+
+
+def _verify_condition_images(root: Path, row: dict[str, str]) -> None:
+    for key, mode in (("source", "RGB"), ("mask", "L")):
+        path = data_path(root, row[f"{key}_path"])
+        if sha256(path) != row[f"{key}_sha256"]:
+            raise ValueError(f"Qwen condition checksum mismatch: {path}")
+        with Image.open(path) as image:
+            image.load()
+            if image.size != (int(row["width"]), int(row["height"])) or image.mode != mode:
+                raise ValueError(f"Qwen condition shape/mode mismatch: {path}")
 
 
 def _check_paths(root: Path, row: dict[str, str]) -> None:
@@ -165,6 +189,60 @@ def verify_manifest(
     ]
     if record.get("samples") != expected_samples:
         raise ValueError("Qwen sample checksums differ from the canonical manifest")
+    assets = load_assets(lock_path)
+    if record.get("qwen_model") != assets["models"]["qwen_image_edit_2511"]:
+        raise ValueError("Qwen model lock changed")
+    expected_revision = assets["repositories"][INTER_EDIT_REPOSITORY]["revision"]
+    if record.get("inter_edit_revision") != expected_revision:
+        raise ValueError("Inter-Edit revision changed")
+    return record
+
+
+def verify_condition_manifest(
+    manifest: str | Path,
+    *,
+    root: str | Path | None = None,
+    lock_path: str | Path = "configs/assets.lock.json",
+) -> dict:
+    """Verify only source/mask inputs; never open target supervision."""
+    manifest = Path(manifest).resolve()
+    sidecar = provenance_path(manifest)
+    if not manifest.exists() or not sidecar.exists():
+        raise FileNotFoundError(
+            f"Qwen manifest and provenance sidecar are both required: {manifest}"
+        )
+    record = json.loads(sidecar.read_text(encoding="utf-8"))
+    data_root = Path(record["data_root"]).resolve()
+    if root is not None and data_root != Path(root).resolve():
+        raise ValueError("Qwen manifest data root changed")
+    if (
+        record.get("schema_version") != SCHEMA
+        or record.get("split") not in SUPPORTED_SPLITS
+        or record.get("json_sha256") != sha256(manifest)
+        or record.get("dataset_json_sha256") != sha256(data_root / "dataset.json")
+        or record.get("canonical_manifest_sha256")
+        != sha256(data_root / record["split"] / "manifest.csv")
+        or tuple(record.get("control_order", ())) != CONTROL_ORDER
+        or record.get("target_field") != "edited_image_path"
+    ):
+        raise ValueError("Qwen manifest provenance changed")
+    rows = _rows(
+        data_root,
+        record["split"],
+        len(record["ids"]),
+        validate_dataset=False,
+        include_target=False,
+    )
+    if [row["id"] for row in rows] != record["ids"]:
+        raise ValueError("Qwen manifest selection differs from the canonical manifest")
+    samples = json.loads(manifest.read_text(encoding="utf-8"))
+    if not isinstance(samples, list) or len(samples) != len(rows):
+        raise ValueError("Qwen manifest must be a JSON list with the recorded sample count")
+    for row, sample in zip(rows, samples, strict=True):
+        if sample != _sample(row):
+            raise ValueError(f"Qwen sample differs from the canonical row: {row['id']}")
+        if sample["edited_image_path"] in [sample[key] for key in CONTROL_ORDER]:
+            raise ValueError(f"Target leaked into Qwen controls: {row['id']}")
     assets = load_assets(lock_path)
     if record.get("qwen_model") != assets["models"]["qwen_image_edit_2511"]:
         raise ValueError("Qwen model lock changed")
