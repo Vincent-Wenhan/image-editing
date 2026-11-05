@@ -91,10 +91,10 @@ rank8 完成后必须先通过 CPU-offload 的单例 Dev checkpoint reload；该
 binary mask 和 instruction，target 只在独立 provenance/evaluation 中使用。reload smoke
 通过只证明 checkpoint 可消费和输入契约一致，不证明 Qwen 或条件方法有质量收益。
 
-当前已实现 `src.qwen` 的 manifest bridge、model/external revision 检查、固定 seed 包装器和
-leased runner，对应协议是 `configs/experiments/qwen_cjt_pilot.yaml`。尚未启动 GPU；
-后续顺序固定为：下载并校验 receipt，CPU 复核 bridge，实时查询 `nvidia-smi`，通过
-`image-edit gpu -- image-edit qwen train ...` 完成 pilot，再决定是否进入 Q0/Q1 正式矩阵。
+当前已实现 `src.qwen` 的 manifest bridge、model/external revision 检查、固定 seed 包装器、
+leased runner 和 CPU-offload reload smoke。rank32 单卡容量失败，rank8 已完成 2-step
+训练和 1 例 Dev reload；这些结果仍不构成质量结论。下一步才是固定 rank8 预算下的
+Q1 binary-mask 对照，再决定是否进入 Q2 role/geometry 矩阵。
 大权重下载遇到限流时只降低传输并发并保留断点分片；传输镜像不改变锁定 revision，
 最终必须通过逐文件 SHA256 校验才会写入 `download.json`。
 

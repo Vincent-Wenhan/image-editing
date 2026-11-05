@@ -55,6 +55,13 @@ rank8 同预算重试，暂不同时引入量化或双卡改变多个变量。
 `status=complete`。单卡显存约 48.5GiB，仍需先做 CPU-offload checkpoint reload/单例 Dev 推理，
 再决定是否进入 Qwen 条件对照；当前没有质量结论。
 
+2026-11-06 UTC Qwen rank8 reload smoke：通过 GPU1 lease 使用 CPU offload 加载 base+LoRA，
+4-step 单例 Dev `dev_140513_t1` 完成，峰值显存约 42GiB，prediction SHA256 为
+`6b18c1e4e765461872774901f3690c63c5a63c8752006b8bbacccef093f38295`。source/mask/instruction
+进入推理，target 未读取；非盲可视检查显示斑马基本保留且背景生成了山地场景，但没有计算
+正式质量指标或人工评分。Qwen rank8 工程 pilot 的加载、训练、checkpoint reload 和 Dev
+推理门槛已通过，下一步才进入固定预算的 binary-mask 对照。
+
 2026-10-23 Asia/Shanghai 本轮收尾：原注入与唯一channel_rms的四方法×双seed均完成，
 正式1920updates、712图、112对checkpoint保留，两个版本均未通过fit/角色利用/D增量。
 RMS使固定Train Old/New BF16差分丢失从79.8–86.0%降到25.2–38.5%，仍未形成正确
