@@ -81,6 +81,12 @@ VAE，总组件规模约 27.1B。48GB A6000 不应假设能以完整 BF16 训练
 FLUX 不能直接按数字等价，正式结论只在同一基座内部比较；跨基座只报告条件收益、质量
 指标、显存、时间和预算。
 
+2026-11-06 的实际 rank32 pilot 已完成加载、预缓存和第 1 个 update，第二个 update 在
+LoRA backward 期间 OOM（峰值约 47.43/47.54GiB）。因此 rank32 只作为容量失败记录，
+不进入正式条件比较；下一步先运行已登记的 `qwen_cjt_rank8_pilot.yaml`，只降低 LoRA
+rank，其余预算和输入保持一致。若 rank8 仍无法保留显存余量，再评估 quantized LoRA
+或双卡模型并行。
+
 当前已实现 `src.qwen` 的 manifest bridge、model/external revision 检查、固定 seed 包装器和
 leased runner，对应协议是 `configs/experiments/qwen_cjt_pilot.yaml`。尚未启动 GPU；
 后续顺序固定为：下载并校验 receipt，CPU 复核 bridge，实时查询 `nvidia-smi`，通过

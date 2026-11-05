@@ -350,6 +350,15 @@ image-edit qwen verify --run outputs/qwen_cjt_capacity_pilot_seeded --require-mo
 image-edit gpu -- image-edit qwen train --run outputs/qwen_cjt_capacity_pilot_seeded
 ```
 
+如果 rank32 pilot 在 48GB 卡上 OOM，使用已登记的 rank8 容量重试目录；它只改变 LoRA
+rank，保持数据、seed、预缓存和 2-step 预算不变：
+
+```bash
+image-edit qwen prepare --protocol configs/experiments/qwen_cjt_rank8_pilot.yaml \
+  --data-root data/magicbrush --output outputs/qwen_cjt_rank8_pilot_seeded
+image-edit gpu -- image-edit qwen train --run outputs/qwen_cjt_rank8_pilot_seeded
+```
+
 训练入口会再次检查模型 receipt、Inter-Edit revision、manifest SHA 和 GPU UUID lease；
 没有租约会在启动外部训练前失败。pilot 通过后，按[方向设计](docs/qwen_cjt_direction_design.md)
 扩展到固定的 binary/role/geometry 条件矩阵；Qwen 与 FLUX 只做条件收益和资源对照，不做
