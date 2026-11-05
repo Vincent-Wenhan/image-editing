@@ -33,6 +33,12 @@ Inter-Edit JSON 的 target-free control bridge、外部 revision/clean-tree 检�
 Torch/CUDA seed，并把 seed=42 写入 pilot config/receipt。旧未加 seed 的 capacity 目录不复用，
 后续使用新目录重新 prepare。
 
+2026-11-05 UTC Qwen 资产完成：使用锁定 revision `6f3ccc0b56e431dc6a0c2b2039706d7d26f22cb9`
+完成约 54GB Qwen-Image-Edit-2511 下载，所有 safetensors 逐文件 SHA256 校验通过并写入
+`models/Qwen-Image-Edit-2511/download.json`；`qwen verify --require-model`、canonical
+2/2 manifest 和 Inter-Edit clean revision 通过。随后三次实时 `nvidia-smi` 均无符合项目
+空闲门禁的卡，尚未启动 Qwen GPU pilot，不能据此写任何容量或质量结论。
+
 2026-10-23 Asia/Shanghai 本轮收尾：原注入与唯一channel_rms的四方法×双seed均完成，
 正式1920updates、712图、112对checkpoint保留，两个版本均未通过fit/角色利用/D增量。
 RMS使固定Train Old/New BF16差分丢失从79.8–86.0%降到25.2–38.5%，仍未形成正确
