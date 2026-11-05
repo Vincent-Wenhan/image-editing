@@ -87,6 +87,10 @@ LoRA backward 期间 OOM（峰值约 47.43/47.54GiB）。因此 rank32 只作为
 rank，其余预算和输入保持一致。若 rank8 仍无法保留显存余量，再评估 quantized LoRA
 或双卡模型并行。
 
+rank8 完成后必须先通过 CPU-offload 的单例 Dev checkpoint reload；该推理只接收 source、
+binary mask 和 instruction，target 只在独立 provenance/evaluation 中使用。reload smoke
+通过只证明 checkpoint 可消费和输入契约一致，不证明 Qwen 或条件方法有质量收益。
+
 当前已实现 `src.qwen` 的 manifest bridge、model/external revision 检查、固定 seed 包装器和
 leased runner，对应协议是 `configs/experiments/qwen_cjt_pilot.yaml`。尚未启动 GPU；
 后续顺序固定为：下载并校验 receipt，CPU 复核 bridge，实时查询 `nvidia-smi`，通过

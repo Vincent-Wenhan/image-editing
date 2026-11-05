@@ -87,3 +87,11 @@ def test_qwen_runner_uses_current_python_for_accelerate(tmp_path):
     assert command[:3] == [sys.executable, "-m", "accelerate.commands.launch"]
     assert command[command.index("--seed") + 1] == "42"
     assert command[command.index("--config") + 1] == "/tmp/train.yaml"
+
+
+def test_qwen_inference_requires_a_gpu_lease(monkeypatch, tmp_path):
+    from src.qwen import inference
+
+    monkeypatch.delenv("IMAGE_EDIT_GPU_UUID", raising=False)
+    with pytest.raises(RuntimeError, match="image-edit gpu"):
+        inference.run(type("Args", (), {"run": str(tmp_path)})())

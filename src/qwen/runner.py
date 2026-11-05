@@ -18,6 +18,7 @@ from src.core.metadata import now, versions
 from src.infra.experiment import source_snapshot
 from src.infra.gpu import require_lease
 from src.qwen.data import verify_manifest, write_manifest
+from src.qwen.inference import run as infer
 from src.qwen.provenance import verify_external_repo, verify_model_download
 
 PROTOCOL = "configs/experiments/qwen_cjt_pilot.yaml"
@@ -226,3 +227,12 @@ def configure(parser):
     train_parser.add_argument("--run", required=True)
     train_parser.add_argument("--lock", default="configs/assets.lock.json")
     train_parser.set_defaults(func=train)
+
+    infer_parser = subparsers.add_parser("infer")
+    infer_parser.add_argument("--run", required=True)
+    infer_parser.add_argument("--output", required=True)
+    infer_parser.add_argument("--sample-id")
+    infer_parser.add_argument("--steps", type=int, default=4)
+    infer_parser.add_argument("--seed", type=int, default=42)
+    infer_parser.add_argument("--lock", default="configs/assets.lock.json")
+    infer_parser.set_defaults(func=infer)

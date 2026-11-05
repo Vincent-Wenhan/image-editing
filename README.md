@@ -359,6 +359,15 @@ image-edit qwen prepare --protocol configs/experiments/qwen_cjt_rank8_pilot.yaml
 image-edit gpu -- image-edit qwen train --run outputs/qwen_cjt_rank8_pilot_seeded
 ```
 
+rank8 完成后，用 CPU offload 做单例 Dev checkpoint reload。该命令只读取 source、mask 和
+instruction，target 只保存在 provenance 中，生成结果不能单独作为质量结论：
+
+```bash
+image-edit gpu -- image-edit qwen infer \
+  --run outputs/qwen_cjt_rank8_pilot_seeded \
+  --output outputs/qwen_cjt_rank8_pilot_seeded/dev_inference
+```
+
 训练入口会再次检查模型 receipt、Inter-Edit revision、manifest SHA 和 GPU UUID lease；
 没有租约会在启动外部训练前失败。pilot 通过后，按[方向设计](docs/qwen_cjt_direction_design.md)
 扩展到固定的 binary/role/geometry 条件矩阵；Qwen 与 FLUX 只做条件收益和资源对照，不做
