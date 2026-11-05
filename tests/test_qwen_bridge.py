@@ -4,8 +4,10 @@ import json
 from pathlib import Path
 
 import pytest
+from PIL import Image
 
 from src.core.io import read_rows, sha256, write_json
+from src.core.paths import data_path
 from src.qwen.data import verify_condition_manifest, verify_manifest, write_manifest
 
 
@@ -70,6 +72,71 @@ def test_qwen_condition_verification_never_opens_target(paired_data, tmp_path):
     row = read_rows(paired_data / "train/manifest.csv")[0]
     (paired_data / row["target_path"]).unlink()
     assert verify_condition_manifest(output, root=paired_data)["ids"] == [row["id"]]
+
+
+def make_control_snapshot(data_root: Path, output: Path) -> Path:
+    entries = {}
+    for split in ("train", "dev"):
+        row = read_rows(data_root / split / "manifest.csv")[0]
+        relative = f"{split}/mask_rgb/{row['id']}.png"
+        path = output / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with Image.open(data_path(data_root, row["mask_path"])) as image:
+            image.convert("RGB").save(path)
+        entries[split] = {
+            "manifest_sha256": sha256(data_root / split / "manifest.csv"),
+            "entries": {
+                row["id"]: {
+                    "path": relative,
+                    "sha256": sha256(path),
+                    "source_sha256": row["source_sha256"],
+                }
+            },
+        }
+    write_json(
+        output / "controls.json",
+        {
+            "schema_version": 2,
+            "kind": "dynamic_binary",
+            "purpose": "oracle_upper_bound",
+            "order": ["source", "mask_rgb"],
+            "splits": entries,
+        },
+    )
+    return output
+
+
+def test_qwen_manifest_uses_verified_external_condition_without_target(paired_data, tmp_path):
+    make_dataset_record(paired_data)
+    controls = make_control_snapshot(paired_data, tmp_path / "controls")
+    output = tmp_path / "train.json"
+    write_manifest(paired_data, "train", output, control_root=controls)
+    payload = json.loads(output.read_text())
+    assert payload[0]["mask_image_path"] == str(
+        (controls / "train/mask_rgb/train_train_t1.png").resolve()
+    )
+    assert verify_manifest(output, root=paired_data)["condition"]["kind"] == "dynamic_binary"
+    row = read_rows(paired_data / "train/manifest.csv")[0]
+    (paired_data / row["target_path"]).unlink()
+    assert verify_condition_manifest(output, root=paired_data)["condition"]["kind"] == (
+        "dynamic_binary"
+    )
+
+
+def test_qwen_inference_uses_manifest_control_path(paired_data, tmp_path):
+    make_dataset_record(paired_data)
+    controls = make_control_snapshot(paired_data, tmp_path / "controls")
+    manifest = tmp_path / "dev.json"
+    write_manifest(paired_data, "dev", manifest, control_root=controls)
+    from src.qwen.inference import _row
+
+    sample, checks = _row(
+        {"data_root": str(paired_data), "dev_manifest": str(manifest)}, None
+    )
+    assert sample["mask_image_path"] == str(
+        (controls / "dev/mask_rgb/dev_dev_t1.png").resolve()
+    )
+    assert checks["id"] == sample["id"]
 
 
 def test_qwen_train_refuses_to_start_without_a_gpu_lease(monkeypatch, tmp_path):

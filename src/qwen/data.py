@@ -12,6 +12,7 @@ from src.core.config import load_assets
 from src.core.io import read_rows, sha256, write_json
 from src.core.paths import data_path
 from src.datasets.validation import validate, verify_images
+from src.qwen.conditions import condition_from_record, load_conditions
 from src.qwen.provenance import INTER_EDIT_REPOSITORY
 
 SCHEMA = "qwen_cjt_manifest_v1"
@@ -69,13 +70,13 @@ def _check_paths(root: Path, row: dict[str, str]) -> None:
         raise ValueError(f"Target cannot be a Qwen control input: {row['id']}")
 
 
-def _sample(row: dict[str, str]) -> dict[str, Any]:
+def _sample(row: dict[str, str], mask_path: str | None = None) -> dict[str, Any]:
     """Return only the fields consumed by Inter-Edit plus a stable sample ID."""
     return {
         "id": row["id"],
         "original_image_path": row["source_path"],
         "edited_image_path": row["target_path"],
-        "mask_image_path": row["mask_path"],
+        "mask_image_path": mask_path or row["mask_path"],
         "instruction": row["instruction"],
     }
 
@@ -93,6 +94,7 @@ def write_manifest(
     limit: int | None = None,
     lock_path: str | Path = "configs/assets.lock.json",
     external_revision: str | None = None,
+    control_root: str | Path | None = None,
 ) -> dict:
     """Write one train/dev JSON manifest and an immutable audit sidecar."""
     root = Path(root).resolve()
@@ -101,7 +103,8 @@ def write_manifest(
     if output.exists() or sidecar.exists():
         raise FileExistsError(f"Qwen manifest already exists: {output}")
     rows = _rows(root, split, limit)
-    samples = [_sample(row) for row in rows]
+    conditions = load_conditions(root, split, rows, control_root)
+    samples = [_sample(row, conditions.entries[row["id"]].path) for row in rows]
     output.parent.mkdir(parents=True, exist_ok=True)
     write_json(output, samples)
     assets = load_assets(lock_path)
@@ -118,6 +121,7 @@ def write_manifest(
         "json_sha256": sha256(output),
         "control_order": list(CONTROL_ORDER),
         "target_field": "edited_image_path",
+        "condition": conditions.record(),
         "inter_edit_revision": revision,
         "qwen_model": assets["models"]["qwen_image_edit_2511"],
         "samples": [
@@ -125,7 +129,7 @@ def write_manifest(
                 "id": row["id"],
                 "source_sha256": row["source_sha256"],
                 "target_sha256": row["target_sha256"],
-                "mask_sha256": row["mask_sha256"],
+                "mask_sha256": conditions.entries[row["id"]].sha256,
             }
             for row in rows
         ],
@@ -166,11 +170,20 @@ def verify_manifest(
     rows = _rows(data_root, record["split"], len(record["ids"]))
     if [row["id"] for row in rows] != record["ids"]:
         raise ValueError("Qwen manifest selection differs from the canonical manifest")
+    declared = condition_from_record(record)
+    conditions = load_conditions(
+        data_root,
+        record["split"],
+        rows,
+        declared.root if declared is not None else None,
+    )
+    if record.get("condition", conditions.record()) != conditions.record():
+        raise ValueError("Qwen condition provenance changed")
     samples = json.loads(manifest.read_text(encoding="utf-8"))
     if not isinstance(samples, list) or len(samples) != len(rows):
         raise ValueError("Qwen manifest must be a JSON list with the recorded sample count")
     for row, sample in zip(rows, samples, strict=True):
-        expected = _sample(row)
+        expected = _sample(row, conditions.entries[row["id"]].path)
         if sample != expected:
             raise ValueError(f"Qwen sample differs from the canonical row: {row['id']}")
         controls = [sample[key] for key in CONTROL_ORDER]
@@ -181,7 +194,7 @@ def verify_manifest(
             "id": row["id"],
             "source_sha256": row["source_sha256"],
             "target_sha256": row["target_sha256"],
-            "mask_sha256": row["mask_sha256"],
+            "mask_sha256": conditions.entries[row["id"]].sha256,
         }
         for row in rows
     ]
@@ -233,11 +246,20 @@ def verify_condition_manifest(
     )
     if [row["id"] for row in rows] != record["ids"]:
         raise ValueError("Qwen manifest selection differs from the canonical manifest")
+    declared = condition_from_record(record)
+    conditions = load_conditions(
+        data_root,
+        record["split"],
+        rows,
+        declared.root if declared is not None else None,
+    )
+    if record.get("condition", conditions.record()) != conditions.record():
+        raise ValueError("Qwen condition provenance changed")
     samples = json.loads(manifest.read_text(encoding="utf-8"))
     if not isinstance(samples, list) or len(samples) != len(rows):
         raise ValueError("Qwen manifest must be a JSON list with the recorded sample count")
     for row, sample in zip(rows, samples, strict=True):
-        if sample != _sample(row):
+        if sample != _sample(row, conditions.entries[row["id"]].path):
             raise ValueError(f"Qwen sample differs from the canonical row: {row['id']}")
         if sample["edited_image_path"] in [sample[key] for key in CONTROL_ORDER]:
             raise ValueError(f"Target leaked into Qwen controls: {row['id']}")

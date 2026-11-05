@@ -44,20 +44,31 @@ def prepare(args) -> None:
     run.mkdir(parents=True)
     try:
         paths = _paths(run)
-        write_manifest(
+        control_root = Path(args.control_root).resolve() if args.control_root else None
+        train_record = write_manifest(
             data_root,
             protocol["train_split"],
             paths["train"],
             limit=protocol.get("train_limit"),
             lock_path=args.lock,
+            control_root=control_root,
         )
-        write_manifest(
+        dev_record = write_manifest(
             data_root,
             protocol["dev_split"],
             paths["dev"],
             limit=protocol.get("dev_limit"),
             lock_path=args.lock,
+            control_root=control_root,
         )
+        if train_record["condition"] != dev_record["condition"]:
+            raise ValueError("Qwen train/dev manifests use different control snapshots")
+        expected_condition = protocol.get("condition_kind")
+        if expected_condition and train_record["condition"]["kind"] != expected_condition:
+            raise ValueError(
+                f"Qwen protocol expects {expected_condition}, "
+                f"got {train_record['condition']['kind']}"
+            )
         asset = load_assets(args.lock)["models"][protocol["model_asset"]]
         model_path = Path(asset["path"]).resolve()
         external = Path(args.external).resolve()
@@ -77,6 +88,7 @@ def prepare(args) -> None:
             "seed": protocol["seed"],
             "train_manifest": str(paths["train"]),
             "dev_manifest": str(paths["dev"]),
+            "condition": train_record["condition"],
             "train_config": str(paths["config"]),
             "config_sha256": sha256(paths["config"]),
         }
@@ -214,6 +226,7 @@ def configure(parser):
     prepare_parser.add_argument("--output", required=True)
     prepare_parser.add_argument("--protocol", default=PROTOCOL)
     prepare_parser.add_argument("--external", default="external/Inter-Edit")
+    prepare_parser.add_argument("--control-root")
     prepare_parser.add_argument("--lock", default="configs/assets.lock.json")
     prepare_parser.set_defaults(func=prepare)
 

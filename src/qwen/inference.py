@@ -9,9 +9,9 @@ from pathlib import Path
 
 from PIL import Image
 
-from src.core.io import read_rows, sha256, write_json
-from src.core.paths import data_path
+from src.core.io import sha256, write_json
 from src.infra.gpu import require_lease
+from src.qwen.conditions import condition_path
 from src.qwen.data import verify_condition_manifest
 from src.qwen.provenance import verify_model_download
 
@@ -42,16 +42,21 @@ def _checkpoint_path(run_root: Path, requested: str | None = None) -> Path:
     return max(candidates, key=lambda item: item[0])[1]
 
 
-def _row(record: dict, sample_id: str | None) -> dict[str, str]:
+def _row(record: dict, sample_id: str | None) -> tuple[dict[str, str], dict[str, str]]:
     root = Path(record["data_root"])
-    verify_condition_manifest(record["dev_manifest"], root=root)
-    rows = read_rows(root / "dev/manifest.csv")
+    provenance = verify_condition_manifest(record["dev_manifest"], root=root)
+    samples = json.loads(Path(record["dev_manifest"]).read_text(encoding="utf-8"))
     if sample_id is None:
-        return rows[0]
-    matches = [row for row in rows if row["id"] == sample_id]
-    if len(matches) != 1:
-        raise ValueError(f"Unknown or duplicate Dev sample: {sample_id}")
-    return matches[0]
+        sample = samples[0]
+    else:
+        matches = [row for row in samples if row["id"] == sample_id]
+        if len(matches) != 1:
+            raise ValueError(f"Unknown or duplicate Dev sample: {sample_id}")
+        sample = matches[0]
+    checks = [item for item in provenance["samples"] if item["id"] == sample["id"]]
+    if len(checks) != 1:
+        raise ValueError(f"Missing provenance for Dev sample: {sample['id']}")
+    return sample, checks[0]
 
 
 def run(args) -> None:
@@ -64,10 +69,10 @@ def run(args) -> None:
     if execution.get("status") != "complete" or execution.get("returncode") != 0:
         raise ValueError("Qwen inference requires a completed training execution")
     verify_model_download(record["model_path"], args.lock)
-    row = _row(record, args.sample_id)
+    row, checks = _row(record, args.sample_id)
     root = Path(record["data_root"])
-    source_path = data_path(root, row["source_path"])
-    mask_path = data_path(root, row["mask_path"])
+    source_path = condition_path(root, row["original_image_path"])
+    mask_path = condition_path(root, row["mask_image_path"])
     checkpoint = _checkpoint_path(run_root, getattr(args, "checkpoint", None))
     output = Path(args.output).resolve()
     if output.exists():
@@ -77,9 +82,9 @@ def run(args) -> None:
         "status": "running",
         "run": str(run_root),
         "sample_id": row["id"],
-        "source_sha256": row["source_sha256"],
-        "mask_sha256": row["mask_sha256"],
-        "target_sha256": row["target_sha256"],
+        "source_sha256": checks["source_sha256"],
+        "mask_sha256": checks["mask_sha256"],
+        "target_sha256": checks["target_sha256"],
         "control_order": ["source", "mask"],
         "checkpoint": str(checkpoint),
         "checkpoint_sha256": sha256(checkpoint),
