@@ -47,7 +47,8 @@ def run(args):
                         asset["revision"],
                         item,
                         destination,
-                        payload_mirror=args.payload_mirror if name == "base" else None,
+                        connections=args.connections,
+                        payload_mirror=args.payload_mirror,
                     )
                     for item in items
                 ]
@@ -75,6 +76,7 @@ def configure(parser):
     asset_names = [*DEFAULT_ASSETS, "qwen_image_edit_2511"]
     parser.add_argument("--asset", choices=[*asset_names, "all"], default="base")
     parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument("--connections", type=int, default=8)
     parser.add_argument("--transport", choices=["hub", "ranges"], default="hub")
     parser.add_argument("--payload-mirror", choices=["modelscope"])
     parser.set_defaults(func=run)

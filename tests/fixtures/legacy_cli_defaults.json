@@ -11,6 +11,7 @@
     "lock": "configs/assets.lock.json",
     "asset": "base",
     "workers": 4,
+    "connections": 8,
     "transport": "hub",
     "payload_mirror": null
   },

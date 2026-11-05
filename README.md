@@ -241,7 +241,12 @@ image-edit download --asset all --transport ranges --payload-mirror modelscope
 image-edit prepare --transport shards
 ```
 
-ModelScope 只作为 Base 权重的传输镜像；每个权重必须匹配 Hugging Face 固定 revision 的 SHA256。数据只下载满足样本数所需的前几个 parquet 分片，并保留在本地 `data/raw/`。
+ModelScope 只作为模型权重的传输镜像；每个权重必须匹配 Hugging Face 固定 revision 的 SHA256。数据只下载满足样本数所需的前几个 parquet 分片，并保留在本地 `data/raw/`。
+
+大模型下载遇到镜像限流时降低 range 并发，例如
+`image-edit download --asset qwen_image_edit_2511 --transport ranges --workers 1 --connections 2`；
+`--payload-mirror modelscope` 只改变传输地址，完成后仍按锁定 revision 的 Hugging Face
+SHA256 校验。
 
 MagicBrush 使用官方 train/dev、每个会话的第一轮，固定上游顺序；不接触 test。实际 source 为 500×500，target/mask 为 1024×1024；先检查宽高比，再统一长边 512。RGBA mask 用反向 alpha 提取编辑区，普通灰度 mask 才使用白色区域。导出保存原始与输出尺寸、mask 编码、样本身份、指令及 SHA256，严格检查配对和跨 split 泄漏。重复执行仅复用通过校验且 revision/数量/预处理一致的完整 split。
 

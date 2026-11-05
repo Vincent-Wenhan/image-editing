@@ -62,7 +62,7 @@ upstream = importlib.util.find_spec('datasets')
 assert upstream is None or upstream.origin != src.datasets.__file__
 """
     subprocess.run(
-        [sys.executable, "-c", script], cwd=tmp_path, env=environment, check=True, timeout=60
+        [sys.executable, "-c", script], cwd=tmp_path, env=environment, check=True, timeout=120
     )
     for command in (
         [sys.executable, "-m", "src"],

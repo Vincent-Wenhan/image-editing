@@ -23,6 +23,11 @@ Inter-Edit JSON 的 target-free control bridge、外部 revision/clean-tree 检�
 契约测试，尚未下载 Qwen 权重、启动 GPU 或产生质量结论。下一步先校验模型 receipt，再
 等待实时 `nvidia-smi` 与 `image-edit gpu --` 门禁后的 capacity/forward/backward pilot。
 
+2026-11-05 UTC Qwen 权重下载：Hugging Face 直连超时，hf-mirror 已成功校验小文件和部分
+大分片；默认 4 worker×8 range 请求触发镜像 429/SSL 波动，已停止本项目自身进程并保留
+约 8.6GB 可续传分片。补充显式 `--connections`，后续改用低并发续传；没有写入完成
+`download.json`，没有启动 GPU。
+
 2026-10-23 Asia/Shanghai 本轮收尾：原注入与唯一channel_rms的四方法×双seed均完成，
 正式1920updates、712图、112对checkpoint保留，两个版本均未通过fit/角色利用/D增量。
 RMS使固定Train Old/New BF16差分丢失从79.8–86.0%降到25.2–38.5%，仍未形成正确

@@ -85,6 +85,8 @@ FLUX 不能直接按数字等价，正式结论只在同一基座内部比较；
 对应协议是 `configs/experiments/qwen_cjt_pilot.yaml`。尚未下载 Qwen 权重或启动 GPU；
 后续顺序固定为：下载并校验 receipt，CPU 复核 bridge，实时查询 `nvidia-smi`，通过
 `image-edit gpu -- image-edit qwen train ...` 完成 pilot，再决定是否进入 Q0/Q1 正式矩阵。
+大权重下载遇到限流时只降低传输并发并保留断点分片；传输镜像不改变锁定 revision，
+最终必须通过逐文件 SHA256 校验才会写入 `download.json`。
 
 ## 评估和停止条件
 
