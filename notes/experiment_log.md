@@ -60,6 +60,11 @@ rank8 同预算重试，暂不同时引入量化或双卡改变多个变量。
 隔离。新增 condition-only manifest verifier，inference 现在只校验/读取 source 与 mask；
 补充删除 target 后仍能通过的回归测试。已有 smoke 产物保留，修复后使用新目录重跑。
 
+2026-11-06 UTC Qwen condition-only reload 重跑：新目录 `dev_inference_condition_safe` 完成
+4-step Dev reload，prediction SHA 与修复前相同（`6b18c1e4...f38295`），target 未读取；
+说明隔离修复没有改变生成。工程 pilot 门槛完成，登记完整 Train/Dev、rank8、seed42、20-update
+Q1 binary-mask 有界对照，尚不写质量结论。
+
 2026-11-06 UTC Qwen rank8 reload smoke：通过 GPU1 lease 使用 CPU offload 加载 base+LoRA，
 4-step 单例 Dev `dev_140513_t1` 完成，峰值显存约 42GiB，prediction SHA256 为
 `6b18c1e4e765461872774901f3690c63c5a63c8752006b8bbacccef093f38295`。source/mask/instruction

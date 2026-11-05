@@ -368,6 +368,15 @@ image-edit gpu -- image-edit qwen infer \
   --output outputs/qwen_cjt_rank8_pilot_seeded/dev_inference
 ```
 
+工程 pilot 和 reload 都通过后，Q1 binary-mask 有界对照使用完整 canonical Train/Dev，
+固定 rank8、seed42 和 20 updates：
+
+```bash
+image-edit qwen prepare --protocol configs/experiments/qwen_cjt_q1_binary_rank8.yaml \
+  --data-root data/magicbrush --output outputs/qwen_cjt_q1_binary_rank8
+image-edit gpu -- image-edit qwen train --run outputs/qwen_cjt_q1_binary_rank8
+```
+
 训练入口会再次检查模型 receipt、Inter-Edit revision、manifest SHA 和 GPU UUID lease；
 没有租约会在启动外部训练前失败。pilot 通过后，按[方向设计](docs/qwen_cjt_direction_design.md)
 扩展到固定的 binary/role/geometry 条件矩阵；Qwen 与 FLUX 只做条件收益和资源对照，不做
