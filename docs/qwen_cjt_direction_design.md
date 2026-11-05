@@ -97,8 +97,16 @@ Dev 指标和人工评估后，才能判断条件收益。
 
 当前已实现 `src.qwen` 的 manifest bridge、model/external revision 检查、固定 seed 包装器、
 leased runner 和 CPU-offload reload smoke。rank32 单卡容量失败，rank8 已完成 2-step
-训练和 1 例 Dev reload；这些结果仍不构成质量结论。下一步才是固定 rank8 预算下的
-Q1 binary-mask 对照，再决定是否进入 Q2 role/geometry 矩阵。
+训练和 1 例 Dev reload；这些结果仍不构成质量结论。Q1 已在 rank8 下完成完整
+Train/Dev 的 20-update binary-mask 有界对照，并成功重载 `checkpoint-20`。实际数字和
+限制见 [Q1 实际报告](qwen_cjt_q1_report.md)。
+
+Q1 只完成工程可行性和通用编辑链路验证：MagicBrush mask 不能提供项目 T/D/P 因果问题
+所需的 synthetic translation 证据，Qwen 的绝对分数也不能和 FLUX 4B 直接比较。因此
+方向作如下收窄：暂不扩大 MagicBrush Qwen 训练，也不立即启动 role/geometry 大矩阵；先
+准备独立 synthetic scene，在同一 Qwen、rank、seed、update 和采样预算下比较
+constant/no-information、dynamic binary `T∪D`，再决定是否进入 role/geometry。这样先
+回答“条件是否真的改变空间编辑”，再回答“更复杂编码是否有额外收益”。
 大权重下载遇到限流时只降低传输并发并保留断点分片；传输镜像不改变锁定 revision，
 最终必须通过逐文件 SHA256 校验才会写入 `download.json`。
 

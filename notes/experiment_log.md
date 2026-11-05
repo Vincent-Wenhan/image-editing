@@ -72,6 +72,20 @@ Q1 binary-mask 有界对照，尚不写质量结论。
 正式质量指标或人工评分。Qwen rank8 工程 pilot 的加载、训练、checkpoint reload 和 Dev
 推理门槛已通过，下一步才进入固定预算的 binary-mask 对照。
 
+2026-11-06 UTC Qwen Q1 binary-mask 有界对照：使用完整 canonical Train/Dev、rank8、seed42、
+batch1、BF16、20 updates 在 GPU1 完成，20/20 updates，1474.77s，无 OOM，观察到峰值约
+48.6GiB。20 个 step loss 为 0.00774–0.305（均值约0.0490），`checkpoint-20` SHA256 为
+`d6cf9c8f63ce94b77d145970cff8f09000583978ad1cc8be255a2f5089589a9f`。随后对固定 Dev
+样本 `dev_140513_t1` 使用 checkpoint-20、CPU offload、4 steps 重载成功，prediction
+SHA256 为 `d35ecf5184061c7311a09e316973505503eb053df07b375145a16cb601362af4`；target
+仍只在 provenance 记录中出现。训练和重载均使用实时 UUID lease，未占用他人 GPU。
+
+本轮只通过模型/数据/训练/checkpoint/reload 工程门禁，没有正式 T/D/P 指标、同预算
+baseline、第二训练 seed 或真人评分，因此不写 Qwen 或 binary-mask 的质量收益结论。
+研究方向收窄为先准备新的 synthetic scene，再做 constant/no-information 与 dynamic
+binary `T∪D` 同预算对照；MagicBrush Q1 不足以验证项目的角色和几何因果假设。详细边界
+见 `docs/qwen_cjt_q1_report.md` 和 `docs/qwen_cjt_direction_design.md`。
+
 2026-10-23 Asia/Shanghai 本轮收尾：原注入与唯一channel_rms的四方法×双seed均完成，
 正式1920updates、712图、112对checkpoint保留，两个版本均未通过fit/角色利用/D增量。
 RMS使固定Train Old/New BF16差分丢失从79.8–86.0%降到25.2–38.5%，仍未形成正确
