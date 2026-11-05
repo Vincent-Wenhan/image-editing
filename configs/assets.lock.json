@@ -28,6 +28,22 @@
       "derived_from": "base",
       "path": "models/klein_text_encoder",
       "description": "Reuse the exact Qwen3 encoder and tokenizer bundled with the pinned base snapshot"
+    },
+    "qwen_image_edit_2511": {
+      "repo_id": "Qwen/Qwen-Image-Edit-2511",
+      "revision": "6f3ccc0b56e431dc6a0c2b2039706d7d26f22cb9",
+      "path": "models/Qwen-Image-Edit-2511",
+      "allow_patterns": [
+        "*.json",
+        "*.md",
+        "processor/*",
+        "scheduler/*",
+        "text_encoder/*",
+        "tokenizer/*",
+        "transformer/*",
+        "vae/*"
+      ],
+      "description": "Pinned Qwen-Image-Edit-2511 base for the independent CJT validation track"
     }
   },
   "dataset": {

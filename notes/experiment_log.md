@@ -17,6 +17,12 @@ CJT 都适合做第二基座验证；先复现 source+binary-mask，再比较 ro
 Qwen 20B 及其语义/VAE组件会显著改变容量和基座，不能把绝对质量提升归因于本方法。
 方案登记于 `docs/qwen_cjt_direction_design.md`；尚未下载模型、修改外部源码或启动GPU。
 
+2026-11-05 UTC Qwen pilot 工程实现：新增锁定的 2511 revision、canonical train/dev 到
+Inter-Edit JSON 的 target-free control bridge、外部 revision/clean-tree 检查和 UUID lease
+训练入口。当前协议为 2 Train/2 Dev/2 updates，官方 1024 级 VAE 预处理；已实现和 CPU
+契约测试，尚未下载 Qwen 权重、启动 GPU 或产生质量结论。下一步先校验模型 receipt，再
+等待实时 `nvidia-smi` 与 `image-edit gpu --` 门禁后的 capacity/forward/backward pilot。
+
 2026-10-23 Asia/Shanghai 本轮收尾：原注入与唯一channel_rms的四方法×双seed均完成，
 正式1920updates、712图、112对checkpoint保留，两个版本均未通过fit/角色利用/D增量。
 RMS使固定Train Old/New BF16差分丢失从79.8–86.0%降到25.2–38.5%，仍未形成正确

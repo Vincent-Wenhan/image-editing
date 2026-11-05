@@ -19,6 +19,7 @@ COMMANDS = {
     "gallery": "src.evaluation.gallery",
     "review": "src.evaluation.review",
     "scene": "src.datasets.scene",
+    "qwen": "src.qwen.runner",
 }
 
 

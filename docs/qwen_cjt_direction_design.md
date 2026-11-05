@@ -1,7 +1,7 @@
 # Qwen CJT 第二基座验证轨
 
-2026-11-05 UTC。本文登记 Qwen 方向的研究设计，不代表已经下载模型、启动训练或
-得到质量结论。
+2026-11-05 UTC。本文登记 Qwen 方向的研究设计和当前工程边界。模型下载、GPU pilot
+和质量结论分别记录；任何 pilot 通过都不等于方法收益。
 
 ## 决策
 
@@ -74,10 +74,17 @@ VAE，总组件规模约 27.1B。48GB A6000 不应假设能以完整 BF16 训练
 模型并行或停止这条路线；不使用无效显存填充，也不在正式实验中临时降低分辨率或 batch
 来改变预算定义。
 
-官方 Inter-Edit debug 配置采用 batch1、512/1024 级图像、bf16、LoRA rank32、最多
-两个 control images；本项目先以 512² 做工程 pilot，随后在容量允许时做 1024² 复核。
-Qwen 方向的更新数与 FLUX 不能直接按数字等价，正式结论只在同一基座内部比较；跨基座
-只报告条件收益、质量指标、显存、时间和预算。
+官方 Inter-Edit debug 配置采用 batch1、1024 级 VAE 预处理、bf16、LoRA rank32、最多
+两个 control images；本项目的 canonical MagicBrush 文件仍是 512²，但官方固定处理器会
+把它映射到 1024 级 latent。当前 pilot 只做 2 个 Train 样本和 2 个更新，用来测量加载、
+前向、反向、checkpoint 与重载边界，不把它当成 512² 质量实验。Qwen 方向的更新数与
+FLUX 不能直接按数字等价，正式结论只在同一基座内部比较；跨基座只报告条件收益、质量
+指标、显存、时间和预算。
+
+当前已实现 `src.qwen` 的 manifest bridge、model/external revision 检查和 leased runner，
+对应协议是 `configs/experiments/qwen_cjt_pilot.yaml`。尚未下载 Qwen 权重或启动 GPU；
+后续顺序固定为：下载并校验 receipt，CPU 复核 bridge，实时查询 `nvidia-smi`，通过
+`image-edit gpu -- image-edit qwen train ...` 完成 pilot，再决定是否进入 Q0/Q1 正式矩阵。
 
 ## 评估和停止条件
 

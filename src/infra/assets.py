@@ -8,12 +8,14 @@ from src.core.config import load_assets
 from src.core.io import write_json
 from src.core.metadata import now
 
+DEFAULT_ASSETS = ("base", "training_vae", "training_text")
+
 
 def run(args):
     from huggingface_hub import snapshot_download
 
     lock = load_assets(args.lock)
-    selected = [args.asset] if args.asset != "all" else list(lock["models"])
+    selected = [args.asset] if args.asset != "all" else list(DEFAULT_ASSETS)
     for name in selected:
         asset = lock["models"][name]
         destination = Path(asset["path"])
@@ -70,9 +72,8 @@ def run(args):
 
 def configure(parser):
     parser.add_argument("--lock", default="configs/assets.lock.json")
-    parser.add_argument(
-        "--asset", choices=["base", "training_vae", "training_text", "all"], default="base"
-    )
+    asset_names = [*DEFAULT_ASSETS, "qwen_image_edit_2511"]
+    parser.add_argument("--asset", choices=[*asset_names, "all"], default="base")
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--transport", choices=["hub", "ranges"], default="hub")
     parser.add_argument("--payload-mirror", choices=["modelscope"])

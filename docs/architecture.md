@@ -307,6 +307,7 @@ setuptools 从仓库根发现 `src` / `src.*`，console entry point 保持 `imag
 | `src/training` | 训练配置、固定 ai-toolkit 适配、checkpoint 验证 | core、datasets、infra |
 | `src/evaluation` | 像素诊断、历史产物评估、画廊 | core、datasets、NumPy、Pillow |
 | `src/infra` | 固定资产下载、断点续传、GPU 租约、环境及验收编排 | core；编排通过 CLI 调用业务 |
+| `src/qwen` | Qwen 资产/外部 revision 门禁、CJT manifest bridge、leased Inter-Edit runner | core、datasets、infra |
 | `scripts` | 保留现有命令的轻量入口、环境 bootstrap、仓库检查 | 已安装的 src 包 |
 
 底层数据对象不引用后端；推理流程不接收训练监督。重型 torch/diffusers/upstream
@@ -339,6 +340,8 @@ manifest、采样预算和固定样本完全一致。路径可迁移，数据内
 - `EditingBackend` 只统一编辑调用与输出；模型内部 Transformer 保持独立。
 - 当前 FLUX 后端只支持无空间条件的 Stage 0；收到尚未实现的控制时明确报错，不能静默忽略。
 - manifest 的推理读取路径只加载 source 和 instruction；训练与评估才读取 target。
+- `qwen` 只把 canonical train/dev manifest 桥接为固定 Inter-Edit CJT JSON；控制顺序为
+  source + mask，target 只由外部训练脚本作为 flow supervision 读取，Qwen 不进入默认 FLUX backend。
 
 配置保留 `configs/assets.lock.json` 的固定资产格式和现有完整 ai-toolkit YAML。
 数据选择、实验/验收预算与模型资产分开；Python 和 shell 从配置读取默认值，
@@ -364,6 +367,7 @@ src/                          # package，不是传统 src-layout 的搜索根
   evaluation/                 # metrics, provenance, evaluate, gallery
   infra/                      # assets, transport, gpu, environment, process,
                               # repositories, repository, acceptance
+  qwen/                       # CJT manifest bridge, provenance and leased runner
 configs/
   assets.lock.json            # 模型、数据、第三方 commit；格式不变
   flux2_edit_lora.yaml         # 完整旧配方；字段和算法不变
@@ -391,6 +395,9 @@ flowchart LR
     I --> J[leased ai-toolkit worker]
     J --> K[finite checkpoint + report.json]
     K --> F
+    D --> L[Qwen source + mask JSON bridge]
+    L --> M[leased Inter-Edit CJT worker]
+    M --> N[Qwen LoRA + execution receipt]
 ```
 
 推理流程只调用 `load_edit_input`，不加载 target/mask/oracle 标签。训练器只消费原来的
@@ -410,10 +417,11 @@ target/mask 只在独立监督加载或评估中打开。`ControlKind.ORACLE_ROL
 - Dynamic Role：在 `datasets` 增加合成场景读取、分组 split 和有效区域；
   在 `conditioning` 加入强度条件预测，`EditSupervision` 单独承载角色真值。
   实际预测返回 `PREDICTED_ROLE`，oracle 上界使用单独、显式的实验流程。
-- Qwen：在 `backends` 增加独立 adapter，在 `training` 增加对应训练集成；
-  复用外部编辑协议和记录，不复用 FLUX Transformer/latent packing。
+- Qwen 后续质量评估：在独立 `backends` adapter 中复用 Qwen pipeline 的 source + mask
+  输入和统一 run provenance；当前 `qwen` 只负责 CJT 工程 pilot，未把 Qwen 控制条件
+  接到 FLUX，也不复用 FLUX Transformer/latent packing。
 
-这些都是下一阶段位置说明，本次没有实现新控制或训练方法。
+除 Qwen 的 manifest/lease 工程 pilot 外，上述质量控制和正式训练方法仍未实现。
 
 ## 开发、安装和运行
 

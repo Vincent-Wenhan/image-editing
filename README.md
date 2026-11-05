@@ -232,7 +232,7 @@ image-edit gallery
 image-edit gpu -- image-edit env --cuda
 ```
 
-下载固定 revision 见 [assets.lock.json](configs/assets.lock.json)。`base` 同时包含 Diffusers 与 BFL 原格式，后者供 ai-toolkit 使用；`training_text` 是 Klein 的 Qwen3 文本编码器，`training_vae` 是训练器需要的 VAE，不是第二阶段 Qwen-Image-Edit 模型。
+下载固定 revision 见 [assets.lock.json](configs/assets.lock.json)。`base` 同时包含 Diffusers 与 BFL 原格式，后者供 ai-toolkit 使用；`training_text` 是 Klein 的 Qwen3 文本编码器，`training_vae` 是训练器需要的 VAE，不是第二阶段 Qwen-Image-Edit 模型。`image-edit download --asset all` 只下载当前 FLUX 基线资产；Qwen 2511 是显式 opt-in 的第二基座，单独运行 `image-edit download --asset qwen_image_edit_2511`。
 
 `training_text` 通过本地链接复用 Base 附带的 Qwen3 权重和 tokenizer，不重复下载另一份文本模型。网络不稳定时可使用经过 SHA256 校验的分块下载：
 
@@ -323,6 +323,33 @@ image-edit gpu -- image-edit infer --lora outputs/lora/flux2_magicbrush_smoke/fl
 实际配置、决策和失败均单独记录，放大后 OOM 最多以新实验名降级一次。
 设备补丁幂等；worker 失败时执行清理并保留原始异常、统计及报告。
 
+## Qwen CJT 第二基座验证
+
+Qwen 轨道固定 `Qwen-Image-Edit-2511` 与 Inter-Edit revision，先复现 source + binary
+mask 的官方 Control-Image Joint Training。桥接只把 canonical train/dev manifest 导出为
+Inter-Edit 需要的 JSON，控制顺序固定为 `[original_image_path, mask_image_path]`；target
+只作为训练监督，不能进入控制列表。准备阶段不加载模型，也不占 GPU：
+
+```bash
+image-edit download --asset qwen_image_edit_2511 --transport ranges
+image-edit qwen prepare --data-root data/magicbrush --output outputs/qwen_cjt_capacity_pilot
+image-edit qwen verify --run outputs/qwen_cjt_capacity_pilot
+```
+
+当前协议是 2 个 Train 样本、2 个 Dev 样本、2 个更新的工程 pilot，使用官方 1024 级 VAE
+预处理，不能把它写成质量实验。模型存在且通过 `qwen verify --require-model` 后，才可以
+通过实时 GPU 门禁启动：
+
+```bash
+image-edit qwen verify --run outputs/qwen_cjt_capacity_pilot --require-model
+image-edit gpu -- image-edit qwen train --run outputs/qwen_cjt_capacity_pilot
+```
+
+训练入口会再次检查模型 receipt、Inter-Edit revision、manifest SHA 和 GPU UUID lease；
+没有租约会在启动外部训练前失败。pilot 通过后，按[方向设计](docs/qwen_cjt_direction_design.md)
+扩展到固定的 binary/role/geometry 条件矩阵；Qwen 与 FLUX 只做条件收益和资源对照，不做
+绝对分数排名。
+
 ## 开发与目录
 
 ```bash
@@ -340,7 +367,8 @@ git push
 `src/` 本身是 Python package，使用 `src.xxx` 绝对导入；模块入口为 `python -m src`。
 `src/core/` 管理数据契约、配置与记录；`datasets/` 管理数据，`conditioning/` 管理控制图契约；
 `backends/` 封装 FLUX.2，`inference/` 与 `training/` 组织执行，`evaluation/` 评估与可视化，
-`infra/` 管理下载、GPU 和环境。`scripts/` 保留轻量兼容入口。
+`infra/` 管理下载、GPU 和环境，`qwen/` 管理第二基座的数据桥接、版本门禁和外部训练入口。
+`scripts/` 保留轻量兼容入口。
 完整目录、依赖、数据流、旧新映射和扩展指南见 [architecture.md](docs/architecture.md)。
 
 配置分为 `configs/assets.lock.json`（模型/数据 revision）、`configs/datasets/`（数据选择）、
@@ -349,7 +377,8 @@ CLI 从这些配置读取默认值，原有命令行覆盖有效。采样默认�
 从仓库根执行默认命令；在其他目录使用已安装的 CLI 时，显式传入数据、模型和模板路径。
 
 `EditInput` 与 `EditSupervision` 独立，推理只读取 source/instruction；`ControlBundle` 标记控制来源，
-普通推理拒绝 oracle。FLUX 已接入 Static/Dilated/Shuffled Mask；Soft/Role/Qwen 仍未实现。
+普通推理拒绝 oracle。FLUX 已接入 Static/Dilated/Shuffled Mask；Soft/Role 仍未实现，Qwen 只接入
+独立的 CJT pilot 桥接，不改变默认 FLUX 路径。
 
 Stage 0 稳定性收尾的 97 项 CPU 回归、Ruff 与 CLI 检查通过；20-step /batch 2 和 150-step /
 batch 4 均保存了有限 checkpoint，固定 12 例重载和配对校验完成。此前 editable/wheel
