@@ -12,6 +12,11 @@
 - 研究结论：原始残差注入与 `channel_rms` 已有 No-Go 证据，本轮不扩大同一配方；
   有向几何场必须经过独立预注册方向、identity/P 和 zero/shuffle 门槛后才可训练。
 
+2026-11-05 UTC Qwen 方向调研：确认 Qwen-Image-Edit-2511 的官方架构和 Inter-Edit
+CJT 都适合做第二基座验证；先复现 source+binary-mask，再比较 role/geometry 条件。
+Qwen 20B 及其语义/VAE组件会显著改变容量和基座，不能把绝对质量提升归因于本方法。
+方案登记于 `docs/qwen_cjt_direction_design.md`；尚未下载模型、修改外部源码或启动GPU。
+
 2026-10-23 Asia/Shanghai 本轮收尾：原注入与唯一channel_rms的四方法×双seed均完成，
 正式1920updates、712图、112对checkpoint保留，两个版本均未通过fit/角色利用/D增量。
 RMS使固定Train Old/New BF16差分丢失从79.8–86.0%降到25.2–38.5%，仍未形成正确

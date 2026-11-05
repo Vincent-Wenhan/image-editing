@@ -16,6 +16,10 @@
 先修复画廊/产物 provenance，再以几何有向场作为新的 target-free 机制候选。当前不扩大
 同一残差注入训练，不启动新的 GPU 任务。
 
+Qwen 第二基座验证轨见[Qwen CJT 方向设计](docs/qwen_cjt_direction_design.md)。先复现
+官方 source+binary-mask CJT，再比较 role/geometry 条件；Qwen 结果只用于区分基座、
+注入接口和条件表示问题，不直接与 FLUX 做绝对分数排名。
+
 唯一候选修改先预注册于[通道预条件设计](docs/role_learnability_repair_design.md)：
 现有编码器内逐通道空间RMS归一化，不增加参数、不改loss；实现与验证状态见报告。
 新研究视图可显式指定`prepare ... --normalization channel_rms`，默认none保留旧计算。
