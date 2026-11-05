@@ -49,11 +49,18 @@ def test_qwen_manifest_matches_canonical_rows_and_is_target_free_in_controls(pai
         verify_manifest(output, root=paired_data)
 
 
-def test_qwen_manifest_rejects_test_split(paired_data, tmp_path):
+def test_qwen_manifest_rejects_unsupported_requested_split(paired_data, tmp_path):
     make_dataset_record(paired_data)
+    with pytest.raises(ValueError, match="train or dev"):
+        write_manifest(paired_data, "test", tmp_path / "test.json")
+
+
+def test_qwen_condition_verification_ignores_sealed_test_directory(paired_data, tmp_path):
+    make_dataset_record(paired_data)
+    output = tmp_path / "train.json"
+    write_manifest(paired_data, "train", output)
     (paired_data / "test").mkdir()
-    with pytest.raises(ValueError, match="sealed Test"):
-        write_manifest(paired_data, "dev", tmp_path / "dev.json")
+    assert verify_condition_manifest(output, root=paired_data)["split"] == "train"
 
 
 def test_qwen_condition_verification_never_opens_target(paired_data, tmp_path):

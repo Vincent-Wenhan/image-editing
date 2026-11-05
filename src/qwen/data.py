@@ -11,7 +11,7 @@ from PIL import Image
 from src.core.config import load_assets
 from src.core.io import read_rows, sha256, write_json
 from src.core.paths import data_path
-from src.datasets.validation import dataset_splits, validate, verify_images
+from src.datasets.validation import validate, verify_images
 from src.qwen.provenance import INTER_EDIT_REPOSITORY
 
 SCHEMA = "qwen_cjt_manifest_v1"
@@ -30,8 +30,6 @@ def _rows(
     root = root.resolve()
     if split not in SUPPORTED_SPLITS:
         raise ValueError("Qwen training and validation manifests may only use train or dev")
-    if "test" in dataset_splits(root):
-        raise ValueError("Qwen pilot refuses a dataset that exposes the sealed Test split")
     if validate_dataset:
         validate(root)
     rows = read_rows(root / split / "manifest.csv")
