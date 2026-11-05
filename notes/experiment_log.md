@@ -39,6 +39,11 @@ Torch/CUDA seed，并把 seed=42 写入 pilot config/receipt。旧未加 seed �
 2/2 manifest 和 Inter-Edit clean revision 通过。随后三次实时 `nvidia-smi` 均无符合项目
 空闲门禁的卡，尚未启动 Qwen GPU pilot，不能据此写任何容量或质量结论。
 
+2026-11-06 UTC Qwen pilot 启动门禁：实时 UUID lease 成功选中空闲 GPU1，但外部训练尚未
+启动；先后发现子命令 PATH 没有 `image-edit`、当前环境 PATH 没有 `accelerate` 两个入口
+兼容问题，均在加载模型前失败并释放租约。runner 改为使用环境内绝对 `image-edit` 调用和
+`sys.executable -m accelerate.commands.launch`，保留原 pilot 目录，不写入执行 receipt。
+
 2026-10-23 Asia/Shanghai 本轮收尾：原注入与唯一channel_rms的四方法×双seed均完成，
 正式1920updates、712图、112对checkpoint保留，两个版本均未通过fit/角色利用/D增量。
 RMS使固定Train Old/New BF16差分丢失从79.8–86.0%降到25.2–38.5%，仍未形成正确

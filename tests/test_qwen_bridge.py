@@ -76,3 +76,14 @@ def test_qwen_seed_wrapper_repeats_cpu_random_state():
     _seed(42)
     second = torch.rand(4)
     assert torch.equal(first, second)
+
+
+def test_qwen_runner_uses_current_python_for_accelerate(tmp_path):
+    import sys
+
+    from src.qwen.runner import _accelerate_command
+
+    command = _accelerate_command(tmp_path, "/tmp/train.yaml", 42)
+    assert command[:3] == [sys.executable, "-m", "accelerate.commands.launch"]
+    assert command[command.index("--seed") + 1] == "42"
+    assert command[command.index("--config") + 1] == "/tmp/train.yaml"

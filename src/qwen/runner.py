@@ -6,6 +6,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -149,6 +150,22 @@ def verify(args, *, require_model: bool = False) -> dict:
     return record
 
 
+def _accelerate_command(external: Path, config: str, seed: int) -> list[str]:
+    return [
+        sys.executable,
+        "-m",
+        "accelerate.commands.launch",
+        "--config_file",
+        str(external / "acc_config.yaml"),
+        "--module",
+        "src.qwen.seeded_train",
+        "--seed",
+        str(seed),
+        "--config",
+        config,
+    ]
+
+
 def train(args) -> None:
     require_lease()
     record = verify(args, require_model=True)
@@ -157,21 +174,7 @@ def train(args) -> None:
     if output.exists():
         raise FileExistsError(f"Qwen run already has an execution receipt: {output}")
     external = Path(record["external"]["path"])
-    accelerate = shutil.which("accelerate")
-    if accelerate is None:
-        raise FileNotFoundError("accelerate is not on PATH")
-    command = [
-        accelerate,
-        "launch",
-        "--config_file",
-        str(external / "acc_config.yaml"),
-        "--module",
-        "src.qwen.seeded_train",
-        "--seed",
-        str(record["seed"]),
-        "--config",
-        record["train_config"],
-    ]
+    command = _accelerate_command(external, record["train_config"], record["seed"])
     execution = {
         "status": "running",
         "created": now(),
