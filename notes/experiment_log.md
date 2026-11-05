@@ -86,6 +86,21 @@ baseline、第二训练 seed 或真人评分，因此不写 Qwen 或 binary-mask
 binary `T∪D` 同预算对照；MagicBrush Q1 不足以验证项目的角色和几何因果假设。详细边界
 见 `docs/qwen_cjt_q1_report.md` 和 `docs/qwen_cjt_direction_design.md`。
 
+2026-11-06 UTC Qwen synthetic Q2 数据准备：第一次 `scene generate` 因当前环境缺少
+`bpy==4.5.3` 失败，失败目录和 `generation.json/render.log` 保留；随后只在项目 `.tmp`
+隔离目录下载固定 bpy wheel，并按锁定 deb/SHA 提取 `.cache/blender/runtime`，没有修改
+共享环境或系统库。重试使用配置 SHA256 `ebddb4d4e27a60c711b5d0c23e62ce7384f2455dfa750d731e3226eacbf74adc`，
+CPU 468.12s 完成，数据集 SHA256 `2c0980f72adb1abb233836485f44529154419019456e5c09d2a924fa129e5907`；
+20 个独立 scene-group、512²、Train/Dev/Test=36/12/12，session/source 无交集，角色
+重算和背景显露校验通过。dynamic binary 和 constant control snapshot 的 index SHA
+分别为 `507360be91436cb17822255e341477680790a6d0666bf316f1b5a96ab96a3d3a` 与
+`5649aaf61eab7891a20e546576a3747a81c122fc9fbb173f917d667a2c8dd202`。
+
+Qwen condition bridge 扩展后，constant 与 oracle dynamic binary 两个 Q2 rank8/seed42/
+20-update run 均已 prepare；Train/Dev manifest、control SHA、source 配对和 target-free
+校验通过。实时 `nvidia-smi` 显示所有 GPU 均有计算进程，故未启动训练，不中断他人任务；
+两个 run 保留为下一次 UUID lease 成功后的唯一候选。临时 bpy wheel/site 已清理。
+
 2026-10-23 Asia/Shanghai 本轮收尾：原注入与唯一channel_rms的四方法×双seed均完成，
 正式1920updates、712图、112对checkpoint保留，两个版本均未通过fit/角色利用/D增量。
 RMS使固定Train Old/New BF16差分丢失从79.8–86.0%降到25.2–38.5%，仍未形成正确

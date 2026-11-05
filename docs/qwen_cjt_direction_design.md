@@ -107,6 +107,10 @@ Q1 只完成工程可行性和通用编辑链路验证：MagicBrush mask 不能�
 准备独立 synthetic scene，在同一 Qwen、rank、seed、update 和采样预算下比较
 constant/no-information、dynamic binary `T∪D`，再决定是否进入 role/geometry。这样先
 回答“条件是否真的改变空间编辑”，再回答“更复杂编码是否有额外收益”。
+为支持这一步，bridge 现在可以绑定独立 `controls.json` snapshot，校验 control SHA、
+source 配对、尺寸和 target 路径；推理会从 JSON manifest 读取实际 control path，不再
+错误地回退到 canonical mask。512² synthetic 数据已经生成并完成 Train/Dev/Test 校验，
+两个 Q2 manifest 已 prepare；GPU 训练仍等待实时空闲 UUID lease。
 大权重下载遇到限流时只降低传输并发并保留断点分片；传输镜像不改变锁定 revision，
 最终必须通过逐文件 SHA256 校验才会写入 `download.json`。
 

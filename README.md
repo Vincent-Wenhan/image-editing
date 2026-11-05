@@ -384,6 +384,21 @@ Q1 的实际训练和 checkpoint reload 结果见 [Qwen Q1 实际报告](docs/qw
 当前结果只通过工程门禁，尚无条件收益结论；下一步先使用独立 synthetic scene 做
 constant/no-information 与 dynamic binary 的同预算对照，再决定是否实现 role/geometry。
 
+Q2 的 synthetic 数据和 control snapshot 已准备好但尚未训练；两个协议都显式固定
+`rank8/seed42/20 updates`，通过 `--control-root` 绑定独立的 `controls.json`：
+
+```bash
+image-edit qwen prepare \
+  --protocol configs/experiments/qwen_cjt_q2_synthetic_constant_rank8.yaml \
+  --data-root data/qwen_cjt_synthetic_20261106_retry \
+  --control-root outputs/qwen_cjt_synthetic_20261106/constant_controls \
+  --output outputs/qwen_cjt_q2_synthetic_constant_rank8
+```
+
+dynamic binary 使用对应的 `qwen_cjt_q2_synthetic_dynamic_rank8.yaml` 和
+`dynamic_binary_controls`。Qwen bridge 会核对 control index、source 配对、尺寸、SHA 和
+target 路径隔离。
+
 训练入口会再次检查模型 receipt、Inter-Edit revision、manifest SHA 和 GPU UUID lease；
 没有租约会在启动外部训练前失败。pilot 通过后，按[方向设计](docs/qwen_cjt_direction_design.md)
 扩展到固定的 binary/role/geometry 条件矩阵；Qwen 与 FLUX 只做条件收益和资源对照，不做

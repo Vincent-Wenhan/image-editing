@@ -60,3 +60,8 @@ Klein Base 4B 的绝对分数直接横向比较。
 scene 上没有稳定差异，停止继续增加条件编码；若只有 oracle 条件有效，则优先重做标签
 可预测性和任务定义，而不是继续堆模型容量。
 
+CPU 侧的下一轮资产已经固定：512²、20 个独立 scene-group，Train/Dev/Test 为 36/12/12，
+并生成了 `constant_mask` 与 oracle `dynamic_binary` 两个 control snapshot。两个 Qwen
+manifest run 已通过 full 和 condition-only provenance 校验；截至本报告更新时间，尚未
+启动这两个 GPU 训练，因此没有把它们写成结果。
+
