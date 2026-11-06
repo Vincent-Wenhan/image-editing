@@ -400,7 +400,8 @@ dynamic binary 使用对应的 `qwen_cjt_q2_synthetic_dynamic_rank8.yaml` 和
 target 路径隔离。
 
 Q2 当前实际状态见 [Q2 报告](docs/qwen_cjt_q2_report.md)：constant 和 dynamic binary
-训练均已完成，但尚未做 checkpoint reload、Dev 指标或人工评估，不能据此做条件收益结论。
+训练、checkpoint reload 和 12 例 Dev score 均已完成；dynamic 的 T/D 像素误差较低，但
+identity/changed fraction 仍有权衡，不能据此做部署或语义成功结论。
 
 训练入口会再次检查模型 receipt、Inter-Edit revision、manifest SHA 和 GPU UUID lease；
 没有租约会在启动外部训练前失败。pilot 通过后，按[方向设计](docs/qwen_cjt_direction_design.md)

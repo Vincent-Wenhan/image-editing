@@ -134,6 +134,16 @@ prediction SHA256 分别为 `4c3c3bc9c0f4a1400a82eef5129c359d933f727a3b868d6266d
 T/D区域，P drift/target MAE 为constant 0.02415、dynamic 0.03034；只作评估链路 smoke，
 没有完整Dev质量结论。详细说明见 `docs/qwen_cjt_q2_report.md`。
 
+随后新增批量 Dev inference 和独立 target-aware score：constant/dynamic 各生成12例、
+4个scene-group，prediction均由1024 native显式转为source 512²。nonzero scene等权聚合
+constant T/D/P/target=`.17394/.15552/.12892/.13251`，dynamic=`.10595/.07021/.09215/.09242`；
+dynamic-constant 的4-scene bootstrap差值 CI分别为 T `[-.07640,-.05748]`、D
+`[-.11886,-.05908]`、P `[-.07289,-.00066]`、target `[-.07183,-.00834]`。但 dynamic
+changed fraction更低（`.57598` vs `.85950`），identity strength=0 target MAE更高
+（`.04117` vs `.03196`），因此只登记为有限 oracle 条件信号，不作方法收益结论。回执在
+`outputs/qwen_cjt_q2_comparison_v3/comparison.json`；下一步先 static基线和第二seed，再
+决定 role/geometry。
+
 2026-10-23 Asia/Shanghai 本轮收尾：原注入与唯一channel_rms的四方法×双seed均完成，
 正式1920updates、712图、112对checkpoint保留，两个版本均未通过fit/角色利用/D增量。
 RMS使固定Train Old/New BF16差分丢失从79.8–86.0%降到25.2–38.5%，仍未形成正确
