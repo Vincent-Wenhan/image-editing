@@ -58,6 +58,19 @@ Role RGB 和 Geometry 都必须使用独立的 condition provenance。不得用�
 差分或精确 target footprint 作为推理输入。Geometry field 只作为 synthetic oracle
 上界，未来 predictor 另行研究。
 
+### Q2 实际结果与下一步边界
+
+Q2 已在同一 synthetic Dev 上完成 source-only、Constant 和 oracle Dynamic Binary 的
+rank8/seed42/20-update 训练预算对照，并用固定 20-step sampling 生成全部 12 例。Dynamic
+相对 Constant 在 T/D、主要阴影创建和 dark-region IoU 上有稳定的 scene-paired 收益，P、
+全图 MAE 和 changed fraction 尚未稳定；source-only 在保护区较保守，但 D 编辑能力弱于
+Dynamic。详细数字、失败回执和配对图见 [Q2 实际报告](qwen_cjt_q2_report.md)。
+
+因此下一步只登记一个同预算的三色 T/D/P Role RGB oracle 可学习性实验，并加入 role
+shuffle negative、identity 和 P 门槛；不追加训练 seed、不扩大数据、不训练 predictor。
+Role RGB 仍是 evaluation upper bound，不能直接当成从 source/instruction 预测 role 的
+部署方案。只有 role map 同时保持 P/identity 并改善 T/D，才会考虑后续 predictor。
+
 ### Q3：只在 oracle 有收益后做 predictor
 
 如果 Q2 的 role/geometry 在未见 scene 上稳定超过 Dynamic Binary，并且 P/identity 没有
@@ -110,7 +123,8 @@ constant/no-information、dynamic binary `T∪D`，再决定是否进入 role/ge
 为支持这一步，bridge 现在可以绑定独立 `controls.json` snapshot，校验 control SHA、
 source 配对、尺寸和 target 路径；推理会从 JSON manifest 读取实际 control path，不再
 错误地回退到 canonical mask。512² synthetic 数据已经生成并完成 Train/Dev/Test 校验，
-两个 Q2 manifest 已 prepare；GPU 训练仍等待实时空闲 UUID lease。
+Q2 的 Constant/Dynamic manifest、训练、checkpoint reload 和 formal-20 Dev 评估均已
+完成；static baseline 的共享 GPU 竞态失败回执保留，未绕过门禁重试。
 大权重下载遇到限流时只降低传输并发并保留断点分片；传输镜像不改变锁定 revision，
 最终必须通过逐文件 SHA256 校验才会写入 `download.json`。
 

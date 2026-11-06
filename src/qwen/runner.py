@@ -17,10 +17,12 @@ from src.core.io import sha256, write_json
 from src.core.metadata import now, versions
 from src.infra.experiment import source_snapshot
 from src.infra.gpu import require_lease
+from src.qwen.comparison import run as compare
 from src.qwen.data import verify_manifest, write_manifest
 from src.qwen.evaluation import run as score
 from src.qwen.inference import run as infer
 from src.qwen.provenance import verify_external_repo, verify_model_download
+from src.qwen.visuals import run as gallery
 
 PROTOCOL = "configs/experiments/qwen_cjt_pilot.yaml"
 
@@ -268,3 +270,21 @@ def configure(parser):
     score_parser.add_argument("--output", required=True)
     score_parser.add_argument("--lock", default="configs/assets.lock.json")
     score_parser.set_defaults(func=score)
+
+    gallery_parser = subparsers.add_parser("gallery")
+    gallery_parser.add_argument("--run", required=True)
+    gallery_parser.add_argument(
+        "--method", action="append", required=True, help="LABEL=metrics.json"
+    )
+    gallery_parser.add_argument("--output", required=True)
+    gallery_parser.add_argument("--failures", type=int, default=4)
+    gallery_parser.set_defaults(func=gallery)
+
+    compare_parser = subparsers.add_parser("compare")
+    compare_parser.add_argument(
+        "--method", action="append", required=True, help="LABEL=metrics.json"
+    )
+    compare_parser.add_argument("--output", required=True)
+    compare_parser.add_argument("--seed", type=int, default=42)
+    compare_parser.add_argument("--resamples", type=int, default=2000)
+    compare_parser.set_defaults(func=compare)

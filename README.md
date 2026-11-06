@@ -384,8 +384,8 @@ Q1 的实际训练和 checkpoint reload 结果见 [Qwen Q1 实际报告](docs/qw
 当前结果只通过工程门禁，尚无条件收益结论；下一步先使用独立 synthetic scene 做
 constant/no-information 与 dynamic binary 的同预算对照，再决定是否实现 role/geometry。
 
-Q2 的 synthetic 数据和 control snapshot 已准备好但尚未训练；两个协议都显式固定
-`rank8/seed42/20 updates`，通过 `--control-root` 绑定独立的 `controls.json`：
+Q2 的 synthetic 数据和 control snapshot 固定为 `rank8/seed42/20 updates`，通过
+`--control-root` 绑定独立的 `controls.json`：
 
 ```bash
 image-edit qwen prepare \
@@ -399,9 +399,43 @@ dynamic binary 使用对应的 `qwen_cjt_q2_synthetic_dynamic_rank8.yaml` 和
 `dynamic_binary_controls`。Qwen bridge 会核对 control index、source 配对、尺寸、SHA 和
 target 路径隔离。
 
-Q2 当前实际状态见 [Q2 报告](docs/qwen_cjt_q2_report.md)：constant 和 dynamic binary
-训练、checkpoint reload 和 12 例 Dev score 均已完成；dynamic 的 T/D 像素误差较低，但
-identity/changed fraction 仍有权衡；static mask baseline 已登记，不能据此做部署或语义成功结论。
+Q2 当前实际状态见 [Q2 报告](docs/qwen_cjt_q2_report.md)：未微调 source-only Qwen、已完成
+的 Constant checkpoint-20 和 Dynamic Binary checkpoint-20 均已用固定 20-step sampling
+完成 12 例 Dev。正式三方 score、scene bootstrap、配对图和失败案例分别保存在
+`outputs/qwen_cjt_q2_formal_comparison_20/` 与 `outputs/qwen_cjt_q2_formal_gallery_20/`。
+Dynamic Binary 在 T/D 与主要阴影创建代理上优于 Constant，但 P/全图收益仍有限；static
+mask 只有登记和共享 GPU 竞态失败回执，不能据此做部署或语义成功结论。
+
+正式评估入口要求三个方法共用 source、prompt、seed、采样步数和 Dev cohort：
+
+```bash
+image-edit gpu -- image-edit qwen infer \
+  --run outputs/qwen_cjt_q2_synthetic_dynamic_rank8 \
+  --output outputs/qwen_cjt_q2_synthetic_dynamic_rank8/dev_inference_formal20 \
+  --all-dev --steps 20 --seed 42
+
+image-edit qwen score \
+  --run outputs/qwen_cjt_q2_synthetic_dynamic_rank8 \
+  --predictions outputs/qwen_cjt_q2_synthetic_dynamic_rank8/dev_inference_formal20 \
+  --output outputs/qwen_cjt_q2_synthetic_dynamic_rank8/dev_score_formal20
+
+image-edit qwen compare \
+  --method source_only=<source-only-metrics.json> \
+  --method constant=<constant-metrics.json> \
+  --method dynamic_binary=<dynamic-metrics.json> \
+  --output <comparison-output>
+
+image-edit qwen gallery \
+  --run <matched-qwen-run> \
+  --method source_only=<source-only-metrics.json> \
+  --method constant=<constant-metrics.json> \
+  --method dynamic_binary=<dynamic-metrics.json> \
+  --output <gallery-output>
+```
+
+`qwen infer --source-only` 不加载 LoRA，也不把 mask 送入 pipeline；target、role、valid 和
+evidence 只由 `qwen score`/`qwen gallery` 在评估阶段读取。`compare` 会拒绝不同数据、
+prompt、seed、采样步数或训练预算的结果。
 
 训练入口会再次检查模型 receipt、Inter-Edit revision、manifest SHA 和 GPU UUID lease；
 没有租约会在启动外部训练前失败。pilot 通过后，按[方向设计](docs/qwen_cjt_direction_design.md)

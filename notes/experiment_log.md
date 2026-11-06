@@ -1,5 +1,43 @@
 # 实验记录
 
+2026-11-07 Asia/Shanghai Q2 formal-20 评估计划：
+
+- 计划：在不新增训练的前提下，固定 `seed=42`、20 个 sampling steps、同一 12 例 Dev，
+  对未微调 Qwen source-only、已完成 Constant checkpoint-20 和 Dynamic Binary
+  checkpoint-20 做三方配对评估；补充目标位移模板定位、旧位置残留、D 区域阴影变化、P
+  漂移和 identity/changed fraction，并生成同 ID 的配对图和失败案例。
+- 范围：target、role、valid、counterfactual evidence 只在独立 score/gallery 阶段读取；
+  不读取封存 Test，不启动 static 或第二训练 seed，不以像素代理冒充真人评价。
+- 验收：三种方法必须覆盖相同 source/prompt/seed/steps，prediction SHA 与 inference
+  回执一致；semantic proxy 明确记录 abstain；CI、Ruff、Pytest、CLI、GPU lease 和
+  provenance 检查通过后，才能更新研究决策。
+
+2026-11-06 UTC Q2 formal-20 完成：
+
+- 已运行：source-only 未微调 Qwen、Constant checkpoint-20、Dynamic Binary checkpoint-20
+  均完成固定 seed42、20 sampling steps、12 个 Dev 样本；Constant 的第一次 formal reload
+  OOM 回执保留，retry-02 完整生成；Dynamic 使用独立 GPU4 UUID lease 完整生成。三方
+  inference 的 native 1024² 输出均显式 resize 为 source 512²，SHA、source/target pairing
+  和训练预算公平性由 score/compare 再次校验。
+- 已实现：score 增加 target displacement、old-position distance、模板定位 abstain、
+  D shadow removal/creation、signed response、dark-region IoU 和 P edge proxy；新增
+  `qwen compare`、`qwen gallery`，生成三方配对图和四个失败案例。
+- 结果：nonzero scene-equal T/D/P/target/changed 分别为 source-only
+  `.06748/.16555/.02803/.03292/.22109`、Constant
+  `.14372/.21852/.06577/.07515/.53188`、Dynamic
+  `.05591/.08773/.03890/.04057/.20605`；identity target MAE 为
+  `.00697/.00733/.00583`。Constant-Dynamic 的 T/D 配对差为
+  `.08782 [.05075,.12488]` / `.13078 [.08453,.17572]`，P 和全图 MAE 区间包含零。
+  Dynamic shadow creation MAE `.04054`、dark-region IoU `.71597`，均明显优于
+  Constant `.20656` / `.29735`；shadow removal 没有改善。目标平均位移 `96.93 px`，
+  模板定位 nonzero 仅 `4/8` 成功，abstain 已保留而未强行解释。
+- 研究结论：Qwen 在该 synthetic 任务具备基础位移/阴影可学习性；oracle Dynamic Binary
+  相对 Constant 对 T/D 和主要 shadow creation 有局部可靠收益，但不是可部署条件，P/全图
+  和 changed fraction 尚无稳定收益。登记下一阶段受限 T/D/P role-map oracle + shuffle
+  negative 的同预算方案，暂不启动训练、第二 seed 或 predictor。
+- 资产：`outputs/qwen_cjt_q2_formal_comparison_20/`、
+  `outputs/qwen_cjt_q2_formal_gallery_20/`；Test 继续封存，真人评价仍为 0。
+
 2026-11-05 Asia/Shanghai 评估完整性维护与方向调整：
 
 - 计划：修复 gallery 的 run/路径/控制类型校验，补强执行 provenance 和 Torch CPU CI，
