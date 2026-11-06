@@ -401,7 +401,7 @@ target 路径隔离。
 
 Q2 当前实际状态见 [Q2 报告](docs/qwen_cjt_q2_report.md)：constant 和 dynamic binary
 训练、checkpoint reload 和 12 例 Dev score 均已完成；dynamic 的 T/D 像素误差较低，但
-identity/changed fraction 仍有权衡，不能据此做部署或语义成功结论。
+identity/changed fraction 仍有权衡；static mask baseline 已登记，不能据此做部署或语义成功结论。
 
 训练入口会再次检查模型 receipt、Inter-Edit revision、manifest SHA 和 GPU UUID lease；
 没有租约会在启动外部训练前失败。pilot 通过后，按[方向设计](docs/qwen_cjt_direction_design.md)

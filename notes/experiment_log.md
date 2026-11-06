@@ -144,6 +144,11 @@ changed fraction更低（`.57598` vs `.85950`），identity strength=0 target MA
 `outputs/qwen_cjt_q2_comparison_v3/comparison.json`；下一步先 static基线和第二seed，再
 决定 role/geometry。
 
+2026-11-06 UTC 登记 Q2 canonical static mask baseline：配置固定为 rank8/seed42/20 updates，
+复用同一 synthetic Train/Dev/Test 和 Qwen 预算，只将第二控制图换为 source occupancy 的
+canonical static mask。下一步先在 CPU 导出并校验 snapshot，再等待独立 UUID lease 训练；不
+与 dynamic 并行占用 GPU。
+
 2026-10-23 Asia/Shanghai 本轮收尾：原注入与唯一channel_rms的四方法×双seed均完成，
 正式1920updates、712图、112对checkpoint保留，两个版本均未通过fit/角色利用/D增量。
 RMS使固定Train Old/New BF16差分丢失从79.8–86.0%降到25.2–38.5%，仍未形成正确

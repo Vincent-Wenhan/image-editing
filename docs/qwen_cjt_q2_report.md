@@ -9,9 +9,10 @@
   为 36/12/12；Test 没有进入训练 manifest。
 - 模型和外部 revision 与 Q1 相同；Qwen LoRA `rank=8`、`seed=42`、BF16、batch1、20
   updates、1024 级预处理。
-- 两个 control snapshot 使用相同 source/target/prompt/seed，只替换第二控制图：
-  `constant_mask` 和 oracle `dynamic_binary`。
+- 三个 control snapshot 使用相同 source/target/prompt/seed，只替换第二控制图：
+  `constant_mask`、canonical `static_mask` 和 oracle `dynamic_binary`。
 - 固定协议：[constant](../configs/experiments/qwen_cjt_q2_synthetic_constant_rank8.yaml)、
+  [static](../configs/experiments/qwen_cjt_q2_synthetic_static_rank8.yaml)、
   [dynamic](../configs/experiments/qwen_cjt_q2_synthetic_dynamic_rank8.yaml)。
 
 ## Constant 结果
@@ -78,6 +79,6 @@ dynamic 的无编辑保持还有退化信号。
 本轮没有使用双卡 DDP：Inter-Edit 当前 Accelerate 配置是 `num_processes=1`，普通 DDP
 会在每张 GPU 复制完整 20B 模型，不能降低单卡显存峰值，还会改变有效 batch/更新语义。
 若后续确需双卡模型并行，应单独设计和验证 lease、分片加载及预算，不把普通 DDP 当成
-显存优化。下一步先增加 canonical/static mask 基线和第二训练 seed，检查 dynamic 的
+显存优化。static mask baseline 已登记，下一步先完成 static 与第二训练 seed，检查 dynamic 的
 T/D收益是否在 identity/changed fraction 门槛下仍成立；之后才考虑 role/geometry oracle，
 最后才是 predictor。
