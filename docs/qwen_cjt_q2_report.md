@@ -30,9 +30,20 @@ SHA256 为
 训练完成后 GPU0 lease 已释放，CPU `qwen verify --require-model` 通过。当前没有运行
 checkpoint reload、Dev 指标或真人评审，因此 constant 只能作为训练/资源基线。
 
-## Dynamic binary 状态与决策
+## Dynamic binary 结果与决策
 
 oracle dynamic binary 的 36/12 manifest、control SHA、source pairing 和 target-free
-校验均已通过，但本轮没有启动训练。没有 dynamic 对照，就不能计算 binary 条件差异，
-也不能声称 Q2 验证了空间编辑方法。后续只有在实时 UUID lease 明确空闲且不影响他人
-任务时，才可按相同协议运行 dynamic；否则保留当前资产即可。
+校验均已通过。随后在另一轮实时 UUID lease 确认 GPU0 无 compute PID 后完成训练：20/20
+updates，1228.19 秒，无 OOM，观察峰值约 48.5 GiB。20 个 step loss 范围为
+`0.000152–0.0395`，均值约 `0.003221`。checkpoint-20 SHA256 为
+`44d569e93423c2a8fa29bef276e953a84d3d7849d0ca23355be04d3f80f028e7`，CPU
+`qwen verify --require-model` 通过。
+
+constant 和 dynamic 的训练门禁都已通过，但两者都还没有 checkpoint reload、Dev 指标或
+真人评审。两组短训练 loss 接近只能说明计算链路稳定，不能说明 dynamic binary 带来了
+空间编辑收益。Q2 当前结论停在“条件对照可训练”，不进入 role/geometry 或 predictor。
+
+本轮没有使用双卡 DDP：Inter-Edit 当前 Accelerate 配置是 `num_processes=1`，普通 DDP
+会在每张 GPU 复制完整 20B 模型，不能降低单卡显存峰值，还会改变有效 batch/更新语义。
+若后续确需双卡模型并行，应单独设计和验证 lease、分片加载及预算，不把普通 DDP 当成
+显存优化。

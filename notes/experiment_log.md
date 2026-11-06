@@ -119,6 +119,13 @@ checkpoint-20 SHA256 为 `0d8810c6969169229eb38d47af762eddc20eccc2b8f474ccd20734
 CPU `qwen verify --require-model` 通过，GPU lease已释放。dynamic binary没有启动，当前
 没有Dev reload或质量结论；详细结果见 `docs/qwen_cjt_q2_report.md`。
 
+随后在新的实时 GPU0 UUID lease 下完成 dynamic binary Q2：20/20 updates、1228.19s、无
+OOM，观察峰值约48.5GiB；20个step loss范围0.000152–0.0395，均值约0.003221，
+checkpoint-20 SHA256 为 `44d569e93423c2a8fa29bef276e953a84d3d7849d0ca23355be04d3f80f028e7`。
+CPU `qwen verify --require-model` 通过，GPU lease已释放。constant/dynamic 尚未做
+checkpoint reload、Dev指标或真人评审，不能写条件收益结论；普通双卡DDP也没有启用，因其
+会复制完整模型而不能降低单卡显存峰值。
+
 2026-10-23 Asia/Shanghai 本轮收尾：原注入与唯一channel_rms的四方法×双seed均完成，
 正式1920updates、712图、112对checkpoint保留，两个版本均未通过fit/角色利用/D增量。
 RMS使固定Train Old/New BF16差分丢失从79.8–86.0%降到25.2–38.5%，仍未形成正确
