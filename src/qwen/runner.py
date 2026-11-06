@@ -249,6 +249,11 @@ def configure(parser):
         "--checkpoint",
         help="LoRA safetensors path; defaults to the latest checkpoint-N in the run",
     )
+    infer_parser.add_argument(
+        "--source-only",
+        action="store_true",
+        help="Use the unmodified base model with source as the only image input",
+    )
     infer_parser.add_argument("--sample-id")
     infer_parser.add_argument("--limit", type=int, default=1)
     infer_parser.add_argument("--all-dev", action="store_true")

@@ -193,6 +193,28 @@ def test_qwen_inference_matches_source_geometry():
     assert changed is False
 
 
+def test_qwen_source_only_baseline_is_registered_in_cli():
+    from src.cli import build_parser
+
+    args = build_parser().parse_args(
+        [
+            "qwen",
+            "infer",
+            "--run",
+            "run",
+            "--output",
+            "out",
+            "--source-only",
+            "--all-dev",
+            "--steps",
+            "20",
+        ]
+    )
+    assert args.source_only is True
+    assert args.all_dev is True
+    assert args.steps == 20
+
+
 def test_qwen_inference_requires_a_gpu_lease(monkeypatch, tmp_path):
     from src.qwen import inference
 

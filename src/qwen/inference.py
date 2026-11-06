@@ -98,7 +98,10 @@ def run(args) -> None:
     limit = None if all_dev else getattr(args, "limit", 1)
     rows = _rows(record, sample_id, limit)
     root = Path(record["data_root"])
-    checkpoint = _checkpoint_path(run_root, getattr(args, "checkpoint", None))
+    source_only = getattr(args, "source_only", False)
+    checkpoint = (
+        None if source_only else _checkpoint_path(run_root, getattr(args, "checkpoint", None))
+    )
     output = Path(args.output).resolve()
     if output.exists():
         raise FileExistsError(f"Use a new Qwen inference directory: {output}")
@@ -106,9 +109,8 @@ def run(args) -> None:
     result_record = {
         "status": "running",
         "run": str(run_root),
-        "control_order": ["source", "mask"],
-        "checkpoint": str(checkpoint),
-        "checkpoint_sha256": sha256(checkpoint),
+        "control_order": ["source"] if source_only else ["source", "mask"],
+        "baseline": "base_source_only" if source_only else "trained_control",
         "seed": args.seed,
         "steps": args.steps,
         "cpu_offload": True,
@@ -120,7 +122,8 @@ def run(args) -> None:
 
         pipeline_class = _pipeline_class()
         pipeline = pipeline_class.from_pretrained(record["model_path"], torch_dtype=torch.bfloat16)
-        pipeline.load_lora_weights(str(checkpoint))
+        if checkpoint is not None:
+            pipeline.load_lora_weights(str(checkpoint))
         pipeline.enable_model_cpu_offload()
         pipeline.set_progress_bar_config(disable=False)
         generator = torch.Generator(device="cuda").manual_seed(args.seed)
@@ -134,7 +137,7 @@ def run(args) -> None:
                 mask = image.convert("RGB")
             with torch.inference_mode():
                 generated = pipeline(
-                    image=[source, mask],
+                    image=[source] if source_only else [source, mask],
                     prompt=row["instruction"],
                     negative_prompt=" ",
                     true_cfg_scale=4.0,
@@ -151,7 +154,6 @@ def run(args) -> None:
                 {
                     "sample_id": row["id"],
                     "source_sha256": checks["source_sha256"],
-                    "mask_sha256": checks["mask_sha256"],
                     "target_sha256": checks["target_sha256"],
                     "native_size": list(native_size),
                     "output_size": list(prediction.size),
@@ -159,9 +161,14 @@ def run(args) -> None:
                     "prediction_sha256": sha256(prediction_path),
                 }
             )
+            if not source_only:
+                results[-1]["mask_sha256"] = checks["mask_sha256"]
         result_record.update(status="complete", results=results)
         if len(results) == 1:
             result_record.update(results[0])
+        if checkpoint is not None:
+            result_record["checkpoint"] = str(checkpoint)
+            result_record["checkpoint_sha256"] = sha256(checkpoint)
     except BaseException as error:
         result_record.update(status="failed", error=repr(error))
         raise
