@@ -47,10 +47,7 @@ def canonical_conditions(rows: list[dict[str, str]]) -> ConditionManifest:
         kind="canonical_mask",
         root=None,
         index_sha256=None,
-        entries={
-            row["id"]: ConditionEntry(row["mask_path"], row["mask_sha256"])
-            for row in rows
-        },
+        entries={row["id"]: ConditionEntry(row["mask_path"], row["mask_sha256"]) for row in rows},
     )
 
 
@@ -117,9 +114,7 @@ def load_conditions(
             ):
                 raise ValueError(f"Qwen control shape/mode mismatch: {row['id']}")
         json_path = (
-            path.relative_to(data_root).as_posix()
-            if path.is_relative_to(data_root)
-            else str(path)
+            path.relative_to(data_root).as_posix() if path.is_relative_to(data_root) else str(path)
         )
         result[row["id"]] = ConditionEntry(json_path, digest)
     return ConditionManifest(kind, root, sha256(index_path), result)

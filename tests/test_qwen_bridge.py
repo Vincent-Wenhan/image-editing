@@ -130,12 +130,8 @@ def test_qwen_inference_uses_manifest_control_path(paired_data, tmp_path):
     write_manifest(paired_data, "dev", manifest, control_root=controls)
     from src.qwen.inference import _row
 
-    sample, checks = _row(
-        {"data_root": str(paired_data), "dev_manifest": str(manifest)}, None
-    )
-    assert sample["mask_image_path"] == str(
-        (controls / "dev/mask_rgb/dev_dev_t1.png").resolve()
-    )
+    sample, checks = _row({"data_root": str(paired_data), "dev_manifest": str(manifest)}, None)
+    assert sample["mask_image_path"] == str((controls / "dev/mask_rgb/dev_dev_t1.png").resolve())
     assert checks["id"] == sample["id"]
 
 
@@ -150,7 +146,7 @@ def test_qwen_train_refuses_to_start_without_a_gpu_lease(monkeypatch, tmp_path):
 
 
 def test_qwen_seed_wrapper_repeats_cpu_random_state():
-    import torch
+    torch = pytest.importorskip("torch")
 
     from src.qwen.seeded_train import _seed
 

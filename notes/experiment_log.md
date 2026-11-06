@@ -101,6 +101,18 @@ Qwen condition bridge 扩展后，constant 与 oracle dynamic binary 两个 Q2 r
 校验通过。实时 `nvidia-smi` 显示所有 GPU 均有计算进程，故未启动训练，不中断他人任务；
 两个 run 保留为下一次 UUID lease 成功后的唯一候选。临时 bpy wheel/site 已清理。
 
+2026-11-06 UTC Qwen Q2 GPU 安全收尾与 CI 修复：首次实时检查发现 GPU5/6 短暂显示空闲，
+但 `image-edit gpu` 的 UUID lease 二次检查拒绝启动；随后使用只调用官方 GPU 门禁的等待器。
+门禁成功后 constant 任务刚创建 execution receipt，复查发现共享 GPU 状态存在竞态，按用户
+要求立即停止本项目自己的进程。`outputs/qwen_cjt_q2_synthetic_constant_rank8/execution.json`
+保留 `status=failed`、`KeyboardInterrupt`，无 checkpoint；未触碰其他 PID，GPU lease 已释放，
+dynamic binary 未启动。Q2 训练暂停，优先处理 CPU/CI。
+
+CI 审查发现新增 Qwen seed 测试在 CPU-only workflow 中直接导入 Torch，会导致 import failure；
+改为 `pytest.importorskip("torch")`，并在两个 GitHub Actions job 加入 `pip check`。Ruff check、
+Ruff format、仓库卫生、pip check、Torch 可用的 Qwen/CLI/GPU 22 项测试（22 passed）和模拟
+无 Torch 的 12 项测试（12 passed/1 skipped）均通过。
+
 2026-10-23 Asia/Shanghai 本轮收尾：原注入与唯一channel_rms的四方法×双seed均完成，
 正式1920updates、712图、112对checkpoint保留，两个版本均未通过fit/角色利用/D增量。
 RMS使固定Train Old/New BF16差分丢失从79.8–86.0%降到25.2–38.5%，仍未形成正确
