@@ -399,6 +399,9 @@ dynamic binary 使用对应的 `qwen_cjt_q2_synthetic_dynamic_rank8.yaml` 和
 `dynamic_binary_controls`。Qwen bridge 会核对 control index、source 配对、尺寸、SHA 和
 target 路径隔离。
 
+Q2 当前实际状态见 [Q2 报告](docs/qwen_cjt_q2_report.md)：constant 已完成一次安全训练，
+dynamic 尚未训练，不能据此做条件收益结论。
+
 训练入口会再次检查模型 receipt、Inter-Edit revision、manifest SHA 和 GPU UUID lease；
 没有租约会在启动外部训练前失败。pilot 通过后，按[方向设计](docs/qwen_cjt_direction_design.md)
 扩展到固定的 binary/role/geometry 条件矩阵；Qwen 与 FLUX 只做条件收益和资源对照，不做

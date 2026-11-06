@@ -113,6 +113,12 @@ CI 审查发现新增 Qwen seed 测试在 CPU-only workflow 中直接导入 Torc
 Ruff format、仓库卫生、pip check、Torch 可用的 Qwen/CLI/GPU 22 项测试（22 passed）和模拟
 无 Torch 的 12 项测试（12 passed/1 skipped）均通过。
 
+随后在新的实时 GPU0 UUID lease 下完成 constant Q2 retry-02：20/20 updates、1197.59s、
+无 OOM，观察峰值约48.5GiB；20个step loss范围0.000146–0.036，均值约0.003137，
+checkpoint-20 SHA256 为 `0d8810c6969169229eb38d47af762eddc20eccc2b8f474ccd20734fe285ce411`。
+CPU `qwen verify --require-model` 通过，GPU lease已释放。dynamic binary没有启动，当前
+没有Dev reload或质量结论；详细结果见 `docs/qwen_cjt_q2_report.md`。
+
 2026-10-23 Asia/Shanghai 本轮收尾：原注入与唯一channel_rms的四方法×双seed均完成，
 正式1920updates、712图、112对checkpoint保留，两个版本均未通过fit/角色利用/D增量。
 RMS使固定Train Old/New BF16差分丢失从79.8–86.0%降到25.2–38.5%，仍未形成正确
