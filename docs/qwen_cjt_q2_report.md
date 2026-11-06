@@ -31,6 +31,11 @@ SHA256 为
 训练完成后 GPU0 lease 已释放，CPU `qwen verify --require-model` 通过。constant 的
 checkpoint reload、完整 Dev 生成和 score 结果与 dynamic 使用相同的采样预算。
 
+canonical static mask baseline 已登记并完成 manifest/control provenance，但首次 GPU 尝试
+没有形成结果：`outputs/qwen_cjt_q2_synthetic_static_rank8/execution.json` 为 failed，
+模型搬到 GPU 时另一组 compute 进程占用了约15.7 GiB，触发 OOM，未生成 checkpoint。
+这是 lease 后的共享状态竞态，不能当成 static 方法的容量 No-Go；本轮不绕过门禁重试。
+
 ## Dynamic binary 结果与决策
 
 oracle dynamic binary 的 36/12 manifest、control SHA、source pairing 和 target-free

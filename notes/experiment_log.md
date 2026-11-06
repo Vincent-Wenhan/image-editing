@@ -149,6 +149,11 @@ changed fraction更低（`.57598` vs `.85950`），identity strength=0 target MA
 canonical static mask。下一步先在 CPU 导出并校验 snapshot，再等待独立 UUID lease 训练；不
 与 dynamic 并行占用 GPU。
 
+static baseline 首次训练尝试：`image-edit gpu` 启动时 GPU0 通过空闲检查，但模型加载期间
+出现另一组约15.7GiB compute 进程；本项目在 transformer 搬到GPU时 OOM，execution receipt
+为 failed、无checkpoint。没有中断或触碰其他PID；这是共享GPU竞态，不解释为static方法
+容量失败。本轮暂停static重试，保留 `outputs/qwen_cjt_q2_synthetic_static_rank8/` 回执。
+
 2026-10-23 Asia/Shanghai 本轮收尾：原注入与唯一channel_rms的四方法×双seed均完成，
 正式1920updates、712图、112对checkpoint保留，两个版本均未通过fit/角色利用/D增量。
 RMS使固定Train Old/New BF16差分丢失从79.8–86.0%降到25.2–38.5%，仍未形成正确
