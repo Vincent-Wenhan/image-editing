@@ -126,6 +126,14 @@ CPU `qwen verify --require-model` 通过，GPU lease已释放。constant/dynamic
 checkpoint reload、Dev指标或真人评审，不能写条件收益结论；普通双卡DDP也没有启用，因其
 会复制完整模型而不能降低单卡显存峰值。
 
+Q2 两组随后各完成一次固定 identity Dev reload（seed42、4 steps、GPU6 UUID lease、CPU
+offload）。发现 Qwen native output 为1024²而 synthetic manifest 为512²，修复 inference
+后明确记录 native/output 尺寸，并按 source 尺寸保存 v2 prediction；constant/dynamic
+prediction SHA256 分别为 `4c3c3bc9c0f4a1400a82eef5129c359d933f727a3b868d6266da93d746d4d99c` 与
+`ee15aacc3a01b8f9cfb3a9a6d9bfcee80a47edfd0850a5e4feca4a365c1b982d`。identity 样本没有
+T/D区域，P drift/target MAE 为constant 0.02415、dynamic 0.03034；只作评估链路 smoke，
+没有完整Dev质量结论。详细说明见 `docs/qwen_cjt_q2_report.md`。
+
 2026-10-23 Asia/Shanghai 本轮收尾：原注入与唯一channel_rms的四方法×双seed均完成，
 正式1920updates、712图、112对checkpoint保留，两个版本均未通过fit/角色利用/D增量。
 RMS使固定Train Old/New BF16差分丢失从79.8–86.0%降到25.2–38.5%，仍未形成正确

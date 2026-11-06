@@ -39,9 +39,20 @@ updates，1228.19 秒，无 OOM，观察峰值约 48.5 GiB。20 个 step loss �
 `44d569e93423c2a8fa29bef276e953a84d3d7849d0ca23355be04d3f80f028e7`，CPU
 `qwen verify --require-model` 通过。
 
-constant 和 dynamic 的训练门禁都已通过，但两者都还没有 checkpoint reload、Dev 指标或
-真人评审。两组短训练 loss 接近只能说明计算链路稳定，不能说明 dynamic binary 带来了
-空间编辑收益。Q2 当前结论停在“条件对照可训练”，不进入 role/geometry 或 predictor。
+constant 和 dynamic 的训练门禁都已通过。随后使用相同 `dev_20261106_000_s000`、seed42、
+4 steps、CPU offload 完成两组 checkpoint reload。Qwen pipeline 原生输出为1024²，推理
+记录明确保存 `native_size=[1024,1024]`，再按 source 尺寸保存512² prediction；两组都记录
+`resized_to_source=true`，避免把1024² smoke 直接混入512² synthetic评估。
+
+- constant prediction SHA256：
+  `4c3c3bc9c0f4a1400a82eef5129c359d933f727a3b868d6266da93d746d4d99c`。
+- dynamic prediction SHA256：
+  `ee15aacc3a01b8f9cfb3a9a6d9bfcee80a47edfd0850a5e4feca4a365c1b982d`。
+
+该 identity 样本的 T/D 区域为空；constant 的 P source drift/target MAE 为 `0.02415`，
+dynamic 为 `0.03034`，只作为尺寸和评估链路 smoke，不能外推到12例 Dev，更不能说明
+constant 优于 dynamic。两者仍没有完整 Dev 指标或真人评审，因此 Q2 当前结论停在“条件
+对照可训练且可重载”，不进入 role/geometry 或 predictor。
 
 本轮没有使用双卡 DDP：Inter-Edit 当前 Accelerate 配置是 `num_processes=1`，普通 DDP
 会在每张 GPU 复制完整 20B 模型，不能降低单卡显存峰值，还会改变有效 batch/更新语义。

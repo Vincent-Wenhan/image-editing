@@ -42,6 +42,14 @@ def _checkpoint_path(run_root: Path, requested: str | None = None) -> Path:
     return max(candidates, key=lambda item: item[0])[1]
 
 
+def _match_source_size(
+    image: Image.Image, source_size: tuple[int, int]
+) -> tuple[Image.Image, bool]:
+    if image.size == source_size:
+        return image.convert("RGB"), False
+    return image.convert("RGB").resize(source_size, Image.Resampling.LANCZOS), True
+
+
 def _row(record: dict, sample_id: str | None) -> tuple[dict[str, str], dict[str, str]]:
     root = Path(record["data_root"])
     provenance = verify_condition_manifest(record["dev_manifest"], root=root)
@@ -117,9 +125,15 @@ def run(args) -> None:
                 generator=generator,
                 num_images_per_prompt=1,
             ).images[0]
-        generated.convert("RGB").save(output / f"{row['id']}.png")
+        native_size = generated.size
+        prediction, resized = _match_source_size(generated, source.size)
+        prediction.save(output / f"{row['id']}.png")
         result_record.update(
-            status="complete", prediction_sha256=sha256(output / f"{row['id']}.png")
+            status="complete",
+            native_size=list(native_size),
+            output_size=list(prediction.size),
+            resized_to_source=resized,
+            prediction_sha256=sha256(output / f"{row['id']}.png"),
         )
     except BaseException as error:
         result_record.update(status="failed", error=repr(error))

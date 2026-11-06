@@ -181,6 +181,18 @@ def test_qwen_inference_selects_latest_checkpoint(tmp_path):
     assert _checkpoint_path(tmp_path, str(older)) == older
 
 
+def test_qwen_inference_matches_source_geometry():
+    from src.qwen.inference import _match_source_size
+
+    image = Image.new("RGB", (1024, 1024), "red")
+    resized, changed = _match_source_size(image, (512, 512))
+    assert resized.size == (512, 512)
+    assert changed is True
+    same, changed = _match_source_size(image, (1024, 1024))
+    assert same.size == (1024, 1024)
+    assert changed is False
+
+
 def test_qwen_inference_requires_a_gpu_lease(monkeypatch, tmp_path):
     from src.qwen import inference
 
