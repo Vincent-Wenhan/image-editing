@@ -465,7 +465,9 @@ response 覆盖阴影重叠强度变化；FP32 latent 面积覆盖避免 uint8 m
 同一个 `--cache-root`、初始化 seed 和 batch 顺序，记录每步 noisy/prompt/target SHA。
 checkpoint 0 和每20步的 LoRA/optimizer/RNG 状态保留；`--resume <checkpoint目录>
 --max-steps 240` 可在明确需要时连续延长，另写 execution receipt。`checkpoint-eval` 复用
-一套 pipeline，逐 checkpoint 生成、评分，不跳过失败。当前代码验收和真实 GPU 状态见
+一套 pipeline，逐 checkpoint 生成、评分，不跳过失败。首次失败后正常续训成功的run也可
+进入推理；推理绑定成功execution回执的SHA，比较时拒绝回执被修改或来自其他run。
+当前代码验收和真实 GPU 状态见
 [Q3 报告](docs/qwen_role_aware_training_report.md)，CPU 小模型测试不代表20B编辑效果。
 本轮30分钟内22次租约申请均无空闲卡，等待器已退出；两组120-step overfit尚未启动，
 历史Q2图像和指标不会计作Q3成果。实现提交 `fb23d2b` 的

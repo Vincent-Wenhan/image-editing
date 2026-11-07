@@ -1,5 +1,12 @@
 # 实验记录
 
+2026-11-07 UTC 14:11 继续：用户确认没有预约GPU，继续按空闲门禁；最新main为509b9a9，
+8卡仍有compute进程，没有启动worker。先补续训验收：推理接受同run成功的continuation，
+绑定execution SHA，比较时复核；不改变训练协议。随后重新经实时门禁等待两步smoke。
+此条是实施前设计与执行计划，不是已完成训练或质量结果。
+续训验收现已实现；32项针对性测试通过/99.47s，Ruff check/format通过。推理回执与
+comparison绑定execution SHA，旧Q2兼容；训练预算和缓存policy未改变。先冻结提交再等待GPU。
+
 2026-11-07 UTC Q3 续跑计划：核实前一轮等待器已结束，retry-04 因 CUDA indices 索引 CPU
 scheduler 表失败，没有成功更新。先对齐上游 VAE/FM/timestep/LoRA/save 契约，补 signed
 counterfactual D masks（包含重叠阴影强度变化）、FP32 latent 面积覆盖、共同缓存与初始化/

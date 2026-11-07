@@ -14,7 +14,11 @@ from src.core.random import sample_seed
 from src.infra.gpu import require_exclusive_context, require_lease
 from src.qwen.conditions import condition_path
 from src.qwen.data import verify_condition_manifest
-from src.qwen.provenance import verify_external_repo, verify_model_download
+from src.qwen.provenance import (
+    completed_training_execution,
+    verify_external_repo,
+    verify_model_download,
+)
 
 SAMPLING = {"negative_prompt": " ", "true_cfg_scale": 4.0, "guidance_scale": 1.0}
 
@@ -95,9 +99,7 @@ def run(args, *, pipeline=None) -> None:
     record = json.loads((run_root / "run.json").read_text(encoding="utf-8"))
     if record.get("status") != "prepared":
         raise ValueError("Qwen inference requires the prepared run record")
-    execution = json.loads((run_root / "execution.json").read_text(encoding="utf-8"))
-    if execution.get("status") != "complete" or execution.get("returncode") != 0:
-        raise ValueError("Qwen inference requires a completed training execution")
+    execution = completed_training_execution(run_root)
     verify_model_download(record["model_path"], args.lock)
     verify_external_repo(record["external"]["path"], args.lock)
     sample_id = getattr(args, "sample_id", None)
@@ -121,6 +123,7 @@ def run(args, *, pipeline=None) -> None:
     result_record = {
         "status": "running",
         "run": str(run_root),
+        **execution,
         "control_order": ["source"] if source_only else ["source", "mask"],
         "baseline": "base_source_only" if source_only else "trained_control",
         "split": split,

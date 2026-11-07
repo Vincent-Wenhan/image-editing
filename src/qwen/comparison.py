@@ -9,6 +9,7 @@ from pathlib import Path
 from src.core.config import load_yaml
 from src.core.io import read_rows, sha256, write_json
 from src.evaluation.role_metrics import paired_scene_ci
+from src.qwen.provenance import verify_inference_execution
 
 PAIR_METRICS = (
     "t_target_mae",
@@ -48,6 +49,7 @@ def _load(label: str, path: Path) -> dict:
     metrics = json.loads(path.read_text(encoding="utf-8"))
     predictions = Path(metrics["predictions"]).resolve()
     inference = json.loads((predictions / "inference.json").read_text(encoding="utf-8"))
+    verify_inference_execution(inference)
     run_root = Path(metrics["run"]).resolve()
     if Path(inference["run"]).resolve() != run_root:
         raise ValueError("Scored Qwen run differs from inference provenance")

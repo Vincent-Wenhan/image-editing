@@ -3,6 +3,14 @@
 日期：2026-11-07 UTC。当前报告只区分设计、代码验收和真实 GPU 运行状态；在成功完成
 overfit 与 Dev 生成前，不把训练 loss 写成方法收益。
 
+14:11 UTC续跑：用户确认没有预约资源，仍按空闲门禁继续。复查8卡均有其他compute进程。
+另修复续训验收：首次execution失败后，同run成功的continuation可供推理使用，绑定其
+execution SHA并由comparison复核；只有失败/running或returncode非零的回执仍拒绝。
+历史Q2回执保持兼容，不修改任何旧execution文件。验收与下一次资源等待另行登记于
+`outputs/qwen_cjt_q3_20261107_v2/continuation_validation_02/` 和 `smoke_wait_02/`。
+续训回执、比较与bridge的32项针对性测试全部通过（99.47s），Ruff check/format通过；
+训练目标、共享编码缓存policy和checkpoint数值路径均未改变，未重跑已通过的昂贵CPU模型检查。
+
 ## 当前设计
 
 训练固定 Qwen-Image-Edit-2511 revision、Inter-Edit revision、synthetic Dynamic Binary

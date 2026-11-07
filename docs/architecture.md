@@ -7,6 +7,8 @@ SHA绑定的共享缓存，`role_loss` 负责counterfactual signed D与latent面
 Train/Dev矩阵生成；`evaluation/comparison/visuals` 独立读取target并验证PNG/预算。
 推理仍仅接收source + dynamic binary + instruction，不增加role-map输入，不修改第三方。
 GPU worker在原UUID租约之内再检查加载/训练期间的后到计算进程，出现争用时只退出自己。
+`qwen/provenance` 校验成功的initial/continuation execution；inference绑定所用回执SHA，
+comparison再次校验，历史没有该字段的Q2回执保持兼容。
 
 2026-10-23可学习性阶段沿用现有边界：datasets建立只含选定Train资产的实验视图，
 training复用固定trainer与观测hook，backends只测特征/梯度，evaluation隔离监督

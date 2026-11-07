@@ -93,3 +93,11 @@ GPU 争用或 supervision geometry 错误都单独记录，不覆盖历史 check
 与官方的一致性指同一1024级预处理、posterior sample、mean/std、token packing、CPU均匀
 timestep、velocity目标、LoRA target_modules和公开save/load接口。Q3显式固定缓存、初始化和
 独立batch顺序，不声称与历史Q2的随机数消耗逐bit相同；新方法只在同一Q3实现内比较。
+
+## 续训后的推理验收修订（实施前登记）
+
+共享节点可能在已保存checkpoint后发生争用，首次execution失败、后续正常续训成功。
+推理应接受同一run内成功的initial或continuation execution，而不是只看首次回执；失败或
+running的回执不能单独授权推理。推理记录绑定所采用execution的路径与SHA，配对比较
+再次核验，旧Q2缺少此字段时保留兼容。验收覆盖首次成功、失败后成功续训、只有失败/
+running、returncode不一致和回执被修改；训练loss、数据、预算和模型参数均不改变。

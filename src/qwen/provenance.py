@@ -1,4 +1,4 @@
-"""Qwen asset and external-repository provenance checks."""
+"""Qwen asset, execution and external-repository provenance checks."""
 
 from __future__ import annotations
 
@@ -11,6 +11,39 @@ from src.core.io import sha256
 
 QWEN_ASSET = "qwen_image_edit_2511"
 INTER_EDIT_REPOSITORY = "Inter-Edit"
+
+
+def completed_training_execution(run_root: Path) -> dict:
+    """Bind inference to a successful initial or continued training execution."""
+    root = Path(run_root).resolve()
+    paths = [root / "execution.json", *root.glob("execution_continue_*.json")]
+    paths = sorted(
+        (path for path in paths if path.is_file()),
+        key=lambda path: path.stat().st_mtime_ns,
+        reverse=True,
+    )
+    for path in paths:
+        receipt = json.loads(path.read_text(encoding="utf-8"))
+        if receipt.get("status") == "complete" and receipt.get("returncode") == 0:
+            return {"execution_receipt": str(path), "execution_sha256": sha256(path)}
+    raise ValueError("Qwen inference requires a completed training execution")
+
+
+def verify_inference_execution(inference: dict) -> None:
+    """Verify bound receipts while accepting legacy inference without these fields."""
+    path, expected = inference.get("execution_receipt"), inference.get("execution_sha256")
+    if path is None and expected is None:
+        return
+    if path is None or expected is None:
+        raise ValueError("Incomplete Qwen execution provenance")
+    path = Path(path).resolve()
+    if path.parent != Path(inference["run"]).resolve():
+        raise ValueError("Qwen execution receipt belongs to another run")
+    if sha256(path) != expected:
+        raise ValueError("Qwen training execution receipt changed after inference")
+    receipt = json.loads(path.read_text(encoding="utf-8"))
+    if receipt.get("status") != "complete" or receipt.get("returncode") != 0:
+        raise ValueError("Qwen inference is bound to an unsuccessful training execution")
 
 
 def locked_qwen_asset(lock_path: str | Path = "configs/assets.lock.json") -> dict:
