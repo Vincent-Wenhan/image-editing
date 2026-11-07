@@ -1,5 +1,30 @@
 # 实验记录
 
+2026-11-07 UTC Qwen 长训练与 Role-aware FM 计划：
+
+- 计划：复用 Dynamic Binary control，新增项目侧 trainer；先用固定 4 个非零 Train 样本
+  做普通 FM 与 Role-aware FM 各 120 steps overfit，再在完整 36 个 Train 样本上做同 seed、
+  同初始化、同 batch/noise 的 120 steps 对照，依据生成和区域指标决定是否追加 240 steps。
+- 设计：Role-aware loss 在实际 VAE latent 网格上监督 `T_old/T_new`、`D_remove/D_create`
+  和 `P`，每个 active region 面积归一化、等权聚合，和 global FM 以 `0.5/0.5` 混合；
+  ordinary FM 使用同一 trainer 的 `role_loss_weight=0`。设计、停止门槛和 target 隔离见
+  `docs/qwen_role_aware_training_design.md`。
+- 范围：不修改 `external/Inter-Edit`，不训练 predictor，不读取 Test，不把 loss 下降当作
+  编辑收益；训练/Dev 生成、失败案例和中间 checkpoint 均保留在独立 outputs 目录。
+- 验收：先通过 120-step overfit 的 T/D/旧位置/阴影/P 配对图，再做完整 Train/Dev；若
+  Role-aware 没有在保持 P/identity 的同时改善 T/D 和至少一个阴影方向，停止追加复杂化。
+
+2026-11-07 UTC Q3 trainer 实现与 GPU smoke 状态：
+
+- 已实现：新增 project-side Qwen trainer、latent area-balanced Role-aware FM、train split
+  inference/score 和四份 overfit/full 配置；普通 FM 与 Role-aware FM 共用初始化、noise、
+  timestep、LoRA 和 checkpoint 逻辑，未修改 `external/Inter-Edit`。
+- 已运行：16 项 Qwen role/bridge targeted tests、Ruff、format、compileall 通过。Dynamic
+  Binary full snapshot 与 overfit 子集的合法 subset provenance 已修复。
+- GPU 失败：1-step smoke 的三次独立目录分别因 JSON/CSV manifest 混读、absolute control
+  path 解析、共享 GPU 竞态 OOM 失败；所有 execution receipt 保留，未中断其他 PID，也未
+  形成质量或容量结论。稳定空闲 GPU smoke 尚未通过，正式 120-step 训练暂不启动。
+
 2026-11-07 Asia/Shanghai Q2 formal-20 评估计划：
 
 - 计划：在不新增训练的前提下，固定 `seed=42`、20 个 sampling steps、同一 12 例 Dev，

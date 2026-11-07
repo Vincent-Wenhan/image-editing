@@ -437,6 +437,24 @@ image-edit qwen gallery \
 evidence 只由 `qwen score`/`qwen gallery` 在评估阶段读取。`compare` 会拒绝不同数据、
 prompt、seed、采样步数或训练预算的结果。
 
+Q3 的实际训练设计见 [Qwen Role-aware 训练设计](docs/qwen_role_aware_training_design.md)。
+项目侧 `qwen train-role` 不修改 Inter-Edit：`ordinary` 使用 global Flow Matching，
+`role_aware` 在相同 Dynamic Binary 控制下额外均衡监督 `T_old/T_new`、`D_remove/D_create`
+和 `P`。先准备 6 样本 overfit，再准备完整 Train；启动前仍必须通过实时 UUID GPU lease：
+
+```bash
+image-edit qwen prepare \
+  --protocol configs/experiments/qwen_cjt_q3_dynamic_overfit_role.yaml \
+  --data-root data/qwen_cjt_synthetic_20261106_retry \
+  --control-root outputs/qwen_cjt_synthetic_20261106/dynamic_binary_controls \
+  --output outputs/qwen_cjt_q3_overfit_role
+image-edit gpu -- image-edit qwen train-role \
+  --run outputs/qwen_cjt_q3_overfit_role
+```
+
+`qwen infer --split train --all-split` 和 `qwen score --split train` 用于检查 overfit 记忆；
+Train 结果不会替代 Dev 结论，Test 继续封存。
+
 训练入口会再次检查模型 receipt、Inter-Edit revision、manifest SHA 和 GPU UUID lease；
 没有租约会在启动外部训练前失败。pilot 通过后，按[方向设计](docs/qwen_cjt_direction_design.md)
 扩展到固定的 binary/role/geometry 条件矩阵；Qwen 与 FLUX 只做条件收益和资源对照，不做

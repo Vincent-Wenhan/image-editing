@@ -51,15 +51,18 @@ def _match_source_size(
 
 
 def _rows(
-    record: dict, sample_id: str | None, limit: int | None
+    record: dict, sample_id: str | None, limit: int | None, split: str = "dev"
 ) -> list[tuple[dict[str, str], dict[str, str]]]:
+    if split not in {"train", "dev"}:
+        raise ValueError("Qwen inference split must be train or dev")
     root = Path(record["data_root"])
-    provenance = verify_condition_manifest(record["dev_manifest"], root=root)
-    samples = json.loads(Path(record["dev_manifest"]).read_text(encoding="utf-8"))
+    manifest = Path(record[f"{split}_manifest"])
+    provenance = verify_condition_manifest(manifest, root=root)
+    samples = json.loads(manifest.read_text(encoding="utf-8"))
     if sample_id is not None:
         matches = [row for row in samples if row["id"] == sample_id]
         if len(matches) != 1:
-            raise ValueError(f"Unknown or duplicate Dev sample: {sample_id}")
+            raise ValueError(f"Unknown or duplicate {split} sample: {sample_id}")
         selected = matches
     elif limit is None:
         selected = samples
@@ -77,8 +80,10 @@ def _rows(
     return result
 
 
-def _row(record: dict, sample_id: str | None) -> tuple[dict[str, str], dict[str, str]]:
-    return _rows(record, sample_id, 1)[0]
+def _row(
+    record: dict, sample_id: str | None, split: str = "dev"
+) -> tuple[dict[str, str], dict[str, str]]:
+    return _rows(record, sample_id, 1, split)[0]
 
 
 def run(args) -> None:
@@ -93,10 +98,12 @@ def run(args) -> None:
     verify_model_download(record["model_path"], args.lock)
     sample_id = getattr(args, "sample_id", None)
     all_dev = getattr(args, "all_dev", False)
-    if sample_id is not None and all_dev:
-        raise ValueError("--sample-id and --all-dev cannot be combined")
-    limit = None if all_dev else getattr(args, "limit", 1)
-    rows = _rows(record, sample_id, limit)
+    split = getattr(args, "split", "dev")
+    all_split = getattr(args, "all_split", False) or all_dev
+    if sample_id is not None and all_split:
+        raise ValueError("--sample-id and --all-split cannot be combined")
+    limit = None if all_split else getattr(args, "limit", 1)
+    rows = _rows(record, sample_id, limit, split)
     root = Path(record["data_root"])
     source_only = getattr(args, "source_only", False)
     checkpoint = (
@@ -111,6 +118,7 @@ def run(args) -> None:
         "run": str(run_root),
         "control_order": ["source"] if source_only else ["source", "mask"],
         "baseline": "base_source_only" if source_only else "trained_control",
+        "split": split,
         "seed": args.seed,
         "steps": args.steps,
         "cpu_offload": True,

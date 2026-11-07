@@ -9,6 +9,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from types import SimpleNamespace
 
 import yaml
 
@@ -143,6 +144,10 @@ def _external_config(protocol, paths, data_root, model_path, run) -> dict:
         "quantize": protocol["quantize"],
         "adam8bit": protocol["adam8bit"],
         "max_control_images": protocol["max_control_images"],
+        "trainer": protocol.get("trainer", "external_inter_edit"),
+        "loss_mode": protocol.get("loss_mode", "ordinary"),
+        "role_loss_weight": protocol.get("role_loss_weight", 0.0),
+        "role_min_pixels": protocol.get("role_min_pixels", 4.0),
     }
 
 
@@ -222,6 +227,51 @@ def train(args) -> None:
     print(execution)
 
 
+def train_role(args) -> None:
+    require_lease()
+    record = verify(args, require_model=True)
+    run = Path(args.run).resolve()
+    output = run / "execution.json"
+    if output.exists():
+        raise FileExistsError(f"Qwen run already has an execution receipt: {output}")
+    config = load_yaml(record["train_config"])
+    if config.get("trainer") != "project_role_aware":
+        raise ValueError("Role-aware training requires trainer: project_role_aware")
+    execution = {
+        "status": "running",
+        "created": now(),
+        "argv": ["image-edit", "qwen", "train-role", "--run", str(run)],
+        "cwd": str(Path.cwd()),
+        "parent_cuda": os.environ.get("CUDA_VISIBLE_DEVICES"),
+        "gpu_uuid": os.environ.get("IMAGE_EDIT_GPU_UUID"),
+        "versions": versions(),
+        "source": source_snapshot(),
+        "trainer": "project_role_aware",
+    }
+    write_json(output, execution)
+    started = time.perf_counter()
+    try:
+        from src.qwen.role_train import train as run_role_train
+
+        report = run_role_train(
+            record,
+            SimpleNamespace(
+                config=config,
+                loss_mode=args.loss_mode,
+                role_loss_weight=args.role_loss_weight,
+                max_steps=args.max_steps,
+            ),
+        )
+        execution.update(status="complete", returncode=0, train_report=report)
+    except BaseException as error:
+        execution.update(status="failed", returncode=1, error=repr(error))
+        raise
+    finally:
+        execution["seconds"] = time.perf_counter() - started
+        write_json(output, execution)
+    print(execution)
+
+
 def configure(parser):
     subparsers = parser.add_subparsers(dest="qwen_command", required=True)
     prepare_parser = subparsers.add_parser("prepare")
@@ -244,6 +294,14 @@ def configure(parser):
     train_parser.add_argument("--lock", default="configs/assets.lock.json")
     train_parser.set_defaults(func=train)
 
+    role_train_parser = subparsers.add_parser("train-role")
+    role_train_parser.add_argument("--run", required=True)
+    role_train_parser.add_argument("--loss-mode", choices=("ordinary", "role_aware"))
+    role_train_parser.add_argument("--role-loss-weight", type=float)
+    role_train_parser.add_argument("--max-steps", type=int)
+    role_train_parser.add_argument("--lock", default="configs/assets.lock.json")
+    role_train_parser.set_defaults(func=train_role)
+
     infer_parser = subparsers.add_parser("infer")
     infer_parser.add_argument("--run", required=True)
     infer_parser.add_argument("--output", required=True)
@@ -257,8 +315,10 @@ def configure(parser):
         help="Use the unmodified base model with source as the only image input",
     )
     infer_parser.add_argument("--sample-id")
+    infer_parser.add_argument("--split", choices=("train", "dev"), default="dev")
     infer_parser.add_argument("--limit", type=int, default=1)
     infer_parser.add_argument("--all-dev", action="store_true")
+    infer_parser.add_argument("--all-split", action="store_true")
     infer_parser.add_argument("--steps", type=int, default=4)
     infer_parser.add_argument("--seed", type=int, default=42)
     infer_parser.add_argument("--lock", default="configs/assets.lock.json")
@@ -268,6 +328,7 @@ def configure(parser):
     score_parser.add_argument("--run", required=True)
     score_parser.add_argument("--predictions", required=True)
     score_parser.add_argument("--output", required=True)
+    score_parser.add_argument("--split", choices=("train", "dev"), default="dev")
     score_parser.add_argument("--lock", default="configs/assets.lock.json")
     score_parser.set_defaults(func=score)
 

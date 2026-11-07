@@ -77,7 +77,8 @@ def load_conditions(
     if section.get("manifest_sha256") != sha256(data_root / split / "manifest.csv"):
         raise ValueError("Qwen control manifest SHA256 changed")
     entries = section.get("entries")
-    if not isinstance(entries, dict) or set(entries) != {row["id"] for row in rows}:
+    row_ids = {row["id"] for row in rows}
+    if not isinstance(entries, dict) or not row_ids <= set(entries):
         raise ValueError("Qwen control sample pairing changed")
     if schema == 1:
         spec = index.get("spec")

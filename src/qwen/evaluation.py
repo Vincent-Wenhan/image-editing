@@ -100,9 +100,12 @@ def run(args) -> None:
         raise ValueError("Qwen scoring requires a completed inference record")
     record = json.loads((run_root / "run.json").read_text(encoding="utf-8"))
     root = Path(record["data_root"])
-    manifest = Path(record["dev_manifest"])
+    split = getattr(args, "split", "dev")
+    if split not in {"train", "dev"}:
+        raise ValueError("Qwen score split must be train or dev")
+    manifest = Path(record[f"{split}_manifest"])
     verify_condition_manifest(manifest, root=root, lock_path=args.lock)
-    rows = {row["id"]: row for row in read_rows(root / "dev/manifest.csv")}
+    rows = {row["id"]: row for row in read_rows(root / split / "manifest.csv")}
     items = inference.get("results")
     if items is None:
         items = [inference]
@@ -145,6 +148,7 @@ def run(args) -> None:
     result = {
         "schema_version": "qwen_synthetic_metrics_v1",
         "run": str(run_root),
+        "split": split,
         "predictions": str(predictions),
         "condition": record.get("condition"),
         "records": scored,

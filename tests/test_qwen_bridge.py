@@ -123,6 +123,20 @@ def test_qwen_manifest_uses_verified_external_condition_without_target(paired_da
     )
 
 
+def test_qwen_manifest_accepts_subset_of_full_control_snapshot(paired_data, tmp_path):
+    make_dataset_record(paired_data)
+    controls = make_control_snapshot(paired_data, tmp_path / "controls")
+    index_path = controls / "controls.json"
+    index = json.loads(index_path.read_text())
+    train_entries = index["splits"]["train"]["entries"]
+    sample = next(iter(train_entries.values()))
+    train_entries["unused_full_snapshot_entry"] = sample
+    write_json(index_path, index)
+    output = tmp_path / "train.json"
+    write_manifest(paired_data, "train", output, control_root=controls)
+    assert verify_manifest(output, root=paired_data)["ids"]
+
+
 def test_qwen_inference_uses_manifest_control_path(paired_data, tmp_path):
     make_dataset_record(paired_data)
     controls = make_control_snapshot(paired_data, tmp_path / "controls")
