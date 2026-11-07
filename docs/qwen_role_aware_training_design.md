@@ -4,6 +4,28 @@
 CJT 接口上增加可学习的 T/D/P 区域监督，直接验证物体位移、阴影更新和背景保持是否改善。
 本阶段不修改 `external/Inter-Edit`，也不使用封存 Test 做训练或调参。
 
+## 2026-11-07 续跑修订（实施前登记）
+
+`retry_04` 的实际失败是 CPU scheduler timestep 表被 CUDA indices 索引；新实现沿用固定
+上游 `compute_density_for_timestep_sampling(weighting_scheme="none")` 的 CPU 采样，再将
+timestep 搬到 GPU。FM 仍是 `noise - normalized_target`，权重仍为 1，不改变采样分布。
+
+阴影方向改用有符号反事实响应
+`delta = (target-target_no_shadow) - (source-source_no_shadow)`；只在 canonical valid D
+区域内，按最大绝对值 RGB 分量的正/负分成 `D_remove/D_create`。这样覆盖重叠阴影的
+强度变化，不把普通 RGB 差异作为因果标签。latent mask 用 FP32 面积平均保留有效覆盖率，
+不经过 uint8 量化；ignore 不进入区域项。global FM 保留上游全网格均值作为统一基线。
+
+两个方法消费同一 SHA 校验的 Train 编码缓存，初始化前独立重置 seed；记录 step/sample ID、
+timestep、noisy/target/control/prompt 哈希、梯度范数、参数更新、峰值显存和逐步耗时。
+保存初始化及每 20-step LoRA 和可恢复状态，120→240 延长须从原状态继续且保留原产物。
+smoke 使用两个真实更新，并验证保存/重载与实际生成。
+
+本轮先完整评估两个方法在 Train6 上的 20/40/60/80/100/120 checkpoint，固定推理20步；
+成功后做 Train36 的同预算对照和 Dev12。所有 checkpoint 均保留，不能事后只挑最好的一张图。
+若区域加权仍留下旧物体/旧阴影，将先用这些训练曲线和图片确定一个最小 effect-aware
+候选，单独登记公式和预算后才执行；不预设其有效。
+
 ## 实验范围
 
 实验固定 Qwen revision、Inter-Edit revision、synthetic 数据、Dynamic Binary control、
@@ -29,22 +51,24 @@ Inter-Edit 20-step 结果继续作为历史锚点，不与新 trainer 的长训�
 
 - `T_old = old \ new`，监督旧物体位置被清除；
 - `T_new = new \ old`，监督新物体位置被生成；
-- `D_remove`，source shadow effect 存在且 target shadow effect 消失的 D 区域；
-- `D_create`，target shadow effect 存在且 source shadow effect 消失的 D 区域；
+- `D_remove`，反事实阴影减弱/移除的 valid D 区域，包含两侧都有阴影的强度变化；
+- `D_create`，反事实阴影增强/创建的 valid D 区域；
 - `P`，canonical valid 的 P 区域，保护未因果变化的背景。
 
-region map 按最近邻从 512² 对齐到实际 VAE latent H×W，invalid 像素完全排除。每个非空
+region map 用 FP32 面积平均从 512² 对齐到实际 VAE latent H×W，invalid 像素对区域项为零。
+latent 的分数覆盖是像素监督代理，不声称等价于 VAE 的非局部感受野。每个非空
 region 先做像素数归一化，再对 active regions 等权平均，避免 P 的面积压过 T/D；少于 4
 个 latent pixel 的 region 标记 inactive，不填入伪监督。最终损失固定为：
 
 ```text
-global_fm = mean(all valid latent/channel errors)
+global_fm = mean(all latent/channel errors)  # 保持官方普通 FM
 role_fm = mean(equal_weighted(active region means))
 loss = (1 - 0.5) * global_fm + 0.5 * role_fm
 ```
 
-训练日志同时记录 global loss、role loss、五个 region loss、active pixel/count 和每步
-checkpoint。普通 FM 使用同一代码和相同 batch/noise，只将 `role_loss_weight=0`；这样
+训练日志每步记录 global/role loss、region loss/coverage、sample/noisy/prompt SHA、梯度
+和显存；checkpoint 在0和每20步保存。普通 FM 使用同一代码和相同 batch/noise，只将
+`role_loss_weight=0`；这样
 不会把 trainer 实现差异误当作方法收益。
 
 ## 验收与停止门槛
@@ -61,3 +85,11 @@ P/identity 同时不劣于普通 FM 时，才登记为实际收益；否则保�
 
 结果目录、配置快照、训练日志和失败回执全部放在 `outputs/`，Test 继续封存。任何 OOM、
 GPU 争用或 supervision geometry 错误都单独记录，不覆盖历史 checkpoint。
+
+资源边界：只有空闲卡才能通过 `image-edit gpu --` 的双次检查；worker 建立自身 CUDA context
+后和每步训练前再次确认所租 UUID 只有一个 compute PID。若共享节点后来出现其他任务，只
+退出本项目 worker，不中断其他 PID。推理也在建立 context 和逐样本前复核。
+
+与官方的一致性指同一1024级预处理、posterior sample、mean/std、token packing、CPU均匀
+timestep、velocity目标、LoRA target_modules和公开save/load接口。Q3显式固定缓存、初始化和
+独立batch顺序，不声称与历史Q2的随机数消耗逐bit相同；新方法只在同一Q3实现内比较。

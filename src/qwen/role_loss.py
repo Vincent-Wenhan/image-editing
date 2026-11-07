@@ -5,7 +5,6 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 import numpy as np
-from PIL import Image
 
 REGION_NAMES = ("t_old", "t_new", "d_remove", "d_create", "p")
 
@@ -37,17 +36,23 @@ def build_region_masks(
         raise ValueError("Role evidence RGB/occupancy geometry differs")
     if any(array.shape != source.shape for array in (target, source_no_shadow, target_no_shadow)):
         raise ValueError("Role evidence RGB geometry differs")
-    if labels.shape != old.shape:
+    if labels.shape != old.shape or new.shape != old.shape or valid.shape != old.shape:
         raise ValueError("Role labels and occupancy geometry differ")
+    if not all(np.isfinite(x).all() for x in (source, target, source_no_shadow, target_no_shadow)):
+        raise ValueError("Role evidence contains non-finite RGB")
+    if not np.isfinite(shadow_threshold) or shadow_threshold <= 0:
+        raise ValueError("Shadow threshold must be positive and finite")
 
-    direct = old | new
-    source_shadow = np.max(np.abs(source - source_no_shadow), axis=-1) >= shadow_threshold
-    target_shadow = np.max(np.abs(target - target_no_shadow), axis=-1) >= shadow_threshold
+    response = (target - target_no_shadow) - (source - source_no_shadow)
+    dominant = np.take_along_axis(response, np.abs(response).argmax(axis=-1)[..., None], axis=-1)[
+        ..., 0
+    ]
+    dependency = (labels == 1) & valid & ~(old | new)
     masks = {
         "t_old": old & ~new & valid,
         "t_new": new & ~old & valid,
-        "d_remove": source_shadow & ~target_shadow & ~direct & valid,
-        "d_create": target_shadow & ~source_shadow & ~direct & valid,
+        "d_remove": dependency & (dominant >= shadow_threshold),
+        "d_create": dependency & (dominant <= -shadow_threshold),
         "p": (labels == 2) & valid,
     }
     stacked = np.stack([masks[name] for name in REGION_NAMES])
@@ -62,12 +67,13 @@ def latent_masks(masks: Mapping[str, np.ndarray], height: int, width: int) -> np
         raise ValueError("Latent mask geometry must be positive")
     result = []
     for name in REGION_NAMES:
-        values = np.asarray(masks[name], dtype=np.uint8)
-        if values.ndim != 2:
+        values = np.asarray(masks[name], dtype=np.float32)
+        if values.ndim != 2 or not np.isfinite(values).all() or np.any((values < 0) | (values > 1)):
             raise ValueError(f"Region mask must be HxW: {name}")
-        image = Image.fromarray(values * 255)
-        resized = image.resize((width, height), Image.Resampling.BOX)
-        result.append(np.asarray(resized, dtype=np.float32) / 255.0)
+        h, w = values.shape
+        if h % height or w % width:
+            raise ValueError("Latent mask grid must divide the image grid exactly")
+        result.append(values.reshape(height, h // height, width, w // width).mean((1, 3)))
     return np.stack(result)
 
 
@@ -78,6 +84,8 @@ def weighted_region_loss(error, masks, *, min_pixels: float = 4.0) -> tuple[obje
     are ``[B,R,H,W]``. Area normalization happens before region averaging.
     """
 
+    if not np.isfinite(min_pixels) or min_pixels <= 0:
+        raise ValueError("Minimum latent region area must be positive and finite")
     if error.ndim < 4 or masks.ndim != 4 or error.shape[0] != masks.shape[0]:
         raise ValueError("FM error and role masks have incompatible dimensions")
     if error.shape[-2:] != masks.shape[-2:] or masks.shape[1] != len(REGION_NAMES):

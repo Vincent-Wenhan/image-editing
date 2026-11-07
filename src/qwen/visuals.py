@@ -99,9 +99,21 @@ def run(args) -> None:
     run_root = Path(args.run).resolve()
     record = json.loads((run_root / "run.json").read_text(encoding="utf-8"))
     root = Path(record["data_root"])
-    rows = {row["id"]: row for row in read_rows(root / "dev/manifest.csv")}
+    split = getattr(args, "split", "dev")
+    if split not in {"train", "dev"}:
+        raise ValueError("Gallery cannot inspect sealed Test")
+    declared = json.loads(Path(record[f"{split}_manifest"]).read_text())
+    selected_ids = {row["id"] for row in declared}
+    rows = {
+        row["id"]: row
+        for row in read_rows(root / split / "manifest.csv")
+        if row["id"] in selected_ids
+    }
     method_rows, prediction_dirs = {}, {}
     for label, metrics in methods.items():
+        scored = json.loads(metrics.read_text())
+        if scored.get("split", "dev") != split:
+            raise ValueError("Gallery methods use different splits")
         method_rows[label], prediction_dirs[label] = _method_records(metrics)
     ids = set(rows)
     for label, scored in method_rows.items():
@@ -111,6 +123,9 @@ def run(args) -> None:
     labels = ["source", "target", *methods]
     images = {}
     for row in selected:
+        for key in ("source", "target"):
+            if sha256(data_path(root, row[f"{key}_path"])) != row[f"{key}_sha256"]:
+                raise ValueError("Gallery reference checksum changed")
         size = int(row["width"]), int(row["height"])
         images[row["id"]] = {
             "source": _image(data_path(root, row["source_path"]), size),
@@ -119,7 +134,7 @@ def run(args) -> None:
         for label, directory in prediction_dirs.items():
             images[row["id"]][label] = _image(directory / f"{row['id']}.png", size)
     output.mkdir(parents=True)
-    _contact(selected, labels, images, output / "paired_dev.png")
+    _contact(selected, labels, images, output / f"paired_{split}.png")
     failures = sorted(
         selected,
         key=lambda row: max(method_rows[label][row["id"]]["target_mae"] for label in methods),
@@ -156,4 +171,5 @@ def configure(parser) -> None:
     parser.add_argument("--method", action="append", required=True, help="LABEL=metrics.json")
     parser.add_argument("--output", required=True)
     parser.add_argument("--failures", type=int, default=4)
+    parser.add_argument("--split", choices=("train", "dev"), default="dev")
     parser.set_defaults(func=run)

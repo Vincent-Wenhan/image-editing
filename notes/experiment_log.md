@@ -1,5 +1,23 @@
 # 实验记录
 
+2026-11-07 UTC Q3 续跑计划：核实前一轮等待器已结束，retry-04 因 CUDA indices 索引 CPU
+scheduler 表失败，没有成功更新。先对齐上游 VAE/FM/timestep/LoRA/save 契约，补 signed
+counterfactual D masks（包含重叠阴影强度变化）、FP32 latent 面积覆盖、共同缓存与初始化/
+逐步输入审计；再执行两个 update smoke/重载，随后两方法各120-step Train6 overfit，每20步
+固定20-step生成评估，通过后才进 Train36/Dev12。设计修订已先记录，结果尚未运行。
+
+2026-11-07 UTC Q3 v2 实施：CPU数值/角色/CLI首批25项、后续小型Qwen公开LoRA重载相关
+10项通过（有重复测试）；实际Train6监督审计为128² latent、valid D遗漏0，强位移两例
+D_remove面积91.8125/116.4375，D_create面积141.125/187.25，没有有效重叠阴影强度变化
+像素。修复signed response只由专门回归验证，不冒称数据上的新增收益。新两方法manifest
+字节SHA和预算一致，plan位于 `outputs/qwen_cjt_q3_20261107_v2/plan.json`。
+8张GPU均有compute进程；12:16:50–12:47:29 UTC有界等待通过 `image-edit gpu --` 申请
+22次均无安全lease，最终 `no_idle_gpu`，模型worker没有启动，等待器已退出；所有拒绝
+保存在 `smoke_wait/`。新20B训练/生成和研究收益仍未完成；Test继续封存。
+本地全量311 passed/1 timeout（1861.72s），原轻量导入项单独原样复跑1 passed/178.16s；
+另23项公平性/资源争用/FM契约检查通过。未放宽timeout、未跳过断言。Ruff、format、
+compileall、pip check、仓库卫生通过；push后核验GitHub Actions。
+
 2026-11-07 UTC Qwen 长训练与 Role-aware FM 计划：
 
 - 计划：复用 Dynamic Binary control，新增项目侧 trainer；先用固定 4 个非零 Train 样本

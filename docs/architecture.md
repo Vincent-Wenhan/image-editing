@@ -1,5 +1,13 @@
 # 工程架构重构
 
+2026-11-07 Qwen Q3 沿用独立 `src/qwen` 边界：`role_data/role_cache` 负责训练编码与
+SHA绑定的共享缓存，`role_loss` 负责counterfactual signed D与latent面积监督，`role_flow`
+复用固定上游packing和FM契约，`role_train/role_checkpoint` 负责精确updates、LoRA保存/
+重载、参数更新证据和optimizer/RNG延续。`checkpoint_eval` 复用一套常驻pipeline按固定
+Train/Dev矩阵生成；`evaluation/comparison/visuals` 独立读取target并验证PNG/预算。
+推理仍仅接收source + dynamic binary + instruction，不增加role-map输入，不修改第三方。
+GPU worker在原UUID租约之内再检查加载/训练期间的后到计算进程，出现争用时只退出自己。
+
 2026-10-23可学习性阶段沿用现有边界：datasets建立只含选定Train资产的实验视图，
 training复用固定trainer与观测hook，backends只测特征/梯度，evaluation隔离监督
 teacher诊断与source-only生成。设计先行，见role_learnability_design.md；不重构目录。

@@ -449,16 +449,31 @@ image-edit qwen prepare \
   --control-root outputs/qwen_cjt_synthetic_20261106/dynamic_binary_controls \
   --output outputs/qwen_cjt_q3_overfit_role
 image-edit gpu -- image-edit qwen train-role \
-  --run outputs/qwen_cjt_q3_overfit_role
+  --run outputs/qwen_cjt_q3_overfit_role \
+  --cache-root outputs/qwen_cjt_q3_20261107_v2/shared_train6
+image-edit gpu -- image-edit qwen checkpoint-eval \
+  --run outputs/qwen_cjt_q3_overfit_role \
+  --checkpoints 20,40,60,80,100,120 --split train --steps 20 --seed 42 \
+  --output outputs/qwen_cjt_q3_overfit_role/train_checkpoint_eval
 ```
 
 `qwen infer --split train --all-split` 和 `qwen score --split train` 用于检查 overfit 记忆；
 Train 结果不会替代 Dev 结论，Test 继续封存。
 
+Q3 续跑修复了 CPU timestep 表/CUDA index 不一致，并以 signed counterfactual shadow
+response 覆盖阴影重叠强度变化；FP32 latent 面积覆盖避免 uint8 mask 量化。两种 loss 共用
+同一个 `--cache-root`、初始化 seed 和 batch 顺序，记录每步 noisy/prompt/target SHA。
+checkpoint 0 和每20步的 LoRA/optimizer/RNG 状态保留；`--resume <checkpoint目录>
+--max-steps 240` 可在明确需要时连续延长，另写 execution receipt。`checkpoint-eval` 复用
+一套 pipeline，逐 checkpoint 生成、评分，不跳过失败。当前代码验收和真实 GPU 状态见
+[Q3 报告](docs/qwen_role_aware_training_report.md)，CPU 小模型测试不代表20B编辑效果。
+本轮30分钟内22次租约申请均无空闲卡，等待器已退出；两组120-step overfit尚未启动，
+历史Q2图像和指标不会计作Q3成果。
+
 训练入口会再次检查模型 receipt、Inter-Edit revision、manifest SHA 和 GPU UUID lease；
-没有租约会在启动外部训练前失败。pilot 通过后，按[方向设计](docs/qwen_cjt_direction_design.md)
-扩展到固定的 binary/role/geometry 条件矩阵；Qwen 与 FLUX 只做条件收益和资源对照，不做
-绝对分数排名。
+没有租约会在启动训练前失败。当前先完成固定Dynamic Binary输入下的Ordinary/Role-aware
+overfit，再按[方向设计](docs/qwen_cjt_direction_design.md)进行完整Train/Dev对照。
+Qwen 与 FLUX 只做条件收益和资源对照，不做绝对分数排名。
 
 ## 开发与目录
 

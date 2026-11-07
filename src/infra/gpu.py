@@ -99,6 +99,22 @@ def require_lease():
         raise RuntimeError("Launch this task with: image-edit gpu -- image-edit ...")
 
 
+def require_exclusive_context():
+    """After creating our CUDA context, yield if another compute PID appeared."""
+    require_lease()
+    uuid = os.environ["IMAGE_EDIT_GPU_UUID"]
+    output = command(
+        ["nvidia-smi", "--query-compute-apps=gpu_uuid,pid", "--format=csv,noheader,nounits"]
+    )
+    processes = {
+        row[1].strip()
+        for row in csv.reader(io.StringIO(output))
+        if len(row) == 2 and row[0].strip() == uuid
+    }
+    if len(processes) != 1:
+        raise RuntimeError("Leased GPU no longer has exactly one compute context; stop this worker")
+
+
 def configure(parser):
     parser.add_argument("--device", type=int, help="Physical GPU index; otherwise first idle card")
     parser.add_argument("command", nargs=argparse.REMAINDER)

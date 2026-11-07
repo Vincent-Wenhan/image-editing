@@ -1,15 +1,21 @@
-"""Project-side Qwen CJT trainer with optional area-balanced Role-aware FM."""
+"""Matched Qwen CJT optimization with ordinary or region-balanced FM."""
 
 from __future__ import annotations
 
 import json
 import random
+import time
 from pathlib import Path
 
 import numpy as np
 
 from src.core.io import sha256, write_json
-from src.qwen.role_data import loader, prepare_cache
+from src.core.metadata import tensor_sha
+from src.infra.gpu import require_exclusive_context
+from src.qwen.role_cache import shared_cache
+from src.qwen.role_checkpoint import restore_checkpoint, save_checkpoint, update_audit
+from src.qwen.role_data import collate
+from src.qwen.role_flow import flow_error, packed_inputs
 from src.qwen.role_loss import weighted_region_loss
 
 TARGET_MODULES = (
@@ -36,189 +42,78 @@ def _seed(value: int) -> None:
     random.seed(value)
     np.random.seed(value)
     torch.manual_seed(value)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(value)
+    torch.cuda.manual_seed_all(value)
 
 
-def _vae_config(model_path: Path) -> dict:
-    return json.loads((model_path / "vae/config.json").read_text(encoding="utf-8"))
+def batch_schedule(sample_count: int, seed: int, steps: int) -> list[int]:
+    """A local RNG fixes batch order independently of model/cache/loss RNGs."""
+    if sample_count < 1 or steps < 1:
+        raise ValueError("Training needs nonempty samples and positive steps")
+    rng = np.random.default_rng(seed)
+    schedule = []
+    while len(schedule) < steps:
+        schedule.extend(rng.permutation(sample_count).tolist())
+    return schedule[:steps]
 
 
-def _sigmas(scheduler, timesteps, device, dtype):
-    sigmas = scheduler.sigmas.to(device=device, dtype=dtype)
-    schedule_timesteps = scheduler.timesteps.to(device=device)
-    indices = [(schedule_timesteps == timestep).nonzero().item() for timestep in timesteps]
-    sigma = sigmas[indices].flatten()
-    while sigma.ndim < 5:
-        sigma = sigma.unsqueeze(-1)
-    return sigma
-
-
-def _normalise(latents, mean, std):
-    return (latents - mean) / std
-
-
-def _packed_inputs(batch, pipeline_class, mean, std, scheduler, device, dtype, vae_scale_factor):
-    import torch
-
-    target = _normalise(batch["target"].to(device=device, dtype=dtype), mean, std)
-    controls = _normalise(batch["controls"].to(device=device, dtype=dtype), mean, std)
-    prompt = batch["prompt"].to(device=device, dtype=dtype)
-    prompt_mask = batch["prompt_mask"].to(device=device, dtype=torch.int32)
-    bsz, channels, temporal, height, width = target.shape
-    if temporal != 1 or controls.shape[2:] != (channels, temporal, height, width):
-        raise ValueError("Cached Qwen latent geometry differs between target and controls")
-    noise = torch.randn_like(target)
-    density = torch.rand(bsz, device=device)
-    indices = (density * scheduler.config.num_train_timesteps).long()
-    timesteps = scheduler.timesteps[indices].to(device=device)
-    sigma = _sigmas(scheduler, timesteps, device, target.dtype)
-    noisy = (1.0 - sigma) * target + sigma * noise
-    noisy_2d = noisy.squeeze(2)
-    packed_noisy = pipeline_class._pack_latents(noisy_2d, bsz, channels, height, width)
-    packed_controls, shapes = [], []
-    for index in range(bsz):
-        sample_controls = []
-        sample_shapes = [(1, height // 2, width // 2)]
-        for control in controls[index]:
-            control_2d = control.squeeze(1).unsqueeze(0)
-            sample_controls.append(
-                pipeline_class._pack_latents(control_2d, 1, channels, height, width)
-            )
-            sample_shapes.append((1, height // 2, width // 2))
-        packed_controls.append(torch.cat(sample_controls, dim=1))
-        shapes.append(sample_shapes)
-    image_latents = torch.cat(packed_controls, dim=0)
-    model_input = torch.cat([packed_noisy, image_latents], dim=1)
-    return {
-        "target": target,
-        "noise": noise,
-        "noisy": model_input,
-        "packed_noisy": packed_noisy,
-        "timesteps": timesteps,
-        "sigma": sigma,
-        "prompt": prompt,
-        "prompt_mask": prompt_mask,
-        "img_shapes": shapes,
-        "txt_seq_lens": prompt_mask.sum(dim=1).tolist(),
-        "height": height,
-        "width": width,
-        "vae_scale_factor": vae_scale_factor,
-    }
-
-
-def _flow_error(transformer, pipeline_class, values):
-    model_pred = transformer(
-        hidden_states=values["noisy"],
-        timestep=values["timesteps"] / 1000,
-        guidance=None,
-        encoder_hidden_states_mask=values["prompt_mask"],
-        encoder_hidden_states=values["prompt"],
-        img_shapes=values["img_shapes"],
-        txt_seq_lens=values["txt_seq_lens"],
-        return_dict=False,
-    )[0]
-    model_pred = model_pred[:, : values["packed_noisy"].size(1)]
-    model_pred = pipeline_class._unpack_latents(
-        model_pred,
-        values["height"] * values["vae_scale_factor"],
-        values["width"] * values["vae_scale_factor"],
-        values["vae_scale_factor"],
-    )
-    if model_pred.ndim == 4:
-        model_pred = model_pred.unsqueeze(1)
-    elif model_pred.ndim == 5 and model_pred.shape[2] == 1:
-        model_pred = model_pred.permute(0, 2, 1, 3, 4)
-    else:
-        raise ValueError(f"Unexpected Qwen prediction shape: {tuple(model_pred.shape)}")
-    target = (values["noise"] - values["target"]).permute(0, 2, 1, 3, 4)
-    weighting = 1.0
-    return (model_pred.float() - target.float()).square() * weighting
-
-
-def _save_checkpoint(accelerator, transformer, pipeline_class, output: Path, step: int) -> str:
-    from diffusers.utils import convert_state_dict_to_diffusers
-    from peft.utils import get_peft_model_state_dict
-
-    if not accelerator.is_main_process:
-        return ""
-    path = output / f"checkpoint-{step}"
-    path.mkdir(parents=True, exist_ok=True)
-    model = accelerator.unwrap_model(transformer)
-    state = convert_state_dict_to_diffusers(get_peft_model_state_dict(model))
-    converted = {}
-    for key, value in state.items():
-        converted[key.replace(".lora.down.", ".lora_A.").replace(".lora.up.", ".lora_B.")] = value
-    pipeline_class.save_lora_weights(path, converted, safe_serialization=True)
-    return str(path / "pytorch_lora_weights.safetensors")
+def _configuration(args) -> tuple[dict, str, float, int]:
+    config = dict(args.config)
+    mode = args.loss_mode or config.get("loss_mode", "ordinary")
+    weight = args.role_loss_weight
+    weight = float(config.get("role_loss_weight", 0.0) if weight is None else weight)
+    steps = config["max_train_steps"] if args.max_steps is None else args.max_steps
+    if mode not in {"ordinary", "role_aware"} or not np.isfinite(weight) or not 0 <= weight <= 1:
+        raise ValueError("Invalid Qwen loss configuration")
+    if mode == "ordinary" and weight:
+        raise ValueError("Ordinary FM must use role_loss_weight=0")
+    upper = max(240, config["max_train_steps"]) if args.resume else config["max_train_steps"]
+    if int(steps) != steps or not 1 <= steps <= upper:
+        raise ValueError("Steps must be in [1, configured max_train_steps]")
+    if config.get("quantize") or config.get("adam8bit") or config["mixed_precision"] != "bf16":
+        raise ValueError("Matched Qwen trainer requires BF16 weights and AdamW")
+    if config["train_batch_size"] != 1 or config["gradient_accumulation_steps"] != 1:
+        raise ValueError("Matched Qwen trainer currently supports batch1/accumulation1 only")
+    return config, mode, weight, int(steps)
 
 
 def train(record: dict, args) -> dict:
     import torch
     from accelerate import Accelerator
-    from accelerate.utils import ProjectConfiguration
     from diffusers import FlowMatchEulerDiscreteScheduler, QwenImageTransformer2DModel
     from diffusers.optimization import get_scheduler
     from peft import LoraConfig
 
-    config = json.loads(json.dumps(args.config)) if isinstance(args.config, dict) else args.config
-    if config.get("quantize") or config.get("adam8bit"):
-        raise ValueError(
-            "Project Role-aware trainer currently requires full BF16 weights and AdamW"
-        )
-    loss_mode = args.loss_mode or config.get("loss_mode", "ordinary")
-    role_weight = float(
-        args.role_loss_weight
-        if args.role_loss_weight is not None
-        else config.get("role_loss_weight", 0.0)
-    )
-    if loss_mode not in {"ordinary", "role_aware"} or not 0 <= role_weight <= 1:
-        raise ValueError("Invalid Role-aware loss configuration")
-    if loss_mode == "ordinary" and role_weight:
-        raise ValueError("Ordinary FM must use role_loss_weight=0")
-    configured_steps = int(config["max_train_steps"])
-    steps = int(args.max_steps or configured_steps)
-    if steps < 1 or steps > configured_steps:
-        raise ValueError("--max-steps must be in [1, configured max_train_steps]")
-    seed = int(config["seed"])
-    _seed(seed)
-    accelerator = Accelerator(
-        gradient_accumulation_steps=int(config["gradient_accumulation_steps"]),
-        mixed_precision=config["mixed_precision"],
-        project_config=ProjectConfiguration(project_dir=record["train_config"]),
-    )
-    dtype = torch.bfloat16 if accelerator.mixed_precision == "bf16" else torch.float32
-    root = Path(record["data_root"])
-    model_path = Path(record["model_path"])
-    samples = prepare_cache(
-        root,
-        Path(record["train_manifest"]),
-        model_path,
-        device=accelerator.device,
-        dtype=dtype,
-        seed=seed,
-    )
-    train_loader = loader(
-        samples,
-        seed=seed,
-        workers=int(config["data_config"]["num_workers"]),
-        batch_size=int(config["train_batch_size"]),
-    )
     from src.qwen.inference import _pipeline_class
 
+    config, mode, role_weight, steps = _configuration(args)
+    seed, output = int(config["seed"]), Path(config["output_dir"])
+    accelerator = Accelerator(mixed_precision="bf16", gradient_accumulation_steps=1)
+    if accelerator.num_processes != 1:
+        raise ValueError("Use one leased GPU per matched Qwen run")
+    dtype, device = torch.bfloat16, accelerator.device
+    probe = torch.empty(1, device=device)
+    torch.cuda.synchronize()
+    del probe
+    require_exclusive_context()
+    model_path = Path(record["model_path"])
+    cache_root = Path(args.cache_root) if args.cache_root else output.parent / "encoding_cache"
+    samples = shared_cache(record, cache_root, device=device, dtype=dtype)
+    cache_sha = sha256(cache_root / "cache.json")
+    require_exclusive_context()
+    # Cache reuse must not change LoRA initialization or either training RNG stream.
+    _seed(seed)
     pipeline_class = _pipeline_class()
-    vae_cfg = _vae_config(model_path)
-    latent_channels = int(vae_cfg["z_dim"])
-    mean = torch.tensor(vae_cfg["latents_mean"], device=accelerator.device, dtype=dtype).view(
-        1, latent_channels, 1, 1, 1
-    )
-    std = torch.tensor(vae_cfg["latents_std"], device=accelerator.device, dtype=dtype).view(
-        1, latent_channels, 1, 1, 1
-    )
+    vae_cfg = json.loads((model_path / "vae/config.json").read_text())
+    mean, std = [
+        torch.tensor(vae_cfg[key], device=device, dtype=dtype).view(1, vae_cfg["z_dim"], 1, 1, 1)
+        for key in ("latents_mean", "latents_std")
+    ]
     vae_scale_factor = 2 ** len(vae_cfg["temperal_downsample"])
     transformer = QwenImageTransformer2DModel.from_pretrained(
-        str(model_path), subfolder="transformer"
-    ).to(device=accelerator.device, dtype=dtype)
+        str(model_path), subfolder="transformer", torch_dtype=dtype, local_files_only=True
+    )
+    require_exclusive_context()
+    transformer.to(device=device)
     transformer.add_adapter(
         LoraConfig(
             r=int(config["rank"]),
@@ -245,45 +140,78 @@ def train(record: dict, args) -> dict:
         num_warmup_steps=int(config["lr_warmup_steps"]),
         num_training_steps=steps,
     )
-    transformer, optimizer, train_loader, scheduler = accelerator.prepare(
-        transformer, optimizer, train_loader, scheduler
-    )
+    start_step = 0
+    if args.resume:
+        start_step = restore_checkpoint(args.resume, transformer, optimizer, scheduler)
+        if start_step >= steps:
+            raise ValueError("Continuation must request more updates than the restored checkpoint")
+    transformer, optimizer, scheduler = accelerator.prepare(transformer, optimizer, scheduler)
     noise_scheduler = FlowMatchEulerDiscreteScheduler.from_pretrained(
-        str(model_path), subfolder="scheduler"
+        str(model_path), subfolder="scheduler", local_files_only=True
     )
-    output = Path(config["output_dir"])
     output.mkdir(parents=True, exist_ok=True)
-    records = []
-    iterator = iter(train_loader)
-    for step in range(1, steps + 1):
-        try:
-            batch = next(iterator)
-        except StopIteration:
-            iterator = iter(train_loader)
-            batch = next(iterator)
-        with accelerator.accumulate(transformer):
-            values = _packed_inputs(
-                batch,
-                pipeline_class,
-                mean,
-                std,
-                noise_scheduler,
-                accelerator.device,
-                dtype,
-                vae_scale_factor,
+    snapshots, records = [], []
+    if start_step:
+        previous = json.loads((output.parent / "train_report.json").read_text())
+        if (
+            previous["cache_sha256"] != cache_sha
+            or previous["loss_mode"] != mode
+            or previous["role_loss_weight"] != role_weight
+        ):
+            raise ValueError("Qwen continuation cache/loss differs from the previous run")
+        snapshots, records = previous["snapshots"], previous["records"]
+        if previous["steps_completed"] != start_step:
+            raise ValueError("Resume checkpoint is not the last recorded update")
+    else:
+        snapshots.append(
+            save_checkpoint(
+                accelerator, transformer, pipeline_class, output, 0, optimizer, scheduler
             )
-            error = _flow_error(transformer, pipeline_class, values)
+        )
+    initial_checkpoint = snapshots[0]["checkpoint"]
+    report = {
+        "status": "running",
+        "configured_steps": int(config["max_train_steps"]),
+        "loss_mode": mode,
+        "role_loss_weight": role_weight,
+        "steps_completed": start_step,
+        "cache_sha256": cache_sha,
+        "initial_checkpoint_sha256": snapshots[0]["sha256"],
+        "train_ids": [sample.sample_id for sample in samples],
+        "snapshots": snapshots,
+        "records": records,
+    }
+    write_json(output.parent / "train_report.json", report)
+    torch.cuda.reset_peak_memory_stats()
+    schedule = batch_schedule(len(samples), seed, steps)
+    for step in range(start_step + 1, steps + 1):
+        require_exclusive_context()
+        started = time.perf_counter()
+        batch = collate([samples[schedule[step - 1]]])
+        values = packed_inputs(batch, pipeline_class, mean, std, noise_scheduler, device, dtype)
+        trace = {
+            "sample_ids": batch["sample_id"],
+            "timesteps": values["timesteps"].tolist(),
+            "sigmas": values["sigma"].flatten().float().tolist(),
+            **{f"{key}_sha256": tensor_sha(values[key]) for key in ("noisy", "target", "prompt")},
+        }
+        with accelerator.accumulate(transformer):
+            error = flow_error(transformer, pipeline_class, values, vae_scale_factor)
             global_loss = error.mean()
-            masks = batch["role_masks"].to(device=accelerator.device, dtype=torch.float32)
-            role_loss, role_records = weighted_region_loss(
-                error, masks, min_pixels=float(config.get("role_min_pixels", 4.0))
+            role_loss, details = weighted_region_loss(
+                error,
+                batch["role_masks"].to(device=device),
+                min_pixels=float(config.get("role_min_pixels", 4.0)),
             )
             loss = (1.0 - role_weight) * global_loss + role_weight * role_loss
+            if not torch.isfinite(loss):
+                raise FloatingPointError(f"Non-finite FM loss at update {step}")
             accelerator.backward(loss)
-            if accelerator.sync_gradients:
-                accelerator.clip_grad_norm_(
-                    transformer.parameters(), float(config["max_grad_norm"])
-                )
+            grad_norm = accelerator.clip_grad_norm_(
+                transformer.parameters(), float(config["max_grad_norm"])
+            )
+            if not torch.isfinite(grad_norm):
+                raise FloatingPointError(f"Non-finite gradient norm at update {step}")
             optimizer.step()
             scheduler.step()
             optimizer.zero_grad(set_to_none=True)
@@ -292,37 +220,32 @@ def train(record: dict, args) -> dict:
                 "step": step,
                 "loss": float(loss.detach()),
                 "global_loss": float(global_loss.detach()),
-                "role_loss_weight": role_weight,
-                **role_records,
+                "grad_norm": float(grad_norm),
+                "seconds": time.perf_counter() - started,
+                "peak_allocated_gib": torch.cuda.max_memory_allocated() / 2**30,
+                "peak_reserved_gib": torch.cuda.max_memory_reserved() / 2**30,
+                **trace,
+                **details,
             }
         )
+        print(json.dumps(records[-1]), flush=True)
+        del error, loss, role_loss, global_loss, values
         if step % int(config["checkpointing_steps"]) == 0 or step == steps:
-            checkpoint = _save_checkpoint(accelerator, transformer, pipeline_class, output, step)
-            if accelerator.is_main_process:
-                write_json(
-                    output.parent / "train_report.json",
-                    {
-                        "status": "running",
-                        "loss_mode": loss_mode,
-                        "role_loss_weight": role_weight,
-                        "steps_completed": step,
-                        "checkpoint": checkpoint,
-                        "records": records,
-                    },
-                )
-    accelerator.wait_for_everyone()
-    report = {
-        "status": "complete",
-        "configured_steps": configured_steps,
-        "loss_mode": loss_mode,
-        "role_loss_weight": role_weight,
-        "steps_completed": steps,
-        "checkpoint": str(output / f"checkpoint-{steps}" / "pytorch_lora_weights.safetensors"),
-        "checkpoint_sha256": sha256(
-            output / f"checkpoint-{steps}" / "pytorch_lora_weights.safetensors"
-        ),
-        "records": records,
-    }
-    if accelerator.is_main_process:
-        write_json(output.parent / "train_report.json", report)
+            snapshot = save_checkpoint(
+                accelerator, transformer, pipeline_class, output, step, optimizer, scheduler
+            )
+            snapshots.append(snapshot)
+            report.update(
+                steps_completed=step,
+                checkpoint=snapshot["checkpoint"],
+                checkpoint_sha256=snapshot["sha256"],
+            )
+            write_json(output.parent / "train_report.json", report)
+    report.update(
+        status="complete", **update_audit(Path(initial_checkpoint), Path(report["checkpoint"]))
+    )
+    if report["changed_parameters"] == 0:
+        raise ValueError("Qwen adapter parameters did not update")
+    write_json(output.parent / "train_report.json", report)
+    accelerator.end_training()
     return report

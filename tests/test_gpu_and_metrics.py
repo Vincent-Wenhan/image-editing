@@ -21,6 +21,21 @@ def test_gpu_requires_launcher(monkeypatch):
         require_lease()
 
 
+@pytest.mark.parametrize("local_pids", [[], ["123"], ["123", "456"]])
+def test_late_gpu_contention_yields_without_touching_other_processes(monkeypatch, local_pids):
+    from src.infra import gpu
+
+    monkeypatch.setenv("IMAGE_EDIT_GPU_UUID", "GPU-ours")
+    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "GPU-ours")
+    output = "GPU-other, 789\n" + "".join(f"GPU-ours, {pid}\n" for pid in local_pids)
+    monkeypatch.setattr(gpu, "command", lambda argv: output)
+    if len(local_pids) == 1:
+        gpu.require_exclusive_context()
+    else:
+        with pytest.raises(RuntimeError, match="exactly one compute context"):
+            gpu.require_exclusive_context()
+
+
 def test_identity_reports_unfulfilled_target():
     source = np.zeros((2, 2, 3))
     target = np.ones_like(source)

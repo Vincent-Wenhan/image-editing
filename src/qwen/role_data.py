@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gc
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,7 +20,6 @@ from src.qwen.role_loss import build_region_masks, latent_masks
 
 if TYPE_CHECKING:
     import torch
-    from torch.utils.data import DataLoader
 
 CONDITION_IMAGE_SIZE = 384 * 384
 VAE_IMAGE_SIZE = 1024 * 1024
@@ -36,9 +36,8 @@ class PreparedSample:
 
 
 def _dimensions(target_area: int, ratio: float) -> tuple[int, int]:
-    width = round((target_area * ratio) ** 0.5 / 32) * 32
-    height = round((width / ratio) / 32) * 32
-    return width, height
+    width = (target_area * ratio) ** 0.5
+    return round(width / 32) * 32, round(width / ratio / 32) * 32
 
 
 def _load_evidence(root: Path, row: dict) -> dict[str, np.ndarray]:
@@ -89,13 +88,13 @@ def prepare_cache(
     samples = json.loads(manifest.read_text(encoding="utf-8"))
     pipeline_class = _pipeline_class()
     pipeline = pipeline_class.from_pretrained(
-        str(model_path), transformer=None, vae=None, torch_dtype=dtype
+        str(model_path), transformer=None, vae=None, torch_dtype=dtype, local_files_only=True
     )
     pipeline.to(device)
     from diffusers import AutoencoderKLQwenImage
 
     vae = AutoencoderKLQwenImage.from_pretrained(
-        str(model_path), subfolder="vae", torch_dtype=dtype
+        str(model_path), subfolder="vae", torch_dtype=dtype, local_files_only=True
     ).to(device)
     torch.manual_seed(seed)
     result = []
@@ -145,22 +144,13 @@ def prepare_cache(
                     role_masks=torch.from_numpy(masks),
                 )
             )
+            print(f"Cached {row['id']}: target={tuple(target.shape)}", flush=True)
     vae.to("cpu")
     pipeline.to("cpu")
-    del vae, pipeline
+    del vae, pipeline, prompt, prompt_mask
+    gc.collect()
     torch.cuda.empty_cache()
     return result
-
-
-class PreparedDataset:
-    def __init__(self, samples: list[PreparedSample]):
-        self.samples = samples
-
-    def __len__(self) -> int:
-        return len(self.samples)
-
-    def __getitem__(self, index: int) -> PreparedSample:
-        return self.samples[index]
 
 
 def collate(samples: list[PreparedSample]) -> dict:
@@ -170,7 +160,9 @@ def collate(samples: list[PreparedSample]) -> dict:
     prompts, prompt_masks = [], []
     for sample in samples:
         pad = max_length - sample.prompt.shape[0]
-        prompts.append(torch.cat([sample.prompt, torch.zeros(pad, sample.prompt.shape[1])], dim=0))
+        prompts.append(
+            torch.cat([sample.prompt, sample.prompt.new_zeros(pad, sample.prompt.shape[1])])
+        )
         prompt_masks.append(
             torch.cat([sample.prompt_mask, torch.zeros(pad, dtype=sample.prompt_mask.dtype)])
         )
@@ -182,21 +174,3 @@ def collate(samples: list[PreparedSample]) -> dict:
         "prompt_mask": torch.stack(prompt_masks),
         "role_masks": torch.stack([sample.role_masks for sample in samples]),
     }
-
-
-def loader(
-    samples: list[PreparedSample], *, seed: int, workers: int, batch_size: int
-) -> DataLoader:
-    import torch
-    from torch.utils.data import DataLoader
-
-    generator = torch.Generator().manual_seed(seed)
-    return DataLoader(
-        PreparedDataset(samples),
-        batch_size=batch_size,
-        shuffle=True,
-        num_workers=workers,
-        collate_fn=collate,
-        pin_memory=True,
-        generator=generator,
-    )

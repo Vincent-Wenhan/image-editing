@@ -10,10 +10,13 @@ from pathlib import Path
 from PIL import Image
 
 from src.core.io import sha256, write_json
-from src.infra.gpu import require_lease
+from src.core.random import sample_seed
+from src.infra.gpu import require_exclusive_context, require_lease
 from src.qwen.conditions import condition_path
 from src.qwen.data import verify_condition_manifest
-from src.qwen.provenance import verify_model_download
+from src.qwen.provenance import verify_external_repo, verify_model_download
+
+SAMPLING = {"negative_prompt": " ", "true_cfg_scale": 4.0, "guidance_scale": 1.0}
 
 
 def _pipeline_class():
@@ -86,7 +89,7 @@ def _row(
     return _rows(record, sample_id, 1, split)[0]
 
 
-def run(args) -> None:
+def run(args, *, pipeline=None) -> None:
     require_lease()
     run_root = Path(args.run).resolve()
     record = json.loads((run_root / "run.json").read_text(encoding="utf-8"))
@@ -96,6 +99,7 @@ def run(args) -> None:
     if execution.get("status") != "complete" or execution.get("returncode") != 0:
         raise ValueError("Qwen inference requires a completed training execution")
     verify_model_download(record["model_path"], args.lock)
+    verify_external_repo(record["external"]["path"], args.lock)
     sample_id = getattr(args, "sample_id", None)
     all_dev = getattr(args, "all_dev", False)
     split = getattr(args, "split", "dev")
@@ -106,6 +110,7 @@ def run(args) -> None:
     rows = _rows(record, sample_id, limit, split)
     root = Path(record["data_root"])
     source_only = getattr(args, "source_only", False)
+    seed_policy = getattr(args, "seed_policy", "stream")
     checkpoint = (
         None if source_only else _checkpoint_path(run_root, getattr(args, "checkpoint", None))
     )
@@ -120,23 +125,41 @@ def run(args) -> None:
         "baseline": "base_source_only" if source_only else "trained_control",
         "split": split,
         "seed": args.seed,
+        "seed_policy": seed_policy,
         "steps": args.steps,
         "cpu_offload": True,
         "sample_count": len(rows),
+        "manifest_sha256": sha256(record[f"{split}_manifest"]),
+        "model_revision": record["model"]["revision"],
+        "sampling": dict(SAMPLING),
+        "inference_source_sha256": sha256(__file__),
     }
     write_json(output / "inference.json", result_record)
     try:
         import torch
 
-        pipeline_class = _pipeline_class()
-        pipeline = pipeline_class.from_pretrained(record["model_path"], torch_dtype=torch.bfloat16)
+        probe = torch.empty(1, device="cuda")
+        torch.cuda.synchronize()
+        del probe
+        require_exclusive_context()
+        owned_pipeline = pipeline is None
+        if owned_pipeline:
+            pipeline = _pipeline_class().from_pretrained(
+                record["model_path"], torch_dtype=torch.bfloat16, local_files_only=True
+            )
+        else:
+            pipeline.unload_lora_weights()
         if checkpoint is not None:
             pipeline.load_lora_weights(str(checkpoint))
-        pipeline.enable_model_cpu_offload()
+        if owned_pipeline:
+            pipeline.enable_model_cpu_offload()
         pipeline.set_progress_bar_config(disable=False)
         generator = torch.Generator(device="cuda").manual_seed(args.seed)
         results = []
         for row, checks in rows:
+            require_exclusive_context()
+            if seed_policy == "per_sample":
+                generator.manual_seed(sample_seed(args.seed, row["id"]))
             source_path = condition_path(root, row["original_image_path"])
             mask_path = condition_path(root, row["mask_image_path"])
             with Image.open(source_path) as image:
@@ -147,9 +170,7 @@ def run(args) -> None:
                 generated = pipeline(
                     image=[source] if source_only else [source, mask],
                     prompt=row["instruction"],
-                    negative_prompt=" ",
-                    true_cfg_scale=4.0,
-                    guidance_scale=1.0,
+                    **SAMPLING,
                     num_inference_steps=args.steps,
                     generator=generator,
                     num_images_per_prompt=1,
@@ -162,6 +183,7 @@ def run(args) -> None:
                 {
                     "sample_id": row["id"],
                     "source_sha256": checks["source_sha256"],
+                    "instruction": row["instruction"],
                     "target_sha256": checks["target_sha256"],
                     "native_size": list(native_size),
                     "output_size": list(prediction.size),
@@ -171,6 +193,8 @@ def run(args) -> None:
             )
             if not source_only:
                 results[-1]["mask_sha256"] = checks["mask_sha256"]
+            result_record["results"] = results
+            write_json(output / "inference.json", result_record)
         result_record.update(status="complete", results=results)
         if len(results) == 1:
             result_record.update(results[0])

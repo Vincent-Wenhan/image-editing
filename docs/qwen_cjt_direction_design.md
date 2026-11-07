@@ -1,5 +1,10 @@
 # Qwen CJT 第二基座验证轨
 
+2026-11-07 当前阶段按[Role-aware训练设计](qwen_role_aware_training_design.md)推进：保留
+source + Dynamic Binary + instruction，只改变训练的区域FM监督。先做Train6的120-step
+Ordinary/Role-aware overfit和完整checkpoint生成，再做Train36/Dev12；原计划的Role RGB
+控制图替换暂停，不能把损失监督与额外推理条件混为同一个方法。
+
 2026-11-05 UTC。本文登记 Qwen 方向的研究设计和当前工程边界。模型下载、GPU pilot
 和质量结论分别记录；任何 pilot 通过都不等于方法收益。
 

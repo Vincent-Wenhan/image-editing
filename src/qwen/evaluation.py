@@ -16,6 +16,7 @@ from src.evaluation.role_failures import geometry_metrics
 from src.evaluation.role_metrics import aggregate, region_metrics
 from src.evaluation.scene_semantics import TranslationLocator, change_proxies
 from src.qwen.data import verify_condition_manifest
+from src.qwen.role_loss import build_region_masks
 
 SEMANTIC_METRICS = (
     "old_only_target_mae",
@@ -31,6 +32,10 @@ SEMANTIC_METRICS = (
     "d_signed_change_response",
     "d_dark_region_iou",
     "p_edge_mae",
+    "cf_d_remove_mae",
+    "cf_d_create_mae",
+    "cf_d_overlap_mae",
+    "old_residual_response",
 )
 
 
@@ -58,6 +63,16 @@ def _semantic_metrics(
         old = np.asarray(evidence["source_occupancy"]) > 0.5
         new = np.asarray(evidence["target_occupancy"]) > 0.5
         background = np.asarray(rgb_image(evidence["background"]), dtype=np.float32) / 255.0
+        regions = build_region_masks(evidence, labels, valid)
+        overlap = (
+            (np.abs(evidence["source"] - evidence["source_no_shadow"]).max(-1) >= 0.02)
+            & (np.abs(evidence["target"] - evidence["target_no_shadow"]).max(-1) >= 0.02)
+            & (regions["d_remove"] | regions["d_create"])
+        )
+    old_only = regions["t_old"]
+    residual = source[old_only] - target[old_only]
+    denominator = float(np.square(residual).sum())
+    errors = np.abs(prediction - target)
     locator = TranslationLocator(source, target, background, old, new)
     located = locator.locate(prediction)
     return {
@@ -69,6 +84,18 @@ def _semantic_metrics(
         "distance_to_old_px": located["distance_to_old_px"],
         "localization_status": located["status"],
         "localization": located,
+        "cf_d_remove_mae": float(errors[regions["d_remove"]].mean())
+        if regions["d_remove"].any()
+        else None,
+        "cf_d_create_mae": float(errors[regions["d_create"]].mean())
+        if regions["d_create"].any()
+        else None,
+        "cf_d_overlap_mae": float(errors[overlap].mean()) if overlap.any() else None,
+        "old_residual_response": float(
+            ((prediction[old_only] - target[old_only]) * residual).sum() / denominator
+        )
+        if denominator > 0
+        else None,
     }
 
 
@@ -98,11 +125,15 @@ def run(args) -> None:
     inference = json.loads((predictions / "inference.json").read_text(encoding="utf-8"))
     if inference.get("status") != "complete":
         raise ValueError("Qwen scoring requires a completed inference record")
+    if Path(inference["run"]).resolve() != run_root:
+        raise ValueError("Qwen score run differs from the prediction's recorded run")
     record = json.loads((run_root / "run.json").read_text(encoding="utf-8"))
     root = Path(record["data_root"])
     split = getattr(args, "split", "dev")
     if split not in {"train", "dev"}:
         raise ValueError("Qwen score split must be train or dev")
+    if inference.get("split", "dev") != split:
+        raise ValueError("Qwen score split differs from the inference record")
     manifest = Path(record[f"{split}_manifest"])
     verify_condition_manifest(manifest, root=root, lock_path=args.lock)
     rows = {row["id"]: row for row in read_rows(root / split / "manifest.csv")}
@@ -150,7 +181,10 @@ def run(args) -> None:
         "run": str(run_root),
         "split": split,
         "predictions": str(predictions),
-        "condition": record.get("condition"),
+        "inference_sha256": sha256(predictions / "inference.json"),
+        "condition": {"kind": "source_only"}
+        if inference.get("baseline") == "base_source_only"
+        else record.get("condition"),
         "records": scored,
         "all": aggregate(scored),
         "nonzero": aggregate([row for row in scored if row["strength"] > 0]),

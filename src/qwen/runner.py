@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 import time
+import traceback
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -18,11 +19,13 @@ from src.core.io import sha256, write_json
 from src.core.metadata import now, versions
 from src.infra.experiment import source_snapshot
 from src.infra.gpu import require_lease
+from src.qwen.checkpoint_eval import configure as configure_checkpoint_eval
 from src.qwen.comparison import run as compare
 from src.qwen.data import verify_manifest, write_manifest
 from src.qwen.evaluation import run as score
 from src.qwen.inference import run as infer
 from src.qwen.provenance import verify_external_repo, verify_model_download
+from src.qwen.role_audit import configure as configure_role_audit
 from src.qwen.visuals import run as gallery
 
 PROTOCOL = "configs/experiments/qwen_cjt_pilot.yaml"
@@ -231,7 +234,9 @@ def train_role(args) -> None:
     require_lease()
     record = verify(args, require_model=True)
     run = Path(args.run).resolve()
-    output = run / "execution.json"
+    output = run / (
+        f"execution_continue_{args.max_steps}.json" if args.resume else "execution.json"
+    )
     if output.exists():
         raise FileExistsError(f"Qwen run already has an execution receipt: {output}")
     config = load_yaml(record["train_config"])
@@ -247,6 +252,10 @@ def train_role(args) -> None:
         "versions": versions(),
         "source": source_snapshot(),
         "trainer": "project_role_aware",
+        "overrides": {
+            key: getattr(args, key)
+            for key in ("loss_mode", "role_loss_weight", "max_steps", "cache_root", "resume")
+        },
     }
     write_json(output, execution)
     started = time.perf_counter()
@@ -260,11 +269,17 @@ def train_role(args) -> None:
                 loss_mode=args.loss_mode,
                 role_loss_weight=args.role_loss_weight,
                 max_steps=args.max_steps,
+                cache_root=args.cache_root,
+                resume=args.resume,
             ),
         )
-        execution.update(status="complete", returncode=0, train_report=report)
+        execution.update(
+            status="complete", returncode=0, checkpoint_sha256=report["checkpoint_sha256"]
+        )
     except BaseException as error:
-        execution.update(status="failed", returncode=1, error=repr(error))
+        execution.update(
+            status="failed", returncode=1, error=repr(error), traceback=traceback.format_exc()
+        )
         raise
     finally:
         execution["seconds"] = time.perf_counter() - started
@@ -274,6 +289,8 @@ def train_role(args) -> None:
 
 def configure(parser):
     subparsers = parser.add_subparsers(dest="qwen_command", required=True)
+    configure_checkpoint_eval(subparsers.add_parser("checkpoint-eval"))
+    configure_role_audit(subparsers.add_parser("supervision-audit"))
     prepare_parser = subparsers.add_parser("prepare")
     prepare_parser.add_argument("--data-root", default="data/magicbrush")
     prepare_parser.add_argument("--output", required=True)
@@ -299,6 +316,10 @@ def configure(parser):
     role_train_parser.add_argument("--loss-mode", choices=("ordinary", "role_aware"))
     role_train_parser.add_argument("--role-loss-weight", type=float)
     role_train_parser.add_argument("--max-steps", type=int)
+    role_train_parser.add_argument("--cache-root")
+    role_train_parser.add_argument(
+        "--resume", help="Continue a preserved project trainer checkpoint"
+    )
     role_train_parser.add_argument("--lock", default="configs/assets.lock.json")
     role_train_parser.set_defaults(func=train_role)
 
@@ -321,6 +342,7 @@ def configure(parser):
     infer_parser.add_argument("--all-split", action="store_true")
     infer_parser.add_argument("--steps", type=int, default=4)
     infer_parser.add_argument("--seed", type=int, default=42)
+    infer_parser.add_argument("--seed-policy", choices=("stream", "per_sample"), default="stream")
     infer_parser.add_argument("--lock", default="configs/assets.lock.json")
     infer_parser.set_defaults(func=infer)
 
@@ -339,6 +361,7 @@ def configure(parser):
     )
     gallery_parser.add_argument("--output", required=True)
     gallery_parser.add_argument("--failures", type=int, default=4)
+    gallery_parser.add_argument("--split", choices=("train", "dev"), default="dev")
     gallery_parser.set_defaults(func=gallery)
 
     compare_parser = subparsers.add_parser("compare")
