@@ -7,14 +7,6 @@ import random
 from pathlib import Path
 
 import numpy as np
-import torch
-from accelerate import Accelerator
-from accelerate.utils import ProjectConfiguration
-from diffusers import FlowMatchEulerDiscreteScheduler, QwenImageTransformer2DModel
-from diffusers.optimization import get_scheduler
-from diffusers.utils import convert_state_dict_to_diffusers
-from peft import LoraConfig
-from peft.utils import get_peft_model_state_dict
 
 from src.core.io import sha256, write_json
 from src.qwen.role_data import loader, prepare_cache
@@ -39,6 +31,8 @@ TARGET_MODULES = (
 
 
 def _seed(value: int) -> None:
+    import torch
+
     random.seed(value)
     np.random.seed(value)
     torch.manual_seed(value)
@@ -65,6 +59,8 @@ def _normalise(latents, mean, std):
 
 
 def _packed_inputs(batch, pipeline_class, mean, std, scheduler, device, dtype, vae_scale_factor):
+    import torch
+
     target = _normalise(batch["target"].to(device=device, dtype=dtype), mean, std)
     controls = _normalise(batch["controls"].to(device=device, dtype=dtype), mean, std)
     prompt = batch["prompt"].to(device=device, dtype=dtype)
@@ -141,6 +137,9 @@ def _flow_error(transformer, pipeline_class, values):
 
 
 def _save_checkpoint(accelerator, transformer, pipeline_class, output: Path, step: int) -> str:
+    from diffusers.utils import convert_state_dict_to_diffusers
+    from peft.utils import get_peft_model_state_dict
+
     if not accelerator.is_main_process:
         return ""
     path = output / f"checkpoint-{step}"
@@ -155,6 +154,13 @@ def _save_checkpoint(accelerator, transformer, pipeline_class, output: Path, ste
 
 
 def train(record: dict, args) -> dict:
+    import torch
+    from accelerate import Accelerator
+    from accelerate.utils import ProjectConfiguration
+    from diffusers import FlowMatchEulerDiscreteScheduler, QwenImageTransformer2DModel
+    from diffusers.optimization import get_scheduler
+    from peft import LoraConfig
+
     config = json.loads(json.dumps(args.config)) if isinstance(args.config, dict) else args.config
     if config.get("quantize") or config.get("adam8bit"):
         raise ValueError(

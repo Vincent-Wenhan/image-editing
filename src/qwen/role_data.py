@@ -5,11 +5,10 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
-import torch
 from PIL import Image
-from torch.utils.data import DataLoader, Dataset
 
 from src.core.io import read_rows, sha256
 from src.core.paths import data_path
@@ -17,6 +16,10 @@ from src.datasets.scene_validation import checked_image
 from src.qwen.conditions import condition_path
 from src.qwen.inference import _pipeline_class
 from src.qwen.role_loss import build_region_masks, latent_masks
+
+if TYPE_CHECKING:
+    import torch
+    from torch.utils.data import DataLoader
 
 CONDITION_IMAGE_SIZE = 384 * 384
 VAE_IMAGE_SIZE = 1024 * 1024
@@ -77,6 +80,8 @@ def prepare_cache(
     seed: int,
 ) -> list[PreparedSample]:
     """Encode the exact CJT controls and target supervision once per run."""
+    import torch
+
     split = manifest.stem
     if split not in {"train", "dev"}:
         raise ValueError(f"Qwen training cache requires train/dev manifest: {manifest}")
@@ -147,7 +152,7 @@ def prepare_cache(
     return result
 
 
-class PreparedDataset(Dataset):
+class PreparedDataset:
     def __init__(self, samples: list[PreparedSample]):
         self.samples = samples
 
@@ -159,6 +164,8 @@ class PreparedDataset(Dataset):
 
 
 def collate(samples: list[PreparedSample]) -> dict:
+    import torch
+
     max_length = max(sample.prompt.shape[0] for sample in samples)
     prompts, prompt_masks = [], []
     for sample in samples:
@@ -180,6 +187,9 @@ def collate(samples: list[PreparedSample]) -> dict:
 def loader(
     samples: list[PreparedSample], *, seed: int, workers: int, batch_size: int
 ) -> DataLoader:
+    import torch
+    from torch.utils.data import DataLoader
+
     generator = torch.Generator().manual_seed(seed)
     return DataLoader(
         PreparedDataset(samples),
