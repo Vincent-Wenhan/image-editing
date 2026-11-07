@@ -62,7 +62,9 @@ Role-aware收益结论；这是资源阻塞，不是方法/训练预算的失败
 本地全量Pytest结果为311 passed、1 failed/1861.72s；唯一失败是仓库外轻量导入子进程
 超过120s，断言没有失败。该项原样单独复跑为1 passed/178.16s（含pytest启动），没有
 放宽timeout或跳过断言。后续23项公平性/GPU争用/FM契约测试通过；Ruff check/format、
-compileall、pip check及仓库卫生检查通过。GitHub Actions由本次正常push触发后核验。
+compileall、pip check及仓库卫生检查通过。实现提交 `fb23d2b` 已正常push至main；
+[GitHub Actions 42374356968](https://github.com/Vincent-Wenhan/image-editing/actions/runs/42374356968)
+的精简CPU与Torch CPU两条任务均成功，包含Pytest、Ruff、CLI和pip check。
 
 历史真实生成图继续保留于 `outputs/qwen_cjt_q2_formal_gallery_20/paired_dev.png` 和
 `failure_cases.png`，它们对应Q2的20-update对照，不能作为本次Q3的生成或收益证据。

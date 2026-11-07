@@ -16,7 +16,9 @@ D_remove面积91.8125/116.4375，D_create面积141.125/187.25，没有有效重�
 保存在 `smoke_wait/`。新20B训练/生成和研究收益仍未完成；Test继续封存。
 本地全量311 passed/1 timeout（1861.72s），原轻量导入项单独原样复跑1 passed/178.16s；
 另23项公平性/资源争用/FM契约检查通过。未放宽timeout、未跳过断言。Ruff、format、
-compileall、pip check、仓库卫生通过；push后核验GitHub Actions。
+compileall、pip check、仓库卫生通过。实现提交 `fb23d2b` 已正常push；
+[CI 42374356968](https://github.com/Vincent-Wenhan/image-editing/actions/runs/42374356968)
+的cpu-checks与torch-cpu-checks均success。提交后复查8卡仍各有compute进程，未启动模型。
 
 2026-11-07 UTC Qwen 长训练与 Role-aware FM 计划：
 
