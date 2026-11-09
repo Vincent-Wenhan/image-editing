@@ -6,6 +6,10 @@
 此条是实施前设计与执行计划，不是已完成训练或质量结果。
 续训验收现已实现；32项针对性测试通过/99.47s，Ruff check/format通过。推理回执与
 comparison绑定execution SHA，旧Q2兼容；训练预算和缓存policy未改变。先冻结提交再等待GPU。
+15:08 UTC GPU 1 smoke_01真实启动并完成pipeline与6例VAE/text cache，cache.pt约29 MiB；
+随后因缓存释放造成空compute PID，被旧严格门禁误判为争用，747.996s后失败，0更新/0 checkpoint。
+原始回执保留。修复门禁：空PID安全通过；若有PID则必须全部为当前worker，外部PID/多PID退出。
+修复后30项针对性测试通过/250.22s，Ruff/format通过；下一步新目录两步smoke。
 
 2026-11-07 UTC Q3 续跑计划：核实前一轮等待器已结束，retry-04 因 CUDA indices 索引 CPU
 scheduler 表失败，没有成功更新。先对齐上游 VAE/FM/timestep/LoRA/save 契约，补 signed

@@ -100,19 +100,26 @@ def require_lease():
 
 
 def require_exclusive_context():
-    """After creating our CUDA context, yield if another compute PID appeared."""
+    """After creating our CUDA context, stop if another compute PID appeared.
+
+    CUDA allocations can be released while a worker keeps running.  In that
+    state ``nvidia-smi --query-compute-apps`` may report no PID for the worker;
+    an empty set is safe because the outer lease already checked memory and
+    utilization before launch.  A reported PID must belong to this worker.
+    """
     require_lease()
     uuid = os.environ["IMAGE_EDIT_GPU_UUID"]
     output = command(
         ["nvidia-smi", "--query-compute-apps=gpu_uuid,pid", "--format=csv,noheader,nounits"]
     )
     processes = {
-        row[1].strip()
+        int(row[1].strip())
         for row in csv.reader(io.StringIO(output))
-        if len(row) == 2 and row[0].strip() == uuid
+        if len(row) == 2 and row[0].strip() == uuid and row[1].strip().isdigit()
     }
-    if len(processes) != 1:
-        raise RuntimeError("Leased GPU no longer has exactly one compute context; stop this worker")
+    foreign = processes - {os.getpid()}
+    if foreign or len(processes) > 1:
+        raise RuntimeError("Leased GPU has another compute context; stop this worker")
 
 
 def configure(parser):

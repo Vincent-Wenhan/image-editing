@@ -11,6 +11,19 @@ execution SHA并由comparison复核；只有失败/running或returncode非零的
 续训回执、比较与bridge的32项针对性测试全部通过（99.47s），Ruff check/format通过；
 训练目标、共享编码缓存policy和checkpoint数值路径均未改变，未重跑已通过的昂贵CPU模型检查。
 
+## 2026-11-09 GPU smoke 失败与修复
+
+GPU 1 的真实 `smoke_01` 已通过正常 UUID lease 启动。共享 Qwen pipeline 加载约73秒，
+随后六个 Train 样本全部完成 VAE/text cache，`shared_train6/cache.pt` 约29 MiB；总耗时
+747.996秒，0次反向/0次参数更新/0个checkpoint。缓存释放后没有设备分配，旧门禁在
+`require_exclusive_context()` 处看到空PID集合并退出，异常为旧的 exactly-one compute
+context 检查。该次失败与数据、模型、FM 或显存不足无关，原始
+`smoke_01/execution.json` 和 `gpu_worker.log` 保留。
+
+修复后的门禁只接受空PID集合或当前worker自己的PID，拒绝任何外部PID和多PID；30项针对性
+测试通过（250.22s），Ruff/format通过。训练目标和缓存policy不变，下一次用新目录进行
+两步真实前向/反向/LoRA更新及重载验证。
+
 ## 当前设计
 
 训练固定 Qwen-Image-Edit-2511 revision、Inter-Edit revision、synthetic Dynamic Binary

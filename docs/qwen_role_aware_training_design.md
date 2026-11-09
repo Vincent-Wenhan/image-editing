@@ -101,3 +101,12 @@ timestep、velocity目标、LoRA target_modules和公开save/load接口。Q3显�
 running的回执不能单独授权推理。推理记录绑定所采用execution的路径与SHA，配对比较
 再次核验，旧Q2缺少此字段时保留兼容。验收覆盖首次成功、失败后成功续训、只有失败/
 running、returncode不一致和回执被修改；训练loss、数据、预算和模型参数均不改变。
+
+## 2026-11-09 smoke 调度修订
+
+首次真实 smoke 已完成六个样本的 VAE/text cache，并写出共享 `cache.pt`；缓存释放后，
+项目没有保留设备分配，`nvidia-smi` 返回空 compute PID，旧的“必须恰好一个PID”检查把
+安全状态误判为争用，0 steps更新后退出。修订后的门禁允许空PID集合（外层启动前已检查
+显存/利用率且没有其他compute进程），若有PID则必须全部属于当前worker，任何其他PID或
+多PID立即退出。该修复只改变资源门禁，不改变训练目标、缓存、随机数或模型控制；原失败
+receipt保留，后续使用新run目录重跑。

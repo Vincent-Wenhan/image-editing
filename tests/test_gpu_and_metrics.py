@@ -1,5 +1,7 @@
 """Ensure occupied GPUs are excluded and identity cannot imply editing success."""
 
+import os
+
 import numpy as np
 import pytest
 
@@ -21,18 +23,19 @@ def test_gpu_requires_launcher(monkeypatch):
         require_lease()
 
 
-@pytest.mark.parametrize("local_pids", [[], ["123"], ["123", "456"]])
+@pytest.mark.parametrize("local_pids", [[], ["self"], ["123"], ["self", "123"]])
 def test_late_gpu_contention_yields_without_touching_other_processes(monkeypatch, local_pids):
     from src.infra import gpu
 
     monkeypatch.setenv("IMAGE_EDIT_GPU_UUID", "GPU-ours")
     monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "GPU-ours")
-    output = "GPU-other, 789\n" + "".join(f"GPU-ours, {pid}\n" for pid in local_pids)
+    pids = [str(os.getpid()) if pid == "self" else pid for pid in local_pids]
+    output = "GPU-other, 789\n" + "".join(f"GPU-ours, {pid}\n" for pid in pids)
     monkeypatch.setattr(gpu, "command", lambda argv: output)
-    if len(local_pids) == 1:
+    if not set(pids) - {str(os.getpid())}:
         gpu.require_exclusive_context()
     else:
-        with pytest.raises(RuntimeError, match="exactly one compute context"):
+        with pytest.raises(RuntimeError, match="another compute context"):
             gpu.require_exclusive_context()
 
 
