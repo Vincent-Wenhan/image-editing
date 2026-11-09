@@ -1,6 +1,6 @@
 # Qwen Role-aware FM 训练阶段报告
 
-日期：2026-11-07 UTC。当前报告只区分设计、代码验收和真实 GPU 运行状态；在成功完成
+日期：2026-11-09 UTC。当前报告只区分设计、代码验收和真实 GPU 运行状态；在成功完成
 overfit 与 Dev 生成前，不把训练 loss 写成方法收益。
 
 14:11 UTC续跑：用户确认没有预约资源，仍按空闲门禁继续。复查8卡均有其他compute进程。
@@ -30,7 +30,21 @@ compute context，均约238秒后退出，0更新/0 checkpoint；`smoke_04`（GP
 资源竞态，训练入口已将首次复核提前到大型 diffusers/Qwen import 之前；后续仍拒绝任何
 外部PID。`smoke_05`（GPU 7）验证了提前复核仍可能在torch/accelerate导入窗口被外部任务
 占用，53.38s后退出，0更新/0 checkpoint。新增单元素CUDA lease anchor，保持本worker的
-合法context直到大型import完成；下一次只再做一次新smoke尝试。
+合法context直到大型import完成。
+
+### 2026-11-09 资源窗口复查结论
+
+按用户授权继续后，`smoke_02`（GPU 0，238.56s）、`smoke_03`（GPU 6，277.12s）、
+`smoke_04`（GPU 7，249.74s）、`smoke_05`（GPU 7，53.38s）和 `smoke_06`（GPU 7，
+54.06s）都在训练循环前检测到外部 compute context，均为0更新、0 checkpoint。`smoke_07`
+使用已加载 torch 的 lease worker，在 GPU 7 上等待外部 context 消失180秒，记录36次争用，
+仍未安全进入训练，模型worker启动数为0。所有回执、日志和显卡检查保存在
+`outputs/qwen_cjt_q3_20261107_v2/smoke_attempts_20261109.json`、各 `smoke_02`–`smoke_07`
+目录及 `smoke_07_preload_wait/`；没有中断他人任务。
+
+因此本阶段没有新的真实 Qwen 前向/反向更新、checkpoint 重载、生成图、训练曲线或
+Role-aware收益数据。Q3 方法结论保持未定，Q2历史图和指标不能替代Q3证据；普通FM、
+Role-aware FM、Train36/Dev12和Effect-aware候选均不启动，直到出现足够稳定的空闲GPU窗口。
 
 ## 当前设计
 
@@ -94,10 +108,13 @@ Role-aware收益结论；这是资源阻塞，不是方法/训练预算的失败
 compileall、pip check及仓库卫生检查通过。实现提交 `fb23d2b` 已正常push至main；
 [GitHub Actions 42374356968](https://github.com/Vincent-Wenhan/image-editing/actions/runs/42374356968)
 的精简CPU与Torch CPU两条任务均成功，包含Pytest、Ruff、CLI和pip check。
+随后资源门禁修复提交 `6051ed6`、`6d5ded1`、`5a22b04` 的
+[GitHub Actions 42650617470](https://github.com/Vincent-Wenhan/image-editing/actions/runs/42650617470)
+也成功通过两条CPU任务。
 
 历史真实生成图继续保留于 `outputs/qwen_cjt_q2_formal_gallery_20/paired_dev.png` 和
 `failure_cases.png`，它们对应Q2的20-update对照，不能作为本次Q3的生成或收益证据。
-待有空闲lease时，先在 `smoke_01` 完成2次更新、核验参数变化并用checkpoint-2真实重载
+待有空闲lease时，先在新的smoke run完成2次更新、核验参数变化并用checkpoint-2真实重载
 生成非零Train样本，再启动已准备好的两组120-step overfit及逐20步配对评估。
 
 ### 历史首次实现记录

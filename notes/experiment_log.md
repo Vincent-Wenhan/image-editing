@@ -15,6 +15,12 @@ context，约238s后安全退出，0更新/0 checkpoint；三份receipt保留。
 将首次复核提前到大型diffusers/Qwen import之前，仍保留cache/model/每步复核；只再尝试一次。
 smoke_05 GPU7在53.38s后仍因torch/accelerate导入窗口外部context退出，0更新。增加单元素
 CUDA lease anchor，保持当前worker context直到大型import完成；外部PID仍拒绝，随后只再试一次。
+2026-11-09继续执行：smoke_02 GPU0/238.56s、smoke_03 GPU6/277.12s、smoke_04 GPU7/249.74s、
+smoke_05 GPU7/53.38s、smoke_06 GPU7/54.06s均在训练循环前发现外部compute，0更新/0 checkpoint。
+预加载worker smoke_07先完成torch导入，再在GPU7 lease内等待外部context；180s内记录36次
+争用，model_workers_started=0，安全退出。机器可读汇总为
+`outputs/qwen_cjt_q3_20261107_v2/smoke_attempts_20261109.json`。本轮停止GPU尝试，不启动
+120-step训练；没有新生成图或方法收益结论，Test继续封存。
 
 2026-11-07 UTC Q3 续跑计划：核实前一轮等待器已结束，retry-04 因 CUDA indices 索引 CPU
 scheduler 表失败，没有成功更新。先对齐上游 VAE/FM/timestep/LoRA/save 契约，补 signed
@@ -35,6 +41,9 @@ D_remove面积91.8125/116.4375，D_create面积141.125/187.25，没有有效重�
 compileall、pip check、仓库卫生通过。实现提交 `fb23d2b` 已正常push；
 [CI 42374356968](https://github.com/Vincent-Wenhan/image-editing/actions/runs/42374356968)
 的cpu-checks与torch-cpu-checks均success。提交后复查8卡仍各有compute进程，未启动模型。
+后续资源门禁修复提交6051ed6/6d5ded1/5a22b04的
+[CI 42650617470](https://github.com/Vincent-Wenhan/image-editing/actions/runs/42650617470)
+两条CPU任务同样success。
 
 2026-11-07 UTC Qwen 长训练与 Role-aware FM 计划：
 

@@ -469,9 +469,13 @@ checkpoint 0 和每20步的 LoRA/optimizer/RNG 状态保留；`--resume <checkpo
 进入推理；推理绑定成功execution回执的SHA，比较时拒绝回执被修改或来自其他run。
 当前代码验收和真实 GPU 状态见
 [Q3 报告](docs/qwen_role_aware_training_report.md)，CPU 小模型测试不代表20B编辑效果。
-本轮30分钟内22次租约申请均无空闲卡，等待器已退出；两组120-step overfit尚未启动，
-历史Q2图像和指标不会计作Q3成果。实现提交 `fb23d2b` 的
+此前30分钟内22次租约申请均无空闲卡；2026-11-09随后6次真实smoke也在训练循环前发现
+外部compute，预加载worker又等待180秒记录36次争用，仍未启动模型worker。两组120-step
+overfit尚未启动，历史Q2图像和指标不会计作Q3成果。实现提交 `fb23d2b` 的
 [两条CPU CI](https://github.com/Vincent-Wenhan/image-editing/actions/runs/42374356968)已通过。
+本轮资源证据见 `outputs/qwen_cjt_q3_20261107_v2/smoke_attempts_20261109.json`；后续资源
+修复的[CPU CI](https://github.com/Vincent-Wenhan/image-editing/actions/runs/42650617470)也已通过，
+待有稳定空闲卡后再执行真实Q3训练。
 
 训练入口会再次检查模型 receipt、Inter-Edit revision、manifest SHA 和 GPU UUID lease；
 没有租约会在启动训练前失败。当前先完成固定Dynamic Binary输入下的Ordinary/Role-aware
