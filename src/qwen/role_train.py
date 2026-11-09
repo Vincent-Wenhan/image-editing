@@ -78,6 +78,14 @@ def _configuration(args) -> tuple[dict, str, float, int]:
 
 def train(record: dict, args) -> dict:
     import torch
+
+    dtype = torch.bfloat16
+    device = torch.device("cuda")
+    # Keep one real CUDA context visible while slow Python modules are imported.
+    lease_anchor = torch.empty(1, device=device)
+    torch.cuda.synchronize()
+    require_exclusive_context()
+
     from accelerate import Accelerator
 
     config, mode, role_weight, steps = _configuration(args)
@@ -85,11 +93,6 @@ def train(record: dict, args) -> dict:
     accelerator = Accelerator(mixed_precision="bf16", gradient_accumulation_steps=1)
     if accelerator.num_processes != 1:
         raise ValueError("Use one leased GPU per matched Qwen run")
-    dtype, device = torch.bfloat16, accelerator.device
-    probe = torch.empty(1, device=device)
-    torch.cuda.synchronize()
-    del probe
-    require_exclusive_context()
     # Keep the first post-launch contention check before slow diffusers/Qwen imports.
     from diffusers import FlowMatchEulerDiscreteScheduler, QwenImageTransformer2DModel
     from diffusers.optimization import get_scheduler
@@ -97,6 +100,8 @@ def train(record: dict, args) -> dict:
 
     from src.qwen.inference import _pipeline_class
 
+    require_exclusive_context()
+    del lease_anchor
     model_path = Path(record["model_path"])
     cache_root = Path(args.cache_root) if args.cache_root else output.parent / "encoding_cache"
     samples = shared_cache(record, cache_root, device=device, dtype=dtype)

@@ -13,6 +13,8 @@ comparison绑定execution SHA，旧Q2兼容；训练预算和缓存policy未改�
 smoke_02 GPU0、smoke_03 GPU6、smoke_04 GPU7均在大型模块导入后首次门禁发现外部compute
 context，约238s后安全退出，0更新/0 checkpoint；三份receipt保留。共享节点导入窗口过长，
 将首次复核提前到大型diffusers/Qwen import之前，仍保留cache/model/每步复核；只再尝试一次。
+smoke_05 GPU7在53.38s后仍因torch/accelerate导入窗口外部context退出，0更新。增加单元素
+CUDA lease anchor，保持当前worker context直到大型import完成；外部PID仍拒绝，随后只再试一次。
 
 2026-11-07 UTC Q3 续跑计划：核实前一轮等待器已结束，retry-04 因 CUDA indices 索引 CPU
 scheduler 表失败，没有成功更新。先对齐上游 VAE/FM/timestep/LoRA/save 契约，补 signed
