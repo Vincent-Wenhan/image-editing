@@ -21,6 +21,10 @@ smoke_05 GPU7/53.38s、smoke_06 GPU7/54.06s均在训练循环前发现外部comp
 争用，model_workers_started=0，安全退出。机器可读汇总为
 `outputs/qwen_cjt_q3_20261107_v2/smoke_attempts_20261109.json`。本轮停止GPU尝试，不启动
 120-step训练；没有新生成图或方法收益结论，Test继续封存。
+2026-11-10继续：GPU1/GPU3分别启动预加载worker smoke_08/smoke_09，torch导入完成后
+NVML持续报告约266MiB外部context；各检查55次、等待300s，均未进入Qwen模型加载，0更新/0 checkpoint。
+机器可读记录为`outputs/qwen_cjt_q3_20261107_v2/smoke_attempts_20261110.json`，临时wrapper
+已清理；本轮停止资源尝试，不把阻塞写成模型/方法失败。
 
 2026-11-07 UTC Q3 续跑计划：核实前一轮等待器已结束，retry-04 因 CUDA indices 索引 CPU
 scheduler 表失败，没有成功更新。先对齐上游 VAE/FM/timestep/LoRA/save 契约，补 signed

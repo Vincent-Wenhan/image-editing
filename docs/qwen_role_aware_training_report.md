@@ -46,6 +46,14 @@ compute context，均约238秒后退出，0更新/0 checkpoint；`smoke_04`（GP
 Role-aware收益数据。Q3 方法结论保持未定，Q2历史图和指标不能替代Q3证据；普通FM、
 Role-aware FM、Train36/Dev12和Effect-aware候选均不启动，直到出现足够稳定的空闲GPU窗口。
 
+### 2026-11-10 预加载复查
+
+在 GPU 1 和 GPU 3 各启动一个同租约的 torch 预加载 worker。两者都完成
+torch 2.6.0+cu118 导入，但随后各卡持续被 NVML 报告约266 MiB 的外部 compute context；
+每个 worker 检查55次、等待300秒，均未进入 Qwen 模型加载或训练，model worker 启动数为0。
+机器可读记录为 `outputs/qwen_cjt_q3_20261107_v2/smoke_attempts_20261110.json`，没有
+中断他人任务、参数更新或新图像。该结果仍是资源阻塞，不是模型或方法失败。
+
 ## 当前设计
 
 训练固定 Qwen-Image-Edit-2511 revision、Inter-Edit revision、synthetic Dynamic Binary

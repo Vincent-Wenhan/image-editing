@@ -476,6 +476,8 @@ overfit尚未启动，历史Q2图像和指标不会计作Q3成果。实现提交
 本轮资源证据见 `outputs/qwen_cjt_q3_20261107_v2/smoke_attempts_20261109.json`；后续资源
 修复的[CPU CI](https://github.com/Vincent-Wenhan/image-editing/actions/runs/42650617470)也已通过，
 待有稳定空闲卡后再执行真实Q3训练。
+2026-11-10在GPU1和GPU3各等待300秒仍被约266 MiB外部compute context阻塞，详见
+`outputs/qwen_cjt_q3_20261107_v2/smoke_attempts_20261110.json`。
 
 训练入口会再次检查模型 receipt、Inter-Edit revision、manifest SHA 和 GPU UUID lease；
 没有租约会在启动训练前失败。当前先完成固定Dynamic Binary输入下的Ordinary/Role-aware
