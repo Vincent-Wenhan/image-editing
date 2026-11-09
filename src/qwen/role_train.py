@@ -79,11 +79,6 @@ def _configuration(args) -> tuple[dict, str, float, int]:
 def train(record: dict, args) -> dict:
     import torch
     from accelerate import Accelerator
-    from diffusers import FlowMatchEulerDiscreteScheduler, QwenImageTransformer2DModel
-    from diffusers.optimization import get_scheduler
-    from peft import LoraConfig
-
-    from src.qwen.inference import _pipeline_class
 
     config, mode, role_weight, steps = _configuration(args)
     seed, output = int(config["seed"]), Path(config["output_dir"])
@@ -95,6 +90,13 @@ def train(record: dict, args) -> dict:
     torch.cuda.synchronize()
     del probe
     require_exclusive_context()
+    # Keep the first post-launch contention check before slow diffusers/Qwen imports.
+    from diffusers import FlowMatchEulerDiscreteScheduler, QwenImageTransformer2DModel
+    from diffusers.optimization import get_scheduler
+    from peft import LoraConfig
+
+    from src.qwen.inference import _pipeline_class
+
     model_path = Path(record["model_path"])
     cache_root = Path(args.cache_root) if args.cache_root else output.parent / "encoding_cache"
     samples = shared_cache(record, cache_root, device=device, dtype=dtype)

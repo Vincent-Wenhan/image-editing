@@ -24,6 +24,12 @@ context 检查。该次失败与数据、模型、FM 或显存不足无关，原
 测试通过（250.22s），Ruff/format通过。训练目标和缓存policy不变，下一次用新目录进行
 两步真实前向/反向/LoRA更新及重载验证。
 
+随后 `smoke_02`（GPU 0）和 `smoke_03`（GPU 6）在大型模块导入窗口中分别检测到外部
+compute context，均约238秒后退出，0更新/0 checkpoint；`smoke_04`（GPU 7）在同一类
+初始门禁下退出。三次失败回执和日志均保留，未中断他人任务。为减少共享节点导入窗口的
+资源竞态，训练入口已将首次复核提前到大型 diffusers/Qwen import 之前；后续仍拒绝任何
+外部PID。下一次只再做一次新smoke尝试。
+
 ## 当前设计
 
 训练固定 Qwen-Image-Edit-2511 revision、Inter-Edit revision、synthetic Dynamic Binary

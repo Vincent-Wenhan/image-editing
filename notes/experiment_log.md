@@ -10,6 +10,9 @@ comparison绑定execution SHA，旧Q2兼容；训练预算和缓存policy未改�
 随后因缓存释放造成空compute PID，被旧严格门禁误判为争用，747.996s后失败，0更新/0 checkpoint。
 原始回执保留。修复门禁：空PID安全通过；若有PID则必须全部为当前worker，外部PID/多PID退出。
 修复后30项针对性测试通过/250.22s，Ruff/format通过；下一步新目录两步smoke。
+smoke_02 GPU0、smoke_03 GPU6、smoke_04 GPU7均在大型模块导入后首次门禁发现外部compute
+context，约238s后安全退出，0更新/0 checkpoint；三份receipt保留。共享节点导入窗口过长，
+将首次复核提前到大型diffusers/Qwen import之前，仍保留cache/model/每步复核；只再尝试一次。
 
 2026-11-07 UTC Q3 续跑计划：核实前一轮等待器已结束，retry-04 因 CUDA indices 索引 CPU
 scheduler 表失败，没有成功更新。先对齐上游 VAE/FM/timestep/LoRA/save 契约，补 signed
